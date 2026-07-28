@@ -35,12 +35,25 @@ async def health_system() -> dict:
 
 @router.get("/ai")
 async def health_ai() -> dict:
+    from app.kernel import ai_kernel
+
+    stats = ai_kernel.get_stats()
     return {
         "data": {
             "status": "healthy",
-            "modules": [],
-            "active_agents": 0,
+            "modules": [
+                "objective_compiler", "planner", "risk_analyzer",
+                "organization_generator", "decision_engine",
+                "devils_advocate", "readiness", "bottleneck",
+            ],
+            "active_agents": 8,
             "pending_tasks": 0,
+            "kernel": {
+                "total_calls": stats["observability"]["total_calls"],
+                "cache_hit_rate": stats["cache"]["hit_rate"],
+                "total_cost": stats["total_cost"],
+                "tokens_used": stats["token_usage"]["total"],
+            },
         }
     }
 

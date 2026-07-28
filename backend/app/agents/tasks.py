@@ -1,0 +1,333 @@
+from __future__ import annotations
+
+from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.agents import BaseAgent
+from app.kernel import ai_kernel
+from app.models.extensions import (
+    Decision,
+    DecisionOption,
+    Department,
+    Milestone,
+    Plan,
+    Risk,
+    Role,
+)
+from app.repositories.extensions_repository import (
+    DecisionOptionRepository,
+    DecisionRepository,
+    DepartmentRepository,
+    MilestoneRepository,
+    ObjectiveCompilationRepository,
+    PlanRepository,
+    RiskRepository,
+    RoleRepository,
+)
+from app.repositories.objective_repository import ObjectiveRepository
+
+
+class PlannerAgent(BaseAgent):
+    async def run(self, objective_id: str) -> dict[str, Any]:
+        obj_repo = ObjectiveRepository(self._session)
+        comp_repo = ObjectiveCompilationRepository(self._session)
+        plan_repo = PlanRepository(self._session)
+
+        objective = await obj_repo.get(objective_id)
+        if not objective:
+            return {"error": "Objective not found"}
+
+        compilation = await comp_repo.get_by_objective(objective_id)
+
+        context = {
+            "objective": {"raw": objective.raw_input},
+            "compilation": {
+                "mission": compilation.mission if compilation else None,
+                "vision": compilation.vision if compilation else None,
+                "budget": compilation.budget if compilation else None,
+                "timeline": compilation.timeline if compilation else None,
+            },
+            "constraints": objective.constraints,
+        }
+
+        result = await self._llm.run(
+            task_type="plan",
+            prompt_template="planner_v1.md",
+            context=context,
+        )
+
+        plan = Plan(
+            objective_id=objective_id,
+            name=f"Plan for {objective.raw_input[:50]}...",
+            description=result.get("roadmap", {}).get("description"),
+            status="draft",
+            plan_version=1,
+            roadmap=result.get("roadmap"),
+            timeline=result.get("timeline"),
+            total_cost=result.get("total_cost"),
+            confidence=result.get("confidence"),
+        )
+        plan = await plan_repo.create(plan)
+
+        milestones_data = result.get("milestones", [])
+        milestone_repo = MilestoneRepository(self._session)
+        for i, ms in enumerate(milestones_data):
+            milestone = Milestone(
+                plan_id=plan.id,
+                name=ms.get("name", f"Milestone {i+1}"),
+                description=ms.get("description"),
+                status=ms.get("status", "pending"),
+                order=ms.get("order", i + 1),
+                dependencies=ms.get("dependencies"),
+                kpis=ms.get("kpis"),
+            )
+            await milestone_repo.create(milestone)
+
+        await self._save_explanation(
+            entity_type="Plan",
+            entity_id=plan.id,
+            recommendation=f"Created execution plan with {len(milestones_data)} milestones",
+            reasoning="Plan generated from objective compilation data using AIKernel",
+            evidence=[str(context)],
+            confidence=plan.confidence,
+        )
+
+        return {"plan_id": plan.id, "milestones_count": len(milestones_data), "status": "created"}
+
+
+class RiskAgent(BaseAgent):
+    async def run(self, objective_id: str) -> dict[str, Any]:
+        comp_repo = ObjectiveCompilationRepository(self._session)
+        risk_repo = RiskRepository(self._session)
+
+        objective = await ObjectiveRepository(self._session).get(objective_id)
+
+        compilation = await comp_repo.get_by_objective(objective_id)
+        context = {
+            "objective": {"raw": objective.raw_input if objective else ""},
+            "constraints": objective.constraints if objective else {},
+            "compilation": {
+                "risks": compilation.risks if compilation else [],
+            },
+        }
+
+        result = await self._llm.run(
+            task_type="risk",
+            prompt_template="risk_v1.md",
+            context=context,
+        )
+
+        risks_data = result.get("risks", [])
+        created_risks = []
+
+        for r_data in risks_data:
+            risk = Risk(
+                objective_id=objective_id,
+                title=r_data.get("title", "Unknown Risk"),
+                description=r_data.get("description"),
+                category=r_data.get("category", "strategic"),
+                probability=r_data.get("probability", 0.5),
+                impact=r_data.get("impact", 0.5),
+                risk_level=r_data.get("risk_level", "medium"),
+                risk_score=r_data.get("risk_score", r_data.get("probability", 0.5) * r_data.get("impact", 0.5)),
+                mitigation=r_data.get("mitigation"),
+                contingency=r_data.get("contingency"),
+                owner=r_data.get("owner"),
+                status="identified",
+            )
+            risk = await risk_repo.create(risk)
+            created_risks.append(risk.id)
+
+        await self._save_explanation(
+            entity_type="Risk",
+            entity_id=objective_id,
+            recommendation=f"Identified {len(created_risks)} risks",
+            reasoning="Risks identified from objective compilation and constraints analysis via AIKernel",
+            evidence=[str(r_data) for r_data in risks_data],
+            risk_level="medium",
+        )
+
+        return {"risk_ids": created_risks, "count": len(created_risks)}
+
+
+class OrganizationAgent(BaseAgent):
+    async def run(self, objective_id: str) -> dict[str, Any]:
+        comp_repo = ObjectiveCompilationRepository(self._session)
+
+        compilation = await comp_repo.get_by_objective(objective_id)
+        context = {
+            "compilation": {
+                "business_type": compilation.business_type if compilation else None,
+                "industry": compilation.industry if compilation else None,
+                "budget": compilation.budget if compilation else None,
+            },
+        }
+
+        result = await self._llm.run(
+            task_type="organization",
+            prompt_template="organization_v1.md",
+            context=context,
+        )
+
+        departments_data = result.get("departments", [])
+        created_depts = []
+
+        for dept_data in departments_data:
+            dept = Department(
+                objective_id=objective_id,
+                name=dept_data.get("name", "Department"),
+                description=dept_data.get("description"),
+                head_count=dept_data.get("head_count", 0),
+                budget=dept_data.get("budget"),
+                status="active",
+            )
+            dept_repo = DepartmentRepository(self._session)
+            dept = await dept_repo.create(dept)
+
+            roles_data = dept_data.get("roles", [])
+            role_repo = RoleRepository(self._session)
+            for role_data in roles_data:
+                role = Role(
+                    department_id=dept.id,
+                    title=role_data.get("title", "Role"),
+                    description=role_data.get("description"),
+                    responsibilities=role_data.get("responsibilities"),
+                    required_skills=role_data.get("required_skills"),
+                    hiring_order=role_data.get("hiring_order", 0),
+                    status="active",
+                    head_count=role_data.get("head_count", 1),
+                )
+                await role_repo.create(role)
+
+            created_depts.append(dept.id)
+
+        await self._save_explanation(
+            entity_type="Organization",
+            entity_id=objective_id,
+            recommendation=f"Generated {len(created_depts)} departments with roles",
+            reasoning="Organization structure derived from business type, industry, and budget via AIKernel",
+            evidence=[str(departments_data)],
+        )
+
+        return {"department_ids": created_depts, "count": len(created_depts)}
+
+
+class DecisionAgent(BaseAgent):
+    async def run(self, objective_id: str) -> dict[str, Any]:
+        decision_repo = DecisionRepository(self._session)
+        comp_repo = ObjectiveCompilationRepository(self._session)
+
+        objective = await ObjectiveRepository(self._session).get(objective_id)
+        compilation = await comp_repo.get_by_objective(objective_id)
+
+        context = {
+            "objective": {"raw": objective.raw_input if objective else ""},
+            "compilation": {
+                "mission": compilation.mission if compilation else None,
+                "budget": compilation.budget if compilation else None,
+                "timeline": compilation.timeline if compilation else None,
+            },
+        }
+
+        result = await self._llm.run(
+            task_type="decision",
+            prompt_template="decision_v1.md",
+            context=context,
+        )
+
+        decision = Decision(
+            objective_id=objective_id,
+            title="Strategic Execution Decision",
+            description="AI-generated strategic recommendation for execution approach",
+            decision_type="strategic",
+            recommendation=result.get("recommendation"),
+            reasoning=result.get("reasoning"),
+            evidence=result.get("evidence"),
+            confidence=result.get("confidence"),
+            risk_level=result.get("risk_level"),
+            affected_departments=result.get("affected_departments"),
+            status="PENDING",
+        )
+        decision = await decision_repo.create(decision)
+
+        options_data = result.get("options", [])
+        for opt_data in options_data:
+            option = DecisionOption(
+                decision_id=decision.id,
+                name=opt_data.get("name", "Option"),
+                description=opt_data.get("description"),
+                pros=opt_data.get("pros"),
+                cons=opt_data.get("cons"),
+                risks=opt_data.get("risks"),
+                cost=opt_data.get("cost"),
+                timeline_impact=opt_data.get("timeline_impact"),
+                confidence=opt_data.get("confidence"),
+                is_recommended=opt_data.get("is_recommended", False),
+            )
+            opt_repo = DecisionOptionRepository(self._session)
+            await opt_repo.create(option)
+
+        await self._save_explanation(
+            entity_type="Decision",
+            entity_id=decision.id,
+            recommendation=result.get("recommendation", ""),
+            reasoning=result.get("reasoning", ""),
+            evidence=result.get("evidence"),
+            confidence=result.get("confidence"),
+            risk_level=result.get("risk_level"),
+            affected_departments=result.get("affected_departments"),
+        )
+
+        return {"decision_id": decision.id, "status": decision.status}
+
+
+class DashboardAgent(BaseAgent):
+    async def run(self, objective_id: str) -> dict[str, Any]:
+        plan_repo = PlanRepository(self._session)
+        risk_repo = RiskRepository(self._session)
+        decision_repo = DecisionRepository(self._session)
+        obj_repo = ObjectiveRepository(self._session)
+        milestone_repo = MilestoneRepository(self._session)
+
+        objective = await obj_repo.get(objective_id)
+        plans = await plan_repo.list_by_objective(objective_id)
+        risks = await risk_repo.list_by_objective(objective_id)
+        decisions = await decision_repo.list_by_objective(objective_id)
+        pending_decisions = await decision_repo.list_pending()
+
+        active_plan = None
+        milestones = []
+        for p in plans:
+            if p.status in ("active", "draft"):
+                active_plan = p
+                milestones = await milestone_repo.list_by_plan(p.id)
+                break
+
+        decision_counts = await decision_repo.count_by_status()
+        risk_counts = await risk_repo.count_by_risk_level(objective_id)
+
+        context = {
+            "objective": {"status": objective.status if objective else None},
+            "plan": {"status": active_plan.status if active_plan else None},
+            "milestones_count": len(milestones),
+            "risks_count": len(risks),
+            "pending_decisions": len(pending_decisions),
+        }
+
+        summary = await self._llm.run(
+            task_type="dashboard",
+            prompt_template="dashboard_v1.md",
+            context=context,
+        )
+
+        return {
+            "summary": summary,
+            "objective": objective,
+            "plan": active_plan,
+            "milestones": milestones,
+            "risks": len(risks),
+            "risk_counts": risk_counts,
+            "decision_counts": decision_counts,
+            "pending_decisions": len(pending_decisions),
+        }

@@ -5,7 +5,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.v1.router import router as api_router
+from app.api.v1.ws import router as ws_router
 from app.config import settings
+from app.kernel import ai_kernel
 from app.logging_ import configure_logging
 from app.middleware import setup_exception_handlers, setup_middleware
 from app.redis_client import redis_client
@@ -37,6 +39,13 @@ setup_middleware(app)
 setup_exception_handlers(app)
 
 app.include_router(api_router)
+app.include_router(ws_router)
+
+# Register WebSocket event listeners on startup
+@app.on_event("startup")
+async def _init_ws_listeners() -> None:
+    from app.api.v1.ws import _setup_event_listeners
+    await _setup_event_listeners()
 
 
 @app.get("/")

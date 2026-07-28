@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     dashboard,
     decisions,
+    features,
     health,
     jobs,
     objectives,
@@ -18,4 +19,5 @@ router.include_router(objectives.router)
 router.include_router(plans.router)
 router.include_router(dashboard.router)
 router.include_router(decisions.router)
+router.include_router(features.router)
 router.include_router(jobs.router)

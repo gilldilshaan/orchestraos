@@ -1,11 +1,25 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Float, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 from app.models.base import BaseEntity
+
+if TYPE_CHECKING:
+    from app.models.extensions import (
+        Decision,
+        Department,
+        ObjectiveCompilation,
+        Plan,
+        Risk,
+        Scenario,
+    )
+    from app.models.job import Job
+    from app.models.user import User
 
 
 class Objective(Base, BaseEntity):
@@ -32,6 +46,24 @@ class Objective(Base, BaseEntity):
     )
     jobs: Mapped[list[Job]] = relationship(
         "Job", back_populates="objective", lazy="selectin", init=False
+    )
+    compilation: Mapped[ObjectiveCompilation | None] = relationship(
+        "ObjectiveCompilation", back_populates="objective", lazy="selectin", init=False, uselist=False
+    )
+    plans: Mapped[list[Plan]] = relationship(
+        "Plan", back_populates="objective", lazy="selectin", init=False
+    )
+    departments: Mapped[list[Department]] = relationship(
+        "Department", back_populates="objective", lazy="selectin", init=False
+    )
+    risks: Mapped[list[Risk]] = relationship(
+        "Risk", back_populates="objective", lazy="selectin", init=False
+    )
+    decisions: Mapped[list[Decision]] = relationship(
+        "Decision", back_populates="objective", lazy="selectin", init=False
+    )
+    scenarios: Mapped[list[Scenario]] = relationship(
+        "Scenario", back_populates="objective", lazy="selectin", init=False
     )
 
 
