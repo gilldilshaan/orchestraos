@@ -1,0 +1,49 @@
+/*
+ * OrchestraOS design tokens — see frontend spec §3.
+ * The product is dark-surface by design (Vercel/Linear-style); there is no
+ * light theme defined in the spec. `.dark` mirrors `:root` so a future
+ * Theme Toggle has a class to hang off without changing today's palette.
+ */
+:root {
+  --bg-base: #05070b;
+  --bg-surface-1: #0a0d14;
+  --bg-surface-2: #10141d;
+  --glass-fill: rgba(16, 20, 29, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --hairline: rgba(255, 255, 255, 0.06);
+
+  --text-primary: #edeff3;
+  --text-secondary: #97a1b0;
+  --text-muted: #5c6577;
+
+  --accent-blue: #3d6bff;
+  --accent-indigo: #4b3fe0;
+  --accent-cyan: #33c9d6;
+  --accent-violet: #8d7bf0;
+
+  --positive: #3fbf83;
+  --warning: #e6a83c;
+  --critical: #e5555f;
+}
+
+.dark {
+  --bg-base: #05070b;
+  --bg-surface-1: #0a0d14;
+  --bg-surface-2: #10141d;
+  --glass-fill: rgba(16, 20, 29, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --hairline: rgba(255, 255, 255, 0.06);
+
+  --text-primary: #edeff3;
+  --text-secondary: #97a1b0;
+  --text-muted: #5c6577;
+
+  --accent-blue: #3d6bff;
+  --accent-indigo: #4b3fe0;
+  --accent-cyan: #33c9d6;
+  --accent-violet: #8d7bf0;
+
+  --positive: #3fbf83;
+  --warning: #e6a83c;
+  --critical: #e5555f;
+}
