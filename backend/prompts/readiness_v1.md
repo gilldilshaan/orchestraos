@@ -2,16 +2,21 @@ Assess the business readiness of this objective:
 
 {{ objective.raw }}
 
-Output JSON with:
-- overall_score: 0-100 overall business readiness
-- market_readiness: 0-100 market opportunity readiness
-- technical_feasibility: 0-100 technical capability readiness
-- budget_readiness: 0-100 financial resource readiness
-- team_readiness: 0-100 team capability readiness
-- timeline_feasibility: 0-100 timeline reasonableness
-- strengths: list of key strength descriptions
-- weaknesses: list of key weakness descriptions
-- recommendations: list of actionable recommendations
-- category_scores: object with detailed sub-scores per category (market_opportunity, competitive_landscape, regulatory, tech_stack, infrastructure, funding, cash_flow, team_experience, team_size, hiring_pipeline, schedule_feasibility, milestone_plan)
+Output JSON ONLY. No markdown. Use these exact fields:
+- overall_score: int 0-100 (overall business readiness)
+- market_readiness: int 0-100 (market opportunity readiness)
+- technical_feasibility: int 0-100 (technical capability readiness)
+- budget_readiness: int 0-100 (financial resource readiness)
+- team_readiness: int 0-100 (team capability readiness)
+- timeline_feasibility: int 0-100 (timeline reasonableness)
+- strengths: [string (key strength descriptions)]
+- weaknesses: [string (key weakness descriptions)]
+- recommendations: [string (actionable recommendations)]
+- category_scores: {market_opportunity: int, competitive_landscape: int, regulatory: int, tech_stack: int, infrastructure: int, funding: int, cash_flow: int, team_experience: int, team_size: int, hiring_pipeline: int, schedule_feasibility: int, milestone_plan: int}
+- recommendation: overall recommendation (string)
+- reasoning: detailed reasoning (string)
+- evidence: list of evidence points (strings)
+- confidence: 0.0 to 1.0
+- risk_level: "low", "medium", "high", or "critical"
 
 Score honestly. A score of 100 means no risk in that category.

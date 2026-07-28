@@ -28,6 +28,8 @@ class ModelRouter:
         "bottleneck": {"provider": "openai", "model": "gpt-4o", "temperature": 0.3, "priority": 1},
         "scenario": {"provider": "openai", "model": "gpt-4o", "temperature": 0.5, "priority": 1},
         "dashboard": {"provider": "openai", "model": "gpt-4o", "temperature": 0.3, "priority": 2},
+        "replan": {"provider": "openai", "model": "gpt-4o", "temperature": 0.4, "priority": 1},
+        "simulation": {"provider": "openai", "model": "gpt-4o", "temperature": 0.5, "priority": 1},
     }
 
     def __init__(self) -> None:
@@ -37,11 +39,13 @@ class ModelRouter:
 
     def get_route(self, task_type: str, **overrides: Any) -> dict[str, Any]:
         route = dict(self.TASK_ROUTES.get(task_type, self.TASK_ROUTES["compile"]))
+        provider = self.get_preferred_provider(task_type)
+        route["provider"] = provider
         route.update(overrides)
         return route
 
     def get_preferred_provider(self, task_type: str) -> str:
-        route = self.get_route(task_type)
+        route = dict(self.TASK_ROUTES.get(task_type, self.TASK_ROUTES["compile"]))
         preferred = route.get("provider", "openai")
         if self._provider_availability.get(preferred, True):
             return preferred

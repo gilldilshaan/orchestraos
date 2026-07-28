@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any
 
@@ -31,10 +32,38 @@ class OutputValidator:
         cleaned = re.sub(r"//[^\n]*", "", cleaned)
         cleaned = re.sub(r"/\*.*?\*/", "", cleaned, flags=re.DOTALL)
 
-        # Try to extract JSON object or array from any surrounding text
-        json_match = re.search(r"(\{.*\}|\[.*\])\s*$", cleaned, re.DOTALL)
-        if json_match:
-            cleaned = json_match.group(1)
+        # Extract the first complete JSON object or array from surrounding text.
+        # Uses non-greedy matching and balanced brace counting.
+        brace_depth = 0
+        bracket_depth = 0
+        json_start = -1
+        for i, ch in enumerate(cleaned):
+            if ch == "{":
+                if brace_depth == 0 and json_start < 0:
+                    json_start = i
+                brace_depth += 1
+            elif ch == "}":
+                brace_depth -= 1
+                if brace_depth == 0 and json_start >= 0:
+                    candidate = cleaned[json_start : i + 1]
+                    try:
+                        json.loads(candidate)
+                        return candidate
+                    except json.JSONDecodeError:
+                        json_start = -1
+            elif ch == "[" and json_start < 0 and brace_depth == 0:
+                if bracket_depth == 0:
+                    json_start = i
+                bracket_depth += 1
+            elif ch == "]" and json_start >= 0 and brace_depth == 0:
+                bracket_depth -= 1
+                if bracket_depth == 0:
+                    candidate = cleaned[json_start : i + 1]
+                    try:
+                        json.loads(candidate)
+                        return candidate
+                    except json.JSONDecodeError:
+                        json_start = -1
 
         return cleaned
 
@@ -53,13 +82,21 @@ class OutputValidator:
             return validated.model_dump(exclude_none=True)
         except ValidationError as e:
             errors = e.errors()
+            filtered = dict(data)
+            repaired: list[str] = []
             for err in errors:
                 loc = ".".join(str(x) for x in err["loc"])
-                if loc in data:
-                    # Try coarsening: if the field has any value, keep it
-                    pass
-            # Best-effort: return original data with validation notes
-            return {**data, "_validation_errors": errors}
+                if loc in filtered:
+                    del filtered[loc]
+                    repaired.append(loc)
+            if repaired:
+                logging.warning("Removed %d invalid fields from %s: %s", len(repaired), schema.__name__, repaired)
+            try:
+                validated = schema(**filtered)
+                return validated.model_dump(exclude_none=True)
+            except ValidationError:
+                filtered["_validation_errors"] = errors
+                return filtered
 
     @staticmethod
     def check_business_rules(

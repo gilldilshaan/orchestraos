@@ -58,6 +58,9 @@ class ObservabilityTracker:
         self._records.append(record)
         return record
 
+    def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
+        return self._estimate_cost(model, input_tokens, output_tokens)
+
     def _estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
         rates = self.ESTIMATED_COST_PER_1K_TOKENS.get(
             model, {"input": 0.0, "output": 0.0}

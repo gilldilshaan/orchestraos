@@ -1,19 +1,28 @@
 Identify and analyze risks for this objective:
 
 Objective: {{ objective.raw }}
-Constraints: {{ objective.constraints }}
+Constraints: {{ constraints }}
 Existing Risks from Compilation: {{ compilation.risks }}
 
-Output JSON with risks array. Each risk has:
-- title: short risk name
-- description: detailed description
-- category: strategic/operational/market/financial/technical
-- probability: 0.0 to 1.0
-- impact: 0.0 to 1.0
-- risk_level: low/medium/high/critical (based on probability * impact)
-- risk_score: probability * impact
-- mitigation: strategy to reduce probability or impact
-- contingency: plan if risk materializes
-- owner: suggested owner role
+Output JSON ONLY. No markdown. Use these exact fields:
+- risks: [{
+    title: string,
+    description: string,
+    category: "strategic" | "operational" | "market" | "financial" | "technical",
+    probability: float 0-1,
+    impact: float 0-1,
+    risk_level: "low" | "medium" | "high" | "critical",
+    risk_score: float (probability * impact),
+    mitigation: string,
+    contingency: string,
+    owner: string (suggested role)
+  }]
+- recommendation: overall risk management recommendation (string)
+- reasoning: detailed reasoning for risk assessment (string)
+- evidence: list of evidence points (strings)
+- confidence: 0.0 to 1.0
+- risk_level: "low", "medium", "high", or "critical"
+- assumptions: list of assumptions made (strings)
+- affected_departments: list of department names (strings)
 
-Cover strategic, operational, market, financial, and technical risk categories.
+Cover strategic, operational, market, financial, and technical risk categories. Be realistic.

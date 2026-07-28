@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
@@ -51,7 +52,7 @@ class EventBus:
             try:
                 await handler(objective_id=objective_id, data=data, context=context)
             except Exception:
-                pass  # Subscriber failures are non-blocking
+                logging.exception("EventBus subscriber error for event %s", event_type)
 
     def get_history(
         self,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import time
 from typing import Any
 
@@ -43,7 +44,7 @@ class AIKernel:
         self.token_tracker = TokenTracker()
         self.cost_tracker = CostTracker()
         self.event_bus = EventBus()
-        self.state_machine = WorkflowStateMachine
+        self.state_machine = WorkflowStateMachine()
 
     async def run(
         self,
@@ -104,7 +105,7 @@ class AIKernel:
             )
 
         try:
-            task_id = f"{task_type}:{hash(resolved_prompt) % 10000}"
+            task_id = f"{task_type}:{hashlib.md5(resolved_prompt.encode()).hexdigest()[:12]}"
             raw_output, attempts = await self.retry_engine.execute(
                 task_type, task_id, _call_llm
             )
@@ -152,7 +153,7 @@ class AIKernel:
         )
         self.token_tracker.add(input_tokens, output_tokens)
 
-        cost = self.observability._estimate_cost(model, input_tokens, output_tokens)
+        cost = self.observability.estimate_cost(model, input_tokens, output_tokens)
         self.cost_tracker.add(model, cost)
 
         return validated

@@ -43,6 +43,28 @@ class PromptManager:
         self._cache[template_name] = content
         return content
 
+    def _resolve_path(self, context: dict[str, Any], path: str) -> str:
+        parts = path.split(".")
+        value: Any = context
+        for part in parts:
+            if isinstance(value, dict):
+                value = value.get(part)
+            elif isinstance(value, list):
+                try:
+                    idx = int(part)
+                    value = value[idx]
+                except (ValueError, IndexError):
+                    return f"{{{{ {path} }}}}"
+            else:
+                return f"{{{{ {path} }}}}"
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, indent=2)
+        return str(value)
+
     def render(
         self,
         template_name: str,
@@ -50,17 +72,13 @@ class PromptManager:
         **kwargs: Any,
     ) -> str:
         template = self.load_template(template_name)
-        variables = {**(context or {}), **kwargs}
+        ctx = {**(context or {}), **kwargs}
         result = template
-        for key, value in variables.items():
-            placeholder = "{{ " + key + " }}"
-            if isinstance(value, str):
-                replacement = value
-            elif isinstance(value, (dict, list)):
-                replacement = json.dumps(value, indent=2)
-            else:
-                replacement = str(value)
-            result = result.replace(placeholder, replacement)
+        import re as _re
+        placeholders = _re.findall(r"\{\{\s*([^}]+)\s*}}", result)
+        for placeholder in placeholders:
+            replacement = self._resolve_path(ctx, placeholder.strip())
+            result = result.replace("{{ " + placeholder.strip() + " }}", replacement)
         return result
 
     def get_available_versions(self, template_base: str) -> list[str]:

@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.llm.client import llm_client
+from app.models.extensions import Explanation
 from app.repositories.extensions_repository import ExplanationRepository
+
+logger = logging.getLogger(__name__)
 
 
 class ExplainableAIService:
     """Ensures every AI recommendation includes explanation metadata.
 
-    This service wraps AI responses to enforce the Explainable AI requirement:
-    every recommendation must include why, reasoning, evidence, assumptions,
+    Every recommendation must include: why, reasoning, evidence, assumptions,
     confidence, trade-offs, risks, dependencies, and affected modules.
     """
 
@@ -48,6 +50,40 @@ class ExplainableAIService:
             "risks": raw_result.get("risks", []),
             "dependencies": raw_result.get("dependencies", []),
             "affected_modules": raw_result.get("affected_modules", []),
+        }
+
+    async def generate_pipeline_explanation(
+        self, objective_id: str, pipeline_result: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Generate a pipeline-level explanation summarizing the full workflow result."""
+        results = pipeline_result.get("results", {})
+        completed = pipeline_result.get("completed_steps", [])
+        errors = pipeline_result.get("errors")
+
+        explanation = Explanation(
+            entity_type="Pipeline",
+            entity_id=objective_id,
+            recommendation=f"Full pipeline completed with {len(completed)} steps" +
+                          (f" ({len(errors)} errors)" if errors else ""),
+            reasoning=f"Pipeline executed steps: {', '.join(completed)}. "
+                      f"Result: {pipeline_result.get('status', 'unknown')}.",
+            evidence=[str(r.get("data", r))[:200] for _, r in list(results.items())[:5]],
+            assumptions=[],
+            confidence=0.9 if not errors else 0.7,
+            risk_level="low" if not errors else "medium",
+            affected_departments=[],
+            dependencies=completed,
+            model_used="pipeline",
+        )
+        created = await self._repo.create(explanation)
+
+        return {
+            "id": created.id,
+            "entity_type": created.entity_type,
+            "entity_id": created.entity_id,
+            "recommendation": created.recommendation,
+            "reasoning": created.reasoning,
+            "confidence": created.confidence,
         }
 
     async def get_explanations(

@@ -22,11 +22,20 @@ class RetryEngine:
     TASK_RETRY_CONFIGS: dict[str, dict[str, Any]] = {
         "compile": {"max_retries": 2, "base_delay": 1.0},
         "plan": {"max_retries": 3, "base_delay": 1.0},
+        "organization": {"max_retries": 2, "base_delay": 1.0},
         "risk": {"max_retries": 2, "base_delay": 1.0},
         "decision": {"max_retries": 3, "base_delay": 1.0},
         "devils_advocate": {"max_retries": 2, "base_delay": 1.5},
+        "dashboard": {"max_retries": 2, "base_delay": 1.0},
         "readiness": {"max_retries": 2, "base_delay": 1.0},
+        "missing_info": {"max_retries": 2, "base_delay": 1.0},
+        "success_probability": {"max_retries": 2, "base_delay": 1.0},
+        "resource_gap": {"max_retries": 2, "base_delay": 1.0},
+        "dependency_graph": {"max_retries": 2, "base_delay": 1.0},
+        "bottleneck": {"max_retries": 2, "base_delay": 1.0},
         "scenario": {"max_retries": 2, "base_delay": 1.0},
+        "replan": {"max_retries": 2, "base_delay": 1.0},
+        "simulation": {"max_retries": 2, "base_delay": 1.0},
     }
 
     def __init__(self) -> None:
@@ -45,7 +54,7 @@ class RetryEngine:
         return delay
 
     def _should_retry(self, attempt: int, config: dict[str, Any], error: Exception) -> bool:
-        if attempt >= config["max_retries"]:
+        if attempt >= config["max_retries"] - 1:
             return False
         error_str = str(error).lower()
         if "rate limit" in error_str or "rate_limit" in error_str:
@@ -58,7 +67,7 @@ class RetryEngine:
             return False
         if "invalid" in error_str or "bad request" in error_str:
             return False
-        return attempt < config["max_retries"] - 1
+        return True
 
     def _record_attempt(
         self, task_id: str, attempt: int, error: str | None, delay: float

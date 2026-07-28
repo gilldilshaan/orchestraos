@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 
@@ -21,7 +21,8 @@ class CacheManager:
 
     def _make_key(self, task_type: str, prompt: str, context_hash: str = "") -> str:
         raw = f"{task_type}:{prompt}:{context_hash}"
-        return hashlib.sha256(raw.encode()).hexdigest()
+        key = hashlib.sha256(raw.encode()).hexdigest()
+        return f"{task_type}:{key}"
 
     def compute_context_hash(self, context: dict[str, Any]) -> str:
         serialized = json.dumps(context, sort_keys=True, default=str)
@@ -36,9 +37,8 @@ class CacheManager:
             self._misses += 1
             return None
 
-        value, timestamp = entry
-        age = (datetime.now(UTC) - timestamp).total_seconds()
-        if age > self._default_ttl:
+        value, expires_at = entry
+        if datetime.now(UTC) > expires_at:
             del self._cache[key]
             self._misses += 1
             return None
@@ -57,8 +57,8 @@ class CacheManager:
         context_hash = self.compute_context_hash(context or {})
         key = self._make_key(task_type, prompt, context_hash)
         ttl = ttl_seconds or self._default_ttl
-        expiry = datetime.now(UTC)
-        self._cache[key] = (value, expiry)
+        expires_at = datetime.now(UTC) + timedelta(seconds=ttl)
+        self._cache[key] = (value, expires_at)
 
     def invalidate(self, task_type: str) -> None:
         keys_to_delete = [k for k in self._cache if k.startswith(task_type)]
