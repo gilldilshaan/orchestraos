@@ -107,10 +107,10 @@ class Department(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False
     )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
     plan_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("plans.id"), default=None, nullable=True
     )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     head_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     budget: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
@@ -152,10 +152,10 @@ class Risk(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False
     )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
     plan_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("plans.id"), default=None, nullable=True
     )
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     category: Mapped[str] = mapped_column(String(100), default="strategic", nullable=False)
     probability: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
@@ -249,12 +249,12 @@ class Scenario(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False
     )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    parameters: Mapped[dict] = mapped_column(JSONB, nullable=False)
     base_plan_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("plans.id"), default=None, nullable=True
     )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    parameters: Mapped[dict] = mapped_column(JSONB, nullable=False)
     results: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
     comparison: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="draft", nullable=False)
@@ -283,8 +283,8 @@ class KPI(Base, BaseEntity):
     __tablename__ = "kpis"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     target_value: Mapped[float] = mapped_column(Float, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     current_value: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     unit: Mapped[str | None] = mapped_column(String(100), default=None, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="on_track", nullable=False)

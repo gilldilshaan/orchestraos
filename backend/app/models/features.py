@@ -39,9 +39,9 @@ class MissingInfoCheck(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False
     )
-    missing_fields: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    critical_missing: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    clarification_questions: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    missing_fields: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    critical_missing: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    clarification_questions: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
     is_complete: Mapped[bool] = mapped_column(default=False, nullable=False)
     refinement_round: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     previous_responses: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
@@ -57,10 +57,10 @@ class DevilsAdvocateCritique(Base, BaseEntity):
         UUID(as_uuid=False), ForeignKey("plans.id"), default=None, nullable=True
     )
     critique_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    counter_arguments: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    risks: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    assumptions: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    better_alternatives: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    counter_arguments: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    risks: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    assumptions: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    better_alternatives: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
     recommendations: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
     model_used: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
 
@@ -94,9 +94,9 @@ class ResourceGap(Base, BaseEntity):
     plan_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("plans.id"), default=None, nullable=True
     )
-    missing_roles: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    missing_skills: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    hiring_needs: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    missing_roles: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    missing_skills: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    hiring_needs: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
     estimated_cost: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     estimated_hiring_timeline: Mapped[str | None] = mapped_column(
         String(255), default=None, nullable=True
@@ -112,11 +112,11 @@ class DependencyGraph(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False
     )
-    nodes: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    edges: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    critical_path: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    circular_dependencies: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
-    blocked_tasks: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    nodes: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    edges: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    critical_path: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    circular_dependencies: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    blocked_tasks: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
     cascade_effects: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
 
 
@@ -127,8 +127,8 @@ class Bottleneck(Base, BaseEntity):
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False
     )
     bottleneck_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    severity: Mapped[str] = mapped_column(String(50), default="medium", nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
+    severity: Mapped[str] = mapped_column(String(50), default="medium", nullable=False)
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     root_cause: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     recommended_resolution: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
@@ -151,10 +151,10 @@ class DecisionMemoryEntry(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False
     )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
     decision_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("decisions.id"), default=None, nullable=True
     )
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
     decision_text: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     reason: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     evidence: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)

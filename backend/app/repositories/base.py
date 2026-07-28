@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ from app.models.base import BaseEntity
 T = TypeVar("T", bound="BaseEntity")
 
 
-class BaseRepository:
+class BaseRepository(Generic[T]):
     def __init__(self, session: AsyncSession, model: type[T]) -> None:
         self._session = session
         self._model = model

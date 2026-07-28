@@ -4,7 +4,7 @@ x-shared-env: &shared-env
 
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     ports:
       - "5432:5432"
     environment:

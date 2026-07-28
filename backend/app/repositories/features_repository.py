@@ -117,6 +117,18 @@ class BottleneckRepository(BaseRepository[Bottleneck]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Bottleneck)
 
+    async def get_by_objective(self, objective_id: str) -> list[Bottleneck]:
+        stmt = (
+            select(Bottleneck)
+            .where(
+                Bottleneck.objective_id == objective_id,
+                Bottleneck.deleted_at.is_(None),
+            )
+            .order_by(Bottleneck.detected_at.desc())
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
     async def list_by_objective(
         self, objective_id: str, *, skip: int = 0, limit: int = 100
     ) -> list[Bottleneck]:

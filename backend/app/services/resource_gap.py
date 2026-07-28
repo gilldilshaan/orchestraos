@@ -29,29 +29,38 @@ class ResourceGapService:
             context=context,
         )
 
-        gaps = result.get("resource_gaps", result.get("gaps", []))
-        overall_risk = result.get("overall_risk", result.get("severity", "medium"))
-
         existing = await self._repo.get_by_objective(objective_id)
         if existing:
             await self._repo.update(existing.id, {
-                "gaps": gaps,
-                "overall_risk": overall_risk,
+                "missing_roles": result.get("missing_roles", []),
+                "missing_skills": result.get("missing_skills", []),
+                "hiring_needs": result.get("hiring_needs", []),
+                "estimated_cost": result.get("estimated_cost"),
+                "estimated_hiring_timeline": result.get("estimated_hiring_timeline"),
+                "hiring_priority": result.get("hiring_priority", []),
+                "available_resources": result.get("available_resources"),
+                "required_resources": result.get("required_resources"),
             })
             rg = existing
         else:
             rg = ResourceGap(
                 objective_id=objective_id,
-                gaps=gaps,
-                overall_risk=overall_risk,
+                missing_roles=result.get("missing_roles", []),
+                missing_skills=result.get("missing_skills", []),
+                hiring_needs=result.get("hiring_needs", []),
+                estimated_cost=result.get("estimated_cost"),
+                estimated_hiring_timeline=result.get("estimated_hiring_timeline"),
+                hiring_priority=result.get("hiring_priority", []),
+                available_resources=result.get("available_resources"),
+                required_resources=result.get("required_resources"),
             )
             rg = await self._repo.create(rg)
 
         return {
             "id": rg.id,
             "objective_id": rg.objective_id,
-            "gaps": rg.gaps,
-            "overall_risk": rg.overall_risk,
+            "missing_roles": rg.missing_roles,
+            "missing_skills": rg.missing_skills,
             "created_at": rg.created_at.isoformat() if rg.created_at else None,
         }
 
@@ -62,7 +71,7 @@ class ResourceGapService:
         return {
             "id": rg.id,
             "objective_id": rg.objective_id,
-            "gaps": rg.gaps,
-            "overall_risk": rg.overall_risk,
+            "missing_roles": rg.missing_roles,
+            "missing_skills": rg.missing_skills,
             "created_at": rg.created_at.isoformat() if rg.created_at else None,
         }

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.kernel import ai_kernel
 from app.models.extensions import KnowledgeGraphEdge, PlanVersion, Scenario
 from app.repositories.extensions_repository import (
+    DecisionRepository,
     DepartmentRepository,
     ExplanationRepository,
     KnowledgeGraphRepository,
