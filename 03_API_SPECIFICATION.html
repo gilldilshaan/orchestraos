@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OrchestraOS — API Specification</title>
+<style>
+@page { size: A4; margin: 2.5cm 2.2cm 2.8cm 2.2cm;
+  @bottom-center { content: counter(page); font-family: Georgia,serif; font-size: 9pt; color: #888; } }
+@page :first { @bottom-center { content: none; } }
+body { font-family: Georgia,'Times New Roman',serif; font-size: 10.5pt; line-height: 1.65;
+  color: #1a1a1a; text-align: justify; orphans: 3; widows: 3; }
+.cover { break-after: page; display: flex; flex-direction: column; justify-content: center;
+  align-items: center; padding-top: 22vh; text-align: center; }
+.cover h1 { font-size: 36pt; letter-spacing: 3pt; color: #0a1724; margin-bottom: 0.2em; }
+.cover .tagline { font-size: 14pt; color: #b8860b; letter-spacing: 1pt; margin-bottom: 0.5em; }
+.cover .subtitle { font-size: 11pt; color: #555; max-width: 70%; margin: 1em auto; }
+.cover .meta { font-size: 10pt; color: #666; margin-top: 4em; }
+.cover .divider { width: 60px; height: 2px; background: #b8860b; margin: 1.5em auto; }
+h1 { font-size: 18pt; color: #0a1724; margin-top: 1.8em; margin-bottom: 0.6em;
+  page-break-after: avoid; border-bottom: 2px solid #b8860b; padding-bottom: 4pt; }
+h2 { font-size: 14pt; color: #1a3a5c; margin-top: 1.4em; margin-bottom: 0.4em; page-break-after: avoid; }
+h3 { font-size: 12pt; color: #2a4a6c; margin-top: 1.2em; margin-bottom: 0.3em; page-break-after: avoid; }
+.toc { break-after: page; }
+.toc h2 { font-size: 18pt; border: none; text-align: center; margin-bottom: 1.5em; }
+.toc ul { list-style: none; padding: 0; columns: 2; column-gap: 3em; }
+.toc li { margin-bottom: 0.4em; font-size: 10pt; }
+.toc li span.num { font-weight: bold; color: #b8860b; display: inline-block; width: 2em; }
+table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 9pt; page-break-inside: avoid; }
+th { background: #0a1724; color: #fff; padding: 6pt 8pt; text-align: left; font-weight: bold; }
+td { padding: 5pt 8pt; border-bottom: 1px solid #ddd; }
+tr:nth-child(even) td { background: #f8f8f8; }
+pre { background: #f4f4f4; border-left: 3px solid #b8860b; padding: 8pt 10pt; font-size: 8pt;
+  font-family: 'Courier New',monospace; line-height: 1.4; overflow-x: auto; margin: 1em 0;
+  page-break-inside: avoid; white-space: pre-wrap; word-wrap: break-word; }
+.page-break { break-before: page; }
+hr.div { border: none; border-top: 1px solid #ddd; margin: 2em 0; }
+ul, ol { margin: 0.5em 0; padding-left: 1.5em; }
+li { margin-bottom: 0.25em; }
+code { background: #f4f4f4; padding: 1pt 4pt; font-size: 9pt; font-family: 'Courier New',monospace; }
+strong { color: #0a1724; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="divider"></div>
+  <h1>OrchestraOS</h1>
+  <p class="tagline">API Specification</p>
+  <div class="divider"></div>
+  <p class="subtitle">Public API &mdash; Internal API &mdash; Job Pattern &mdash; WebSocket Events</p>
+  <p class="meta">Version 2.0 &mdash; July 2026<br>
+  Based on SAS v2.0 &mdash; Prepared for Engineering Team</p>
+</div>
+
+<div class="toc">
+<h2>Table of Contents</h2>
+<ul>
+<li><span class="num">01.</span> Document Control</li>
+<li><span class="num">02.</span> API Overview</li>
+<li><span class="num">03.</span> Authentication</li>
+<li><span class="num">04.</span> Common Patterns</li>
+<li><span class="num">05.</span> Error Handling</li>
+<li><span class="num">06.</span> Rate Limiting</li>
+<li><span class="num">07.</span> Public API &mdash; Objectives</li>
+<li><span class="num">08.</span> Public API &mdash; Plans</li>
+<li><span class="num">09.</span> Public API &mdash; Dashboard</li>
+<li><span class="num">10.</span> Public API &mdash; Decisions</li>
+<li><span class="num">11.</span> Public API &mdash; Jobs</li>
+<li><span class="num">12.</span> Public API &mdash; Health</li>
+<li><span class="num">13.</span> WebSocket Events</li>
+<li><span class="num">14.</span> Internal API &mdash; Overview</li>
+<li><span class="num">15.</span> Internal API &mdash; Endpoints</li>
+<li><span class="num">16.</span> API Versioning</li>
+<li><span class="num">17.</span> SDK &amp; Client Libraries</li>
+</ul>
+</div>
+
+<div class="page-break"></div>
+<h1>1. Document Control</h1>
+<table>
+<thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Changes</th></tr></thead>
+<tbody>
+<tr><td>1.0</td><td>2026-07-27</td><td>Core Team</td><td>Initial API specification</td></tr>
+<tr><td>2.0</td><td>2026-07-27</td><td>Core Team</td><td>Public/Internal split, jobs pattern, UUIDv7, dashboard aggregation, three-tier health</td></tr>
+</tbody>
+</table>
+
+<h1>2. API Overview</h1>
+<p><strong>External API speaks business language. Internal API speaks AI language.</strong></p>
+<p>The public API exposes ~12 endpoints that map to user intent. The AI Kernel internally orchestrates ~10 service endpoints that the frontend never calls directly.</p>
+
+<h3>2.1 Base URLs</h3>
+<table>
+<thead><tr><th>Environment</th><th>Public API</th><th>Internal API</th></tr></thead>
+<tbody>
+<tr><td>Development</td><td><code>http://localhost:8000/api/v1</code></td><td><code>http://localhost:8000/internal</code></td></tr>
+<tr><td>Production</td><td><code>https://api.orchestraos.io/api/v1</code></td><td>(cluster-internal)</td></tr>
+</tbody>
+</table>
+<p>IDs use <strong>UUIDv7</strong> format (time-ordered, sortable). All requests use HTTPS in production. JSON bodies. ISO 8601 dates.</p>
+
+<h3>2.2 Public API Surface</h3>
+<table>
+<thead><tr><th>Category</th><th>Endpoints</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>Objectives</td><td><code>POST /objectives</code><br><code>GET /objectives/:id</code><br><code>POST /objectives/:id/generate</code></td><td>Submit, inspect, and generate plans for objectives</td></tr>
+<tr><td>Plans</td><td><code>GET /plans/:id</code><br><code>POST /plans/:id/approve</code></td><td>View and approve execution plans</td></tr>
+<tr><td>Dashboard</td><td><code>GET /dashboard/:objectiveId</code></td><td>Aggregated view of everything</td></tr>
+<tr><td>Decisions</td><td><code>GET /decisions</code><br><code>GET /decisions/:id</code><br><code>POST /decisions/:id/approve</code><br><code>POST /decisions/:id/reject</code></td><td>Review and resolve AI decisions</td></tr>
+<tr><td>Jobs</td><td><code>GET /jobs/:id</code></td><td>Poll long-running operations</td></tr>
+<tr><td>Health</td><td><code>GET /health/system</code><br><code>GET /health/ai</code><br><code>GET /health/organization</code></td><td>Three-tier health monitoring</td></tr>
+</tbody>
+</table>
+
+<h3>2.3 Internal API Surface</h3>
+<pre>POST /internal/compile              (Objective Compiler)
+POST /internal/generate-plan        (Planner)
+POST /internal/generate-org         (Organization Generator)
+POST /internal/analyze-risk         (Risk Engine)
+POST /internal/simulate             (Simulation Engine)
+POST /internal/generate-evidence    (Evidence Engine)
+POST /internal/memory/insert        (Memory)
+POST /internal/memory/query         (Memory)
+POST /internal/create-decision      (Decision Engine)
+POST /internal/agents/assign        (Agent Manager)</pre>
+
+<div class="page-break"></div>
+<h1>3. Authentication</h1>
+<p><strong>Public API:</strong> Bearer JWT token.</p>
+<pre>Authorization: Bearer eyJhbGciOiJIUzI1NiIs...</pre>
+<table>
+<thead><tr><th>Token</th><th>Lifetime</th><th>Source</th></tr></thead>
+<tbody>
+<tr><td>Access Token</td><td>1 hour</td><td>Supabase Auth</td></tr>
+<tr><td>Refresh Token</td><td>7 days</td><td>Supabase Auth</td></tr>
+</tbody>
+</table>
+<p><strong>Internal API:</strong> Service-to-service API key.</p>
+<pre>X-Internal-Key: isk_abc123def456</pre>
+<p>Errors: 401 (missing), 403 (insufficient).</p>
+
+<h1>4. Common Patterns</h1>
+
+<h3>4.1 Async Job Pattern</h3>
+<p>Operations taking &gt;1s return <strong>202 Accepted</strong> with a <code>job_id</code>. Client polls <code>GET /jobs/:id</code>.</p>
+<pre>POST /objectives/:id/generate
+  → 202 Accepted
+  → { job_id: "018f3a7c-...", status: "queued" }
+
+GET /jobs/018f3a7c-...
+  → { status: "running", progress: { percent: 65, step: "Simulation Engine" } }
+  → { status: "completed", result: { plan_id: "...", decision_ids: [...] } }
+  → { status: "failed", error: { code: "E-001", message: "..." } }</pre>
+
+<h3>4.2 Pagination &amp; Fields</h3>
+<pre>GET /decisions?cursor=2026-07-27T14:30:00Z&limit=20
+GET /objectives?fields=id,raw_input,status
+X-Trace-Id: trace_abc123</pre>
+
+<div class="page-break"></div>
+<h1>5. Error Handling</h1>
+<table>
+<thead><tr><th>Code</th><th>HTTP</th><th>Name</th><th>Retryable</th></tr></thead>
+<tbody>
+<tr><td>E-001</td><td>502</td><td>LLM_PROVIDER_ERROR</td><td>Yes</td></tr>
+<tr><td>E-002</td><td>504</td><td>MODULE_TIMEOUT</td><td>Yes</td></tr>
+<tr><td>E-003</td><td>500</td><td>AGENT_FAILURE</td><td>Yes</td></tr>
+<tr><td>E-004</td><td>503</td><td>DB_CONNECTION_ERROR</td><td>Yes</td></tr>
+<tr><td>E-005</td><td>422</td><td>VALIDATION_ERROR</td><td>No</td></tr>
+<tr><td>E-006</td><td>401</td><td>AUTH_ERROR</td><td>No</td></tr>
+<tr><td>E-007</td><td>403</td><td>FORBIDDEN</td><td>No</td></tr>
+<tr><td>E-008</td><td>404</td><td>NOT_FOUND</td><td>No</td></tr>
+<tr><td>E-009</td><td>429</td><td>RATE_LIMITED</td><td>Yes</td></tr>
+<tr><td>E-010</td><td>409</td><td>CONFLICT</td><td>No</td></tr>
+<tr><td>E-011</td><td>507</td><td>RESOURCE_EXHAUSTED</td><td>Yes</td></tr>
+<tr><td>E-012</td><td>400</td><td>BAD_REQUEST</td><td>No</td></tr>
+</tbody>
+</table>
+
+<h1>6. Rate Limiting</h1>
+<table>
+<thead><tr><th>Tier</th><th>Requests/min</th><th>Burst</th></tr></thead>
+<tbody>
+<tr><td>Free</td><td>60</td><td>100</td></tr>
+<tr><td>Pro</td><td>600</td><td>1000</td></tr>
+<tr><td>Enterprise</td><td>6000</td><td>10000</td></tr>
+</tbody>
+</table>
+<p>Health endpoints exempt.</p>
+
+<div class="page-break"></div>
+<h1>7. Public API &mdash; Objectives</h1>
+
+<h3>7.1 Submit Objective</h3>
+<pre>POST /api/v1/objectives
+Body: { "raw_input": "Launch an AI SaaS in 90 days with a team of 5", "context": {} }
+
+Response 201:
+{
+  "data": {
+    "id": "018f3a6b-7e5c-7b00-b3c2-9c3a1b2c3d4e",
+    "raw_input": "Launch an AI SaaS in 90 days with a team of 5",
+    "status": "compiled",
+    "summary": "Launch new AI SaaS product with a team of 5 within 90 days",
+    "constraints": { "timeline_days": 90, "team_size": 5 },
+    "success_criteria": ["MVP deployed", "10 beta customers", "CI/CD pipeline"],
+    "confidence": 0.85,
+    "created_at": "2026-07-27T14:30:00Z"
+  }
+}</pre>
+
+<h3>7.2 Get Objective</h3>
+<pre>GET /api/v1/objectives/:id</pre>
+
+<h3>7.3 Generate Plan (Async)</h3>
+<pre>POST /api/v1/objectives/:id/generate
+
+Response 202:
+{
+  "data": {
+    "job_id": "018f3a7c-8e6d-4a00-c3d4-5e6f7a8b9c0d",
+    "status": "queued",
+    "estimated_duration_seconds": 25
+  }
+}</pre>
+<p>Internally chains: Planner &rarr; Memory &rarr; Risk &rarr; Simulation &rarr; Org Gen &rarr; Evidence &rarr; Decisions.</p>
+
+<div class="page-break"></div>
+<h1>8. Public API &mdash; Plans</h1>
+
+<h3>8.1 Get Plan</h3>
+<pre>GET /api/v1/plans/:id
+
+Response 200:
+{
+  "data": {
+    "id": "018f3a8d-...",
+    "objective_id": "018f3a6b-...",
+    "status": "generated",
+    "selected_strategy": "Plan A (Recommended)",
+    "strategies": [
+      { "name": "Plan A (Recommended)", "timeline_days": 90, "cost_usd": 150000, "risk_score": 0.35, "success_probability": 0.72 },
+      { "name": "Plan B (Conservative)", "timeline_days": 120, "risk_score": 0.20, "success_probability": 0.80 },
+      { "name": "Plan C (Aggressive)", "timeline_days": 60, "risk_score": 0.65, "success_probability": 0.35 }
+    ],
+    "critical_path": ["Database schema", "Backend API", "Frontend UI"],
+    "risks": [{ "category": "technical", "risk": "API latency at scale" }],
+    "confidence": 0.82
+  }
+}</pre>
+
+<h3>8.2 Approve Plan</h3>
+<pre>POST /api/v1/plans/:id/approve
+Body: { "selected_strategy": "Plan A (Recommended)", "modifications": { "timeline_days": 95 } }
+
+Response 200:
+{
+  "data": {
+    "plan_id": "018f3a8d-...",
+    "status": "approved",
+    "organization": { "departments_created": 3, "total_agents": 8 },
+    "tasks_created": 12,
+    "approved_at": "2026-07-27T14:30:00Z"
+  }
+}</pre>
+
+<div class="page-break"></div>
+<h1>9. Public API &mdash; Dashboard</h1>
+<p>Single aggregated endpoint. The frontend makes <strong>one</strong> request instead of 6 separate calls.</p>
+<pre>GET /api/v1/dashboard/:objectiveId
+
+Response 200:
+{
+  "data": {
+    "objective": {
+      "id": "018f3a6b-...",
+      "summary": "Launch new AI SaaS product",
+      "status": "executing",
+      "progress_percent": 35,
+      "current_step": "Executing tasks"
+    },
+    "organization": {
+      "departments": [
+        { "name": "Engineering", "status": "active", "agent_count": 3, "health_score": 0.92 },
+        { "name": "Marketing", "status": "active", "agent_count": 1, "health_score": 0.85 }
+      ],
+      "health": { "execution_score": 0.92, "coordination_score": 0.88, "risk_index": 0.25 }
+    },
+    "plan": {
+      "id": "018f3a8d-...",
+      "status": "approved",
+      "selected_strategy": "Plan A (Recommended)",
+      "timeline_days": 90, "days_elapsed": 5, "days_remaining": 85,
+      "critical_path": ["Database schema", "Backend API", "Frontend UI"],
+      "top_risks": ["API latency at scale"]
+    },
+    "pending_decisions": 3,
+    "recent_activity": [
+      { "type": "task.completed", "description": "Database schema designed", "timestamp": "..." },
+      { "type": "decision.created", "description": "Frontend framework decision", "timestamp": "..." }
+    ]
+  }
+}</pre>
+
+<div class="page-break"></div>
+<h1>10. Public API &mdash; Decisions</h1>
+
+<h3>10.1 List Decisions</h3>
+<pre>GET /api/v1/decisions?status=pending&objective_id=018f3a6b-...
+
+Response 200:
+{
+  "data": [{
+    "id": "018f3a9e-...",
+    "question": "Which frontend framework should we use?",
+    "options": [
+      { "id": "opt_a", "label": "React + Next.js" },
+      { "id": "opt_b", "label": "Vue + Nuxt" }
+    ],
+    "recommendation": { "option_id": "opt_a", "summary": "Next.js provides SSR and larger ecosystem", "confidence": 0.91 },
+    "confidence": 0.91,
+    "authority_level": "recommend",
+    "status": "pending",
+    "created_at": "2026-07-27T14:20:00Z"
+  }]
+}</pre>
+
+<h3>10.2 Get Decision</h3>
+<pre>GET /api/v1/decisions/:id
+Returns full decision with evidence and risk assessment.</pre>
+
+<h3>10.3 Approve Decision</h3>
+<pre>POST /api/v1/decisions/:id/approve
+Body: {
+  "approved": true,
+  "option_id": "opt_a",
+  "reason": "Next.js aligns with our team's expertise",
+  "feedback": "Consider using the Pages Router for simpler MVP",
+  "attachments": []
+}
+
+Response 200: { "status": "approved", "resolved_by": "user_abc123", "accepted_option": "React + Next.js" }</pre>
+
+<h3>10.4 Reject Decision</h3>
+<pre>POST /api/v1/decisions/:id/reject
+Body: {
+  "approved": false,
+  "option_id": "opt_b",
+  "reason": "Team has more Vue experience",
+  "feedback": "Regenerate plan with Vue + Nuxt",
+  "attachments": ["https://team-skill-matrix.internal"]
+}
+
+Response 200: { "status": "rejected", "rejection_reason": "Team has more Vue experience" }</pre>
+
+<div class="page-break"></div>
+<h1>11. Public API &mdash; Jobs</h1>
+<pre>GET /api/v1/jobs/:job_id
+
+Response (running):
+{
+  "data": {
+    "id": "018f3a7c-...",
+    "type": "plan_generation",
+    "status": "running",
+    "progress": { "percent": 65, "step": "Simulation Engine", "message": "Comparing execution strategies" },
+    "estimated_completion_at": "2026-07-27T14:30:25Z"
+  }
+}
+
+Response (completed):
+{
+  "data": {
+    "id": "018f3a7c-...",
+    "status": "completed",
+    "result": { "plan_id": "...", "decision_ids": ["..."], "duration_seconds": 22 }
+  }
+}
+
+Response (failed):
+{
+  "data": {
+    "id": "018f3a7c-...",
+    "status": "failed",
+    "error": { "code": "E-001", "message": "LLM provider unavailable after 3 retries" }
+  }
+}</pre>
+
+<h3>Job Types</h3>
+<table>
+<thead><tr><th>Type</th><th>Created By</th><th>Duration</th></tr></thead>
+<tbody>
+<tr><td><code>plan_generation</code></td><td><code>POST /objectives/:id/generate</code></td><td>15-30s</td></tr>
+<tr><td><code>plan_approval</code></td><td><code>POST /plans/:id/approve</code></td><td>5-10s</td></tr>
+</tbody>
+</table>
+
+<div class="page-break"></div>
+<h1>12. Public API &mdash; Health</h1>
+<p>Three distinct endpoints for three distinct concerns.</p>
+
+<h3>12.1 System Health</h3>
+<pre>GET /api/v1/health/system
+{
+  "status": "healthy",
+  "version": "2.0",
+  "uptime_seconds": 3600,
+  "dependencies": {
+    "database": { "status": "ok", "latency_ms": 5 },
+    "redis": { "status": "ok", "latency_ms": 2 },
+    "openai": { "status": "ok" },
+    "anthropic": { "status": "degraded" }
+  }
+}</pre>
+
+<h3>12.2 AI Health</h3>
+<pre>GET /api/v1/health/ai
+{
+  "status": "healthy",
+  "modules": [
+    { "name": "ObjectiveCompiler", "status": "healthy" },
+    { "name": "Planner", "status": "healthy" },
+    { "name": "RiskEngine", "status": "degraded", "error_rate_5min": 0.06 }
+  ],
+  "active_agents": 21,
+  "pending_tasks": 8
+}</pre>
+
+<h3>12.3 Organization Health</h3>
+<pre>GET /api/v1/health/organization
+{
+  "status": "healthy",
+  "metrics": {
+    "execution_score": 0.92,
+    "coordination_score": 0.88,
+    "risk_index": 0.25,
+    "trust_score": 0.85,
+    "decision_quality": 0.90
+  },
+  "active_objectives": 3,
+  "active_departments": 7,
+  "pending_decisions": 4
+}</pre>
+
+<div class="page-break"></div>
+<h1>13. WebSocket Events</h1>
+<pre>wss://api.orchestraos.io/ws/v1?token=eyJ...</pre>
+
+<h3>13.1 Subscribe</h3>
+<pre>{ "type": "subscribe", "channels": ["objective:018f3a6b-...:progress", "decisions:new", "health:alert"] }</pre>
+
+<h3>13.2 Event Channels</h3>
+<table>
+<thead><tr><th>Channel</th><th>Trigger</th></tr></thead>
+<tbody>
+<tr><td><code>objective:{id}:progress</code></td><td>Step progress (percent, step name, message)</td></tr>
+<tr><td><code>objective:{id}:state</code></td><td>Status change</td></tr>
+<tr><td><code>plan:{id}:state</code></td><td>Plan status change</td></tr>
+<tr><td><code>decisions:new</code></td><td>New decision needing review</td></tr>
+<tr><td><code>decisions:{id}:resolved</code></td><td>Decision approved/rejected</td></tr>
+<tr><td><code>organization:{id}:restructured</code></td><td>Department merge/split</td></tr>
+<tr><td><code>health:alert</code></td><td>Threshold breach</td></tr>
+<tr><td><code>job:{id}:progress</code></td><td>Running job update</td></tr>
+<tr><td><code>system:error</code></td><td>System error</td></tr>
+</tbody>
+</table>
+
+<h3>13.3 Progress Event Example</h3>
+<pre>{
+  "channel": "objective:018f3a6b-...:progress",
+  "event": "objective.progress",
+  "data": {
+    "objective_id": "018f3a6b-...",
+    "percent": 65,
+    "step": "Simulation Engine",
+    "message": "Comparing execution strategies. 3 scenarios generated."
+  },
+  "timestamp": "2026-07-27T14:30:16.123Z"
+}</pre>
+
+<h3>13.4 Client Messages</h3>
+<pre>subscribe { channels }, unsubscribe { channels }, ping {}, pong {}</pre>
+
+<div class="page-break"></div>
+<h1>14. Internal API &mdash; Overview</h1>
+<p>Used exclusively by the AI Kernel for service-to-service communication. Not internet-facing.</p>
+<pre>X-Internal-Key: isk_abc123def456</pre>
+
+<h3>14.1 AI Kernel Orchestration Flow</h3>
+<pre>AI Kernel
+  ├── POST /internal/compile           (Objective Compiler)
+  ├── POST /internal/memory/query      (Memory)
+  ├── POST /internal/generate-plan     (Planner)
+  ├── POST /internal/analyze-risk      (Risk Engine)
+  ├── POST /internal/simulate          (Simulation Engine)
+  ├── POST /internal/generate-org      (Org Generator)
+  ├── POST /internal/generate-evidence (Evidence Engine)
+  ├── POST /internal/create-decision   (Decision Engine)
+  └── POST /internal/agents/assign     (Agent Manager)</pre>
+
+<div class="page-break"></div>
+<h1>15. Internal API &mdash; Endpoints</h1>
+
+<h3>15.1 Objective Compiler</h3>
+<pre>POST /internal/compile
+Body: { "raw_input": "Launch an AI SaaS in 90 days", "context": {}, "trace_id": "..." }
+Response: { "goal_id": "018f3a6b-...", "compiled_spec": {...}, "confidence": 0.85, "duration_ms": 3200 }</pre>
+
+<h3>15.2 Planner</h3>
+<pre>POST /internal/generate-plan
+Body: { "goal_id": "...", "compiled_spec": {...}, "trace_id": "..." }
+Response: { "plan_id": "...", "plan_data": {...}, "confidence": 0.82, "duration_ms": 8500 }</pre>
+
+<h3>15.3 Risk Engine</h3>
+<pre>POST /internal/analyze-risk
+Body: { "plan_id": "...", "plan_data": {...}, "trace_id": "..." }</pre>
+
+<h3>15.4 Simulation Engine</h3>
+<pre>POST /internal/simulate
+Body: { "plan_id": "...", "strategies": ["conservative", "balanced", "aggressive"], "trace_id": "..." }</pre>
+
+<h3>15.5 Organization Generator</h3>
+<pre>POST /internal/generate-org
+Body: { "plan_id": "...", "objective_id": "...", "trace_id": "..." }</pre>
+
+<h3>15.6 Evidence Engine</h3>
+<pre>POST /internal/generate-evidence
+Body: { "claim": "Adding 2 engineers will reduce timeline by 30%", "context": {}, "trace_id": "..." }</pre>
+
+<h3>15.7 Memory</h3>
+<pre>POST /internal/memory/insert
+Body: { "memory_type": "episodic", "content": "Project X failed due to scope creep", "importance": 0.85 }
+
+POST /internal/memory/query
+Body: { "query": "What caused previous failures?", "memory_types": ["episodic"], "limit": 10, "threshold": 0.7 }</pre>
+
+<h3>15.8 Decision Engine</h3>
+<pre>POST /internal/create-decision
+Body: {
+  "objective_id": "...",
+  "question": "Which frontend framework?",
+  "options": [{ "id": "opt_a", "label": "React + Next.js" }, { "id": "opt_b", "label": "Vue + Nuxt" }],
+  "recommendation": { "option_id": "opt_a", "rationale": "Next.js provides SSR and larger ecosystem" },
+  "confidence": 0.91,
+  "authority_level": "recommend",
+  "trace_id": "..."
+}</pre>
+
+<h3>15.9 Agent Manager</h3>
+<pre>POST /internal/agents/assign
+Body: { "task_id": "...", "required_capabilities": ["api_design"], "department_id": "...", "trace_id": "..." }</pre>
+
+<div class="page-break"></div>
+<h1>16. API Versioning</h1>
+<p>URL path versioning: <code>/api/v1/objectives</code>.</p>
+<table>
+<thead><tr><th>Phase</th><th>Duration</th><th>Behavior</th></tr></thead>
+<tbody>
+<tr><td>Active</td><td>&mdash;</td><td>Full support</td></tr>
+<tr><td>Deprecated</td><td>6 months</td><td>Warning headers</td></tr>
+<tr><td>Sunset</td><td>&mdash;</td><td>410 Gone</td></tr>
+</tbody>
+</table>
+<pre>Sunset: Sat, 27 Jan 2027 00:00:00 GMT
+Deprecation: true</pre>
+
+<h1>17. SDK &amp; Client Libraries</h1>
+
+<h3>17.1 Python</h3>
+<pre>from orchestraos import OrchestraOS
+client = OrchestraOS(api_key="sk-...")
+
+obj = client.objectives.create("Launch an AI SaaS in 90 days")
+job = client.objectives.generate(obj.id)
+
+while (status := client.jobs.get(job.id)).status == "running":
+    print(f"Progress: {status.progress.percent}%")
+
+plan = client.plans.get(status.result.plan_id)
+client.plans.approve(plan.id, strategy="Plan A (Recommended)")
+
+for decision in client.decisions.list(status="pending"):
+    client.decisions.approve(decision.id, option_id="opt_a")
+
+dashboard = client.dashboard.get(obj.id)</pre>
+
+<h3>17.2 JavaScript</h3>
+<pre>import { OrchestraOS } from '@orchestraos/sdk';
+const client = new OrchestraOS({ apiKey: 'sk-...' });
+
+const obj = await client.objectives.create('Launch an AI SaaS');
+
+const job = await client.objectives.generate(obj.id);
+const plan = await client.jobs.poll(job.id, { interval: 2000 });
+
+await client.plans.approve(plan.plan_id, { strategy: 'Plan A (Recommended)' });
+
+const dashboard = await client.dashboard.get(obj.id);</pre>
+
+<h3>17.3 cURL</h3>
+<pre># Submit objective
+curl -X POST https://api.orchestraos.io/api/v1/objectives \
+  -H "Authorization: Bearer eyJ..." -H "Content-Type: application/json" \
+  -d '{"raw_input": "Launch an AI SaaS in 90 days"}'
+
+# Generate plan (async)
+curl -X POST https://api.orchestraos.io/api/v1/objectives/018f3a6b-.../generate \
+  -H "Authorization: Bearer eyJ..."
+
+# Poll job
+curl https://api.orchestraos.io/api/v1/jobs/018f3a7c-... \
+  -H "Authorization: Bearer eyJ..."
+
+# Get dashboard
+curl https://api.orchestraos.io/api/v1/dashboard/018f3a6b-... \
+  -H "Authorization: Bearer eyJ..."
+
+# Approve decision
+curl -X POST https://api.orchestraos.io/api/v1/decisions/018f3a9e-.../approve \
+  -H "Authorization: Bearer eyJ..." -H "Content-Type: application/json" \
+  -d '{"approved": true, "option_id": "opt_a", "reason": "Best fit for our stack"}'</pre>
+
+<hr class="div">
+<p style="text-align:center; margin-top:3em; color:#888;">&mdash; End of API Specification &mdash;</p>
+</body>
+</html>

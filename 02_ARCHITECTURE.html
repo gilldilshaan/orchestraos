@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OrchestraOS — Software Architecture Specification</title>
+<style>
+@page { size: A4; margin: 2.5cm 2.2cm 2.8cm 2.2cm;
+  @bottom-center { content: counter(page); font-family: Georgia,serif; font-size: 9pt; color: #888; } }
+@page :first { @bottom-center { content: none; } }
+body { font-family: Georgia,'Times New Roman',serif; font-size: 10.5pt; line-height: 1.65;
+  color: #1a1a1a; text-align: justify; orphans: 3; widows: 3; }
+.cover { break-after: page; display: flex; flex-direction: column; justify-content: center;
+  align-items: center; padding-top: 22vh; text-align: center; }
+.cover h1 { font-size: 36pt; letter-spacing: 3pt; color: #0a1724; margin-bottom: 0.2em; }
+.cover .tagline { font-size: 14pt; color: #b8860b; letter-spacing: 1pt; margin-bottom: 0.5em; }
+.cover .subtitle { font-size: 11pt; color: #555; max-width: 70%; margin: 1em auto; }
+.cover .meta { font-size: 10pt; color: #666; margin-top: 4em; }
+.cover .divider { width: 60px; height: 2px; background: #b8860b; margin: 1.5em auto; }
+h1 { font-size: 18pt; color: #0a1724; margin-top: 1.8em; margin-bottom: 0.6em;
+  page-break-after: avoid; border-bottom: 2px solid #b8860b; padding-bottom: 4pt; }
+h2 { font-size: 14pt; color: #1a3a5c; margin-top: 1.4em; margin-bottom: 0.4em; page-break-after: avoid; }
+h3 { font-size: 12pt; color: #2a4a6c; margin-top: 1.2em; margin-bottom: 0.3em; page-break-after: avoid; }
+.toc { break-after: page; }
+.toc h2 { font-size: 18pt; border: none; text-align: center; margin-bottom: 1.5em; }
+.toc ul { list-style: none; padding: 0; columns: 2; column-gap: 3em; }
+.toc li { margin-bottom: 0.4em; font-size: 10pt; }
+.toc li span.num { font-weight: bold; color: #b8860b; display: inline-block; width: 2em; }
+table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 9pt; page-break-inside: avoid; }
+th { background: #0a1724; color: #fff; padding: 6pt 8pt; text-align: left; font-weight: bold; }
+td { padding: 5pt 8pt; border-bottom: 1px solid #ddd; }
+tr:nth-child(even) td { background: #f8f8f8; }
+pre { background: #f4f4f4; border-left: 3px solid #b8860b; padding: 8pt 10pt; font-size: 8pt;
+  font-family: 'Courier New',monospace; line-height: 1.4; overflow-x: auto; margin: 1em 0;
+  page-break-inside: avoid; white-space: pre-wrap; word-wrap: break-word; }
+.diagram { font-family: 'Courier New',monospace; font-size: 8pt; line-height: 1.2;
+  background: #0a1724; color: #d4d4d4; padding: 10pt; margin: 1em 0;
+  white-space: pre; overflow-x: auto; page-break-inside: avoid; }
+.callout { border-left: 4px solid #b8860b; background: #fefcf8; padding: 8pt 12pt;
+  margin: 1em 0; page-break-inside: avoid; }
+.callout.warn { border-left-color: #c0392b; background: #fdf2f0; }
+.callout.info { border-left-color: #2980b9; background: #f0f6fb; }
+.page-break { break-before: page; }
+hr.div { border: none; border-top: 1px solid #ddd; margin: 2em 0; }
+ul, ol { margin: 0.5em 0; padding-left: 1.5em; }
+li { margin-bottom: 0.25em; }
+code { background: #f4f4f4; padding: 1pt 4pt; font-size: 9pt; font-family: 'Courier New',monospace; }
+strong { color: #0a1724; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="divider"></div>
+  <h1>OrchestraOS</h1>
+  <p class="tagline">Software Architecture Specification</p>
+  <div class="divider"></div>
+  <p class="subtitle">Architectural Drivers, System Architecture, AI Kernel Deep-Dive, Module Design, Communication Protocol, Observability &amp; Failure Handling</p>
+  <p class="meta">Version 2.0 &mdash; July 2026<br>
+  Based on TPRD v1.0 &mdash; Prepared for Engineering Team &amp; Technical Review</p>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+<h2>Table of Contents</h2>
+<ul>
+<li><span class="num">01.</span> Document Control</li>
+<li><span class="num">02.</span> Architectural Principles</li>
+<li><span class="num">03.</span> Architectural Drivers</li>
+<li><span class="num">04.</span> System Architecture Overview</li>
+<li><span class="num">05.</span> Technology Stack</li>
+<li><span class="num">06.</span> Request Lifecycle</li>
+<li><span class="num">07.</span> AI Kernel</li>
+<li><span class="num">08.</span> Module Architecture</li>
+<li><span class="num">09.</span> Module Interface Contracts</li>
+<li><span class="num">10.</span> Communication Protocol</li>
+<li><span class="num">11.</span> Data Flow</li>
+<li><span class="num">12.</span> Decision Flow</li>
+<li><span class="num">13.</span> Failure Handling</li>
+<li><span class="num">14.</span> API Specification</li>
+<li><span class="num">15.</span> Database Schema</li>
+<li><span class="num">16.</span> Agent Architecture</li>
+<li><span class="num">17.</span> LLM Abstraction Layer</li>
+<li><span class="num">18.</span> Frontend Architecture</li>
+<li><span class="num">19.</span> Folder Structure</li>
+<li><span class="num">20.</span> Deployment Architecture</li>
+<li><span class="num">21.</span> Development Setup</li>
+<li><span class="num">22.</span> Testing Strategy</li>
+<li><span class="num">23.</span> Observability</li>
+<li><span class="num">24.</span> Performance Targets</li>
+<li><span class="num">25.</span> Security Architecture</li>
+<li><span class="num">26.</span> Appendix: Sequence Diagrams</li>
+</ul>
+</div>
+
+<!-- 1. DOCUMENT CONTROL -->
+<div class="page-break"></div>
+<h1>1. Document Control</h1>
+<table>
+<thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Changes</th></tr></thead>
+<tbody>
+<tr><td>1.0</td><td>2026-07-27</td><td>Core Team</td><td>Initial architecture</td></tr>
+<tr><td>2.0</td><td>2026-07-27</td><td>Core Team</td><td>SAS upgrade: drivers, lifecycle, AI Kernel deep, comm protocol, observability, decision flow, failure handling, per-module folders</td></tr>
+</tbody>
+</table>
+
+<!-- 2. ARCHITECTURAL PRINCIPLES -->
+<div class="page-break"></div>
+<h1>2. Architectural Principles</h1>
+<h2>2.1 Design Tenets</h2>
+<table>
+<thead><tr><th>Principle</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>Objective First</td><td>Business objectives drive all module execution</td></tr>
+<tr><td>Explainability</td><td>Every output includes structured reasoning</td></tr>
+<tr><td>Human Oversight</td><td>AI recommends, humans approve (configurable threshold)</td></tr>
+<tr><td>Modularity</td><td>Every AI module is independently replaceable</td></tr>
+<tr><td>Extensibility</td><td>New modules integrate without redesigning the platform</td></tr>
+<tr><td>Evidence Driven</td><td>Every recommendation references supporting context</td></tr>
+</tbody>
+</table>
+<h2>2.2 Key Architectural Decisions</h2>
+<table>
+<thead><tr><th>Decision</th><th>Choice</th><th>Rationale</th></tr></thead>
+<tbody>
+<tr><td>Backend framework</td><td>FastAPI</td><td>Async-native, Pydantic validation, OpenAPI docs</td></tr>
+<tr><td>Frontend framework</td><td>Next.js 14+ App Router</td><td>SSR, React Server Components, API routes</td></tr>
+<tr><td>Primary database</td><td>Supabase (PostgreSQL)</td><td>Managed Postgres, real-time, auth, pgvector</td></tr>
+<tr><td>Vector storage</td><td>pgvector</td><td>Single database, no extra infra</td></tr>
+<tr><td>LLM providers</td><td>Multi-provider router</td><td>No vendor lock-in, fallback, cost optimization</td></tr>
+<tr><td>Message protocol</td><td>REST + WebSocket</td><td>REST for CRUD, WebSocket for real-time state</td></tr>
+<tr><td>Caching</td><td>Redis</td><td>Distributed, fast, widely supported</td></tr>
+<tr><td>Deployment</td><td>Docker + VPS</td><td>Portable, simple, cost-effective for hackathon</td></tr>
+<tr><td>Auth</td><td>Supabase Auth + JWT</td><td>Built-in, RLS integration, refresh tokens</td></tr>
+</tbody>
+</table>
+
+<!-- 3. ARCHITECTURAL DRIVERS -->
+<div class="page-break"></div>
+<h1>3. Architectural Drivers</h1>
+<p>This section explains <strong>why every major design decision exists</strong>. These drivers constrain and guide all architectural choices.</p>
+
+<h3>3.1 Performance</h3>
+<table><thead><tr><th>Driver</th><th>Constraint</th><th>Design Response</th></tr></thead>
+<tbody>
+<tr><td>Pipeline latency</td><td>Full cycle &lt;30s</td><td>Async execution, parallel module dispatch, caching</td></tr>
+<tr><td>LLM latency</td><td>Varies by model (2-15s)</td><td>Multi-model routing, timeout with fallback, streaming</td></tr>
+<tr><td>UI responsiveness</td><td>Page load &lt;2s P95</td><td>SSR via Next.js, TanStack Query caching, CDN assets</td></tr>
+</tbody></table>
+
+<h3>3.2 Scalability</h3>
+<table><thead><tr><th>Driver</th><th>Constraint</th><th>Design Response</th></tr></thead>
+<tbody>
+<tr><td>Horizontal scale</td><td>Add modules without rewrites</td><td>Plugin registry pattern, stable module contracts</td></tr>
+<tr><td>Data growth</td><td>Memory grows unbounded</td><td>Tiered storage (hot/warm/cold), importance-based pruning</td></tr>
+<tr><td>Concurrent objs</td><td>Multiple objectives</td><td>AI Kernel resource allocator, priority scheduling</td></tr>
+</tbody></table>
+
+<h3>3.3 Explainability</h3>
+<table><thead><tr><th>Driver</th><th>Constraint</th><th>Design Response</th></tr></thead>
+<tbody>
+<tr><td>Auditability</td><td>Every decision traceable</td><td>Evidence Engine per claim, structured decision records</td></tr>
+<tr><td>Confidence</td><td>Calibrated trust signals</td><td>Confidence scores from historical accuracy, thresholds</td></tr>
+<tr><td>Transparency</td><td>Human readable reasoning</td><td>Natural language reasoning attached to every verdict</td></tr>
+</tbody></table>
+
+<h3>3.4 Extensibility</h3>
+<table><thead><tr><th>Driver</th><th>Constraint</th><th>Design Response</th></tr></thead>
+<tbody>
+<tr><td>Module addition</td><td>Add without kernel changes</td><td>Module Registry, typed input/output contracts</td></tr>
+<tr><td>Provider swap</td><td>Swap LLM provider</td><td>Abstract LLM provider interface, model router</td></tr>
+<tr><td>Agent types</td><td>New agent roles</td><td>BaseAgent class, agent registration by capability</td></tr>
+</tbody></table>
+
+<h3>3.5 Human Oversight</h3>
+<table><thead><tr><th>Driver</th><th>Constraint</th><th>Design Response</th></tr></thead>
+<tbody>
+<tr><td>Risk threshold</td><td>High-risk needs approval</td><td>Decision authority levels (recommend/approve/execute)</td></tr>
+<tr><td>Feedback loop</td><td>Humans improve AI</td><td>Rejection reason capture, confidence calibration</td></tr>
+<tr><td>Intervention</td><td>Manual override possible</td><td>Manual dispatch, task reassignment, plan modification</td></tr>
+</tbody></table>
+
+<h3>3.6 Low Coupling</h3>
+<table><thead><tr><th>Driver</th><th>Constraint</th><th>Design Response</th></tr></thead>
+<tbody>
+<tr><td>Module isolation</td><td>One module failure scoped</td><td>AI Kernel manages all inter-module communication</td></tr>
+<tr><td>Interface stable</td><td>Contracts versioned</td><td>Pydantic schemas, JSON serialization, schema registry</td></tr>
+<tr><td>Dependency</td><td>No circular imports</td><td>Strict layered dependency: Kernel &rarr; Modules &rarr; Agents</td></tr>
+</tbody></table>
+
+<h3>3.7 High Cohesion</h3>
+<table><thead><tr><th>Driver</th><th>Constraint</th><th>Design Response</th></tr></thead>
+<tbody>
+<tr><td>Single purpose</td><td>Each module one job</td><td>Planner plans, Risk Engine assesses, Evidence validates</td></tr>
+<tr><td>Internal complexity</td><td>Hidden behind interface</td><td>Public API narrow, internal complexity encapsulated</td></tr>
+</tbody></table>
+
+<h3>3.8 Fault Tolerance</h3>
+<table><thead><tr><th>Driver</th><th>Constraint</th><th>Design Response</th></tr></thead>
+<tbody>
+<tr><td>LLM failure</td><td>Provider outage</td><td>Retry with backoff, fallback chain, degraded output</td></tr>
+<tr><td>Module crash</td><td>Module process dies</td><td>Health heartbeat, auto-restart, state recovery</td></tr>
+<tr><td>Data corruption</td><td>Bad memory entry</td><td>Versioned entries, rollback capability, audit log</td></tr>
+</tbody></table>
+
+<!-- 4. SYSTEM ARCHITECTURE OVERVIEW -->
+<div class="page-break"></div>
+<h1>4. System Architecture Overview</h1>
+<h2>4.1 Layered Architecture</h2>
+<div class="diagram">┌─────────────────────────────────────────────────────────────┐
+│                   DECISION SURFACE                           │
+│    (Next.js Frontend — Dashboard, Org Graph, Decisions)      │
+├─────────────────────────────────────────────────────────────┤
+│                   API GATEWAY                                 │
+│    (FastAPI — REST endpoints, WebSocket, auth, routing)      │
+├─────────────────────────────────────────────────────────────┤
+│                   AI KERNEL                                   │
+│    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │
+│    │Scheduler │ │  Memory  │ │  Msg Bus │ │  Module  │     │
+│    │          │ │ Manager  │ │          │ │ Registry │     │
+│    └──────────┘ └──────────┘ └──────────┘ └──────────┘     │
+│    ┌──────────┐ ┌──────────┐ ┌──────────┐                   │
+│    │  State   │ │  Health  │ │ Resource │                   │
+│    │ Manager  │ │ Monitor  │ │ Allocator│                   │
+│    └──────────┘ └──────────┘ └──────────┘                   │
+├─────────────────────────────────────────────────────────────┤
+│                   CORE MODULES                                │
+│    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │
+│    │ Planner  │ │ Org Gen  │ │ Risk     │ │ Sim      │     │
+│    └──────────┘ └──────────┘ └──────────┘ └──────────┘     │
+│    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │
+│    │ Evidence │ │ Memory   │ │ Health   │ │ Objective│     │
+│    │ Engine   │ │ Manager  │ │ Engine   │ │ Compiler │     │
+│    └──────────┘ └──────────┘ └──────────┘ └──────────┘     │
+├─────────────────────────────────────────────────────────────┤
+│                   AGENT LAYER                                 │
+│    Dynamic departments with specialized agents               │
+├─────────────────────────────────────────────────────────────┤
+│                   LLM PROVIDER LAYER                          │
+│    (OpenAI, Anthropic, Google — routed by task type)         │
+├─────────────────────────────────────────────────────────────┤
+│                   DATA LAYER                                  │
+│    (Supabase PostgreSQL + pgvector + Redis)                  │
+└─────────────────────────────────────────────────────────────┘</div>
+
+<!-- 5. TECHNOLOGY STACK -->
+<div class="page-break"></div>
+<h1>5. Technology Stack</h1>
+<table>
+<thead><tr><th>Component</th><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>Framework</td><td>FastAPI</td><td>0.111+</td><td>Async Python web framework</td></tr>
+<tr><td>Runtime</td><td>Python</td><td>3.12+</td><td>Modern Python with pattern</td></tr>
+<tr><td>Validation</td><td>Pydantic v2</td><td>2.7+</td><td>Schema validation</td></tr>
+<tr><td>ASGI Server</td><td>Uvicorn</td><td>0.29+</td><td>Production ASGI server</td></tr>
+<tr><td>ORM</td><td>SQLAlchemy</td><td>2.0+</td><td>Database ORM</td></tr>
+<tr><td>Async DB</td><td>asyncpg</td><td>0.29+</td><td>Async PostgreSQL driver</td></tr>
+<tr><td>Vector Search</td><td>pgvector</td><td>0.7+</td><td>Embedding similarity search</td></tr>
+<tr><td>LLM SDK</td><td>openai, anthropic</td><td>Latest</td><td>Provider SDKs</td></tr>
+<tr><td>Caching</td><td>redis-py</td><td>5.0+</td><td>Redis client</td></tr>
+<tr><td>Auth</td><td>supabase-py</td><td>2.5+</td><td>Supabase Auth client</td></tr>
+<tr><td>Observability</td><td>OpenTelemetry</td><td>1.24+</td><td>Traces, metrics, logs</td></tr>
+<tr><td>Structured logs</td><td>structlog</td><td>24.1+</td><td>JSON-formatted logging</td></tr>
+</tbody>
+</table>
+
+<!-- 6. REQUEST LIFECYCLE -->
+<div class="page-break"></div>
+<h1>6. Request Lifecycle</h1>
+<p>A single user objective &mdash; &ldquo;Launch an AI SaaS in 90 days&rdquo; &mdash; traced through every system component.</p>
+
+<h3>Step 1: API Gateway</h3>
+<pre>POST /api/v1/objectives { raw_input: "Launch an AI SaaS in 90 days" }
+  → Authenticate JWT
+  → Validate input shape
+  → Assign trace_id for observability
+  → Dispatch to Objective Compiler</pre>
+
+<h3>Step 2: Objective Compiler</h3>
+<pre>Select LLM: o3-mini (reasoning task)
+  → Inject system prompt + user input
+  → Parse structured JSON against CompiledGoal schema
+  → Store compiled objective in database
+  → Emit event: objective.compiled
+  → Return CompiledGoal to Kernel</pre>
+
+<h3>Step 3: AI Kernel Dispatch</h3>
+<pre>Receive CompiledGoal
+  → Module Registry routes to Planner
+  → Resource Allocator estimates compute needed
+  → State Manager creates execution context
+  → Forward goal to Planner</pre>
+
+<h3>Step 4: Planner</h3>
+<pre>Query Memory for similar past objectives
+  → Select LLM: gpt-4o (complex planning)
+  → Generate work streams with milestones & dependencies
+  → Run PERT analysis for critical path
+  → Identify bottlenecks (min 3)
+  → Generate 2+ contingency plans
+  → Return Plan to Kernel</pre>
+
+<h3>Step 5: Parallel Dispatch</h3>
+<pre>Kernel sends in parallel:
+  → Plan to Org Generator (synthesize departments)
+  → Plan to Risk Engine (assess risks)
+  → Plan to Simulation Engine (compare strategies)</pre>
+
+<h3>Step 6: Dashboard Assembly</h3>
+<pre>Collect results from all parallel modules
+  → Request Evidence Engine validate key claims
+  → Check authority level for each decision
+  → Create Decision records requiring human approval
+  → Store complete state in Memory
+  → Push dashboard via WebSocket</pre>
+
+<h3>Step 7: Human Review</h3>
+<pre>Dashboard renders: timeline, org graph, risks, comparisons
+  → User reviews evidence, confidence, alternatives
+  → User approves or rejects
+  → POST /api/v1/decisions/:id/approve</pre>
+
+<h3>Step 8: Execution</h3>
+<pre>Kernel receives approval
+  → Scheduler creates task queue
+  → Dispatch tasks to agent departments
+  → Agents execute (may request evidence, memory, tools)
+  → On completion: Memory stores outcome</pre>
+
+<!-- 7. AI KERNEL -->
+<div class="page-break"></div>
+<h1>7. AI Kernel</h1>
+<p>The AI Kernel is the central nervous system of OrchestraOS. Seven subsystems operate inside it:</p>
+
+<div class="diagram">┌──────────────────────────────────────────────────────────────────┐
+│                        AI KERNEL                                  │
+│                                                                   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │  Scheduler   │  │  Memory     │  │  Message    │              │
+│  │ • Priority Q │  │  Manager    │  │  Bus        │              │
+│  │ • DAG resolver│  │ • Tiered    │  │ • Pub/sub   │              │
+│  │ • Deadline   │  │   storage   │  │ • Routing   │              │
+│  │   tracking   │  │ • Pruning   │  │ • Delivery  │              │
+│  └──────┬───────┘  └──────┬──────┘  └──────┬──────┘              │
+│  ┌──────┴───────┐  ┌──────┴──────┐  ┌──────┴──────┐              │
+│  │  Module      │  │  State      │  │  Health     │              │
+│  │  Registry    │  │  Manager    │  │  Monitor    │              │
+│  └──────────────┘  └─────────────┘  └─────────────┘              │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │  Resource Allocator                                       │    │
+│  │  • Token budget per module/provider                       │    │
+│  │  • Model quota enforcement                                │    │
+│  │  • Priority-based preemption                              │    │
+│  └──────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────┘</div>
+
+<h3>7.1 Scheduler</h3>
+<p>Manages execution order with priority queuing and DAG-based dependency resolution. Priority levels: P0 (Critical), P1 (High), P2 (Normal), P3 (Low). Deadlock detection runs each cycle &mdash; breaks by escalating lowest-priority task.</p>
+
+<h3>7.2 Memory Manager</h3>
+<table>
+<thead><tr><th>Tier</th><th>Technology</th><th>Capacity</th><th>Eviction</th></tr></thead>
+<tbody>
+<tr><td>Hot</td><td>Redis</td><td>1GB</td><td>LRU by importance score</td></tr>
+<tr><td>Warm</td><td>pgvector</td><td>100K entries</td><td>Importance &lt; 0.1 pruned</td></tr>
+<tr><td>Cold</td><td>PostgreSQL JSON</td><td>Unlimited</td><td>Archived after 90 days</td></tr>
+</tbody>
+</table>
+
+<h3>7.3 Message Bus</h3>
+<p>Reliable inter-module communication with pub/sub routing, at-least-once delivery guarantees, and dead-letter queues for failed deliveries.</p>
+
+<h3>7.4 Module Registry</h3>
+<p>Discovers, registers, and validates modules with interface versioning. Lifecycle: Register &rarr; Validate Interface &rarr; Health Check &rarr; Ready &rarr; Deregister.</p>
+
+<h3>7.5 State Manager</h3>
+<p>Maintains execution context per objective with snapshots for recovery and rollback. Supports concurrency control via per-objective locks.</p>
+
+<h3>7.6 Health Monitor</h3>
+<table>
+<thead><tr><th>Metric</th><th>Source</th><th>Alert Threshold</th></tr></thead>
+<tbody>
+<tr><td>Module heartbeat</td><td>Module ping (5s)</td><td>Missed 3 pings = down</td></tr>
+<tr><td>Task latency</td><td>Execution timer</td><td>&gt;2x expected duration</td></tr>
+<tr><td>LLM error rate</td><td>Provider wrapper</td><td>&gt;5% error rate</td></tr>
+<tr><td>Memory utilization</td><td>Memory Manager</td><td>&gt;80% hot tier</td></tr>
+<tr><td>Decision backlog</td><td>Decision Surface</td><td>&gt;10 pending</td></tr>
+</tbody>
+</table>
+
+<h3>7.7 Resource Allocator</h3>
+<p>Weighted fair queuing by objective priority. Burst allowance: 2x base for 60s. Starvation prevention: minimum 10% reserved for low-priority. Backpressure when &gt;80% consumed.</p>
+
+<!-- 8. MODULE ARCHITECTURE -->
+<div class="page-break"></div>
+<h1>8. Module Architecture</h1>
+
+<h3>8.1 Objective Compiler</h3>
+<div class="diagram">Raw Input → NLP Parser → Ambiguity Resolver → Constraint Encoder
+         → Dependency Mapper → Risk Analyzer → Feasibility Check
+         → Structured Goal (JSON)</div>
+
+<h3>8.2 Planner</h3>
+<p>Decomposes goals into milestones (reverse-chronological from deadline). Generates task groups by department, builds dependency DAG, computes critical path via PERT. Produces 2+ contingency plans.</p>
+
+<h3>8.3 Dynamic Organization Generator</h3>
+<table>
+<thead><tr><th>Trigger</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td>workload_avg &gt; 0.9</td><td>Split department</td></tr>
+<tr><td>workload_avg &lt; 0.2</td><td>Merge into parent</td></tr>
+<tr><td>error_rate &gt; 0.15</td><td>Reassign agents</td></tr>
+<tr><td>decision_backlog &gt; 10</td><td>Add manager agent</td></tr>
+<tr><td>objective_complete</td><td>Dissolve department</td></tr>
+</tbody>
+</table>
+
+<h3>8.4 Risk Engine</h3>
+<p>Risk categories: Technical, Timeline, Resource, Market. Detection: rule-based pattern match + PERT analysis + historical comparison. Includes Monte Carlo simulation for success probability.</p>
+
+<h3>8.5 Simulation Engine</h3>
+<table>
+<thead><tr><th>Dimension</th><th>Plan A (Recommended)</th><th>Plan B (Conservative)</th><th>Plan C (Aggressive)</th></tr></thead>
+<tbody>
+<tr><td>Timeline</td><td>90 days</td><td>120 days</td><td>60 days</td></tr>
+<tr><td>Cost</td><td>$150,000</td><td>$100,000</td><td>$250,000</td></tr>
+<tr><td>Risk Score</td><td>0.35</td><td>0.20</td><td>0.65</td></tr>
+<tr><td>Success Prob</td><td>0.72</td><td>0.80</td><td>0.35</td></tr>
+</tbody>
+</table>
+
+<h3>8.6 Evidence Engine</h3>
+<div class="diagram">Claim → Source Retrieval → Source Scoring → Claim-Source Alignment
+         → Contradiction Detection → Confidence Calibration → Verdict</div>
+
+<h3>8.7 Organizational Memory</h3>
+<p>Five types: Episodic (experience), Semantic (knowledge), Procedural (skills), Social (relationships), Contextual (current state).</p>
+
+<h3>8.8 Health Engine</h3>
+<table>
+<thead><tr><th>Metric</th><th>Target</th><th>Warning</th><th>Critical</th><th>Remediation</th></tr></thead>
+<tbody>
+<tr><td>Execution Score</td><td>&gt;90%</td><td>&lt;80%</td><td>&lt;60%</td><td>Reallocate resources</td></tr>
+<tr><td>Coordination Score</td><td>&gt;85%</td><td>&lt;75%</td><td>&lt;55%</td><td>Reduce inter-dept deps</td></tr>
+<tr><td>Risk Index</td><td>&lt;0.30</td><td>&gt;0.50</td><td>&gt;0.70</td><td>Pause, escalate</td></tr>
+<tr><td>Trust Score</td><td>&gt;80%</td><td>&lt;70%</td><td>&lt;50%</td><td>Calibrate confidence</td></tr>
+<tr><td>Decision Quality</td><td>&gt;85%</td><td>&lt;75%</td><td>&lt;55%</td><td>Review, update prompts</td></tr>
+</tbody>
+</table>
+
+<!-- 9. MODULE INTERFACE CONTRACTS -->
+<div class="page-break"></div>
+<h1>9. Module Interface Contracts</h1>
+<table>
+<thead><tr><th>Source</th><th>Target</th><th>Input Type</th><th>Output Type</th></tr></thead>
+<tbody>
+<tr><td>Objective Compiler</td><td>Planner</td><td>str</td><td>CompiledGoal</td></tr>
+<tr><td>Planner</td><td>Org Generator</td><td>CompiledGoal, ResourceSpec</td><td>OrgStructure</td></tr>
+<tr><td>Planner</td><td>Simulation Engine</td><td>Plan</td><td>SimulationResult</td></tr>
+<tr><td>Planner</td><td>Risk Engine</td><td>Plan, MemorySnippets</td><td>RiskAssessment</td></tr>
+<tr><td>Org Generator</td><td>AI Kernel</td><td>OrgStructure</td><td>RegistrationConfirmation</td></tr>
+<tr><td>AI Kernel</td><td>Any Agent</td><td>Task</td><td>TaskResult</td></tr>
+<tr><td>Any Module</td><td>Evidence Engine</td><td>Claim, Context</td><td>EvidenceReport</td></tr>
+<tr><td>Any Module</td><td>Memory Manager</td><td>MemoryEntry / MemoryQuery</td><td>MemoryId / list[MemoryEntry]</td></tr>
+</tbody>
+</table>
+
+<!-- 10. COMMUNICATION PROTOCOL -->
+<div class="page-break"></div>
+<h1>10. Communication Protocol</h1>
+<p>Every inter-module message follows a standard envelope for traceability and routing.</p>
+
+<h3>10.1 Message Envelope</h3>
+<pre>{
+  "header": {
+    "message_id": "msg_abc123",
+    "trace_id": "trace_xyz789",
+    "source": "Planner",
+    "target": "RiskEngine",
+    "message_type": "command",
+    "protocol_version": "1.0",
+    "timestamp": "2026-07-27T14:30:00.123Z",
+    "ttl_ms": 30000,
+    "priority": "P1",
+    "correlation_id": "obj_456"
+  },
+  "body": {
+    "schema": "RiskAssessmentRequest",
+    "schema_version": "1.0",
+    "payload": { ... }
+  },
+  "metadata": {
+    "retry_count": 0,
+    "max_retries": 3
+  }
+}</pre>
+
+<h3>10.2 Message Types</h3>
+<table>
+<thead><tr><th>Type</th><th>Direction</th><th>Guarantee</th><th>Use Case</th></tr></thead>
+<tbody>
+<tr><td>command</td><td>Module &rarr; Module</td><td>At-least-once</td><td>Request an action</td></tr>
+<tr><td>response</td><td>Module &rarr; Module</td><td>At-least-once</td><td>Respond to command</td></tr>
+<tr><td>event</td><td>Module &rarr; Bus</td><td>At-most-once</td><td>Broadcast state change</td></tr>
+<tr><td>query</td><td>Module &rarr; Memory</td><td>At-least-once</td><td>Request data</td></tr>
+<tr><td>error</td><td>Module &rarr; Kernel</td><td>At-least-once</td><td>Report failure</td></tr>
+<tr><td>heartbeat</td><td>Agent &rarr; Kernel</td><td>At-most-once</td><td>Liveness signal</td></tr>
+</tbody>
+</table>
+
+<!-- 11. DATA FLOW -->
+<div class="page-break"></div>
+<h1>11. Data Flow</h1>
+<h3>11.1 Primary Execution</h3>
+<div class="diagram">User Input → Objective Compiler → Planner → Org Generator
+         → AI Kernel → Parallel Execution (Agents + Engines)
+         → Decision Surface → Human Approval → Execution</div>
+
+<h3>11.2 Real-Time Event Flow</h3>
+<div class="diagram">AI Kernel Event Bus
+  ├── Decision Required → Decision Surface (WebSocket push)
+  │     └── Human Responds → Kernel resumes
+  ├── Health Alert → Health Engine → Org Generator restructures
+  ├── Agent State Change → Memory records → UI updates
+  └── LLM Error → Model Router fallback → Kernel notified</div>
+
+<h3>11.3 Observability Data Flow</h3>
+<pre>Every module emits:
+  → Structured Log (structlog) → stdout
+  → Metric (OpenTelemetry) → Prometheus → Grafana
+  → Trace (OpenTelemetry) → Jaeger
+  → Audit Event → Audit Log Table (PostgreSQL)</pre>
+
+<!-- 12. DECISION FLOW -->
+<div class="page-break"></div>
+<h1>12. Decision Flow</h1>
+<p>Every decision follows a formal lifecycle ensuring explainability and appropriate human oversight.</p>
+
+<div class="diagram">PROPOSE → GATHER EVIDENCE → RENDER (question, options, recommendation, confidence)
+  → ROUTE (check authority level)
+    ├── Auto-execute (high confidence, low risk)
+    └── Human review → APPROVE / REJECT → EXECUTE
+         → STORE MEMORY → LEARN (calibrate confidence)</div>
+
+<h3>12.1 Authority Level Determination</h3>
+<pre>def determine_authority(confidence, risk_score, decision_type):
+    if decision_type == "strategic":
+        return "execute"          # Always human
+    if risk_score > 0.7:
+        return "execute"          # High risk = human
+    if confidence < 0.6:
+        return "approve"          # Low confidence = manager
+    if confidence > 0.9 and risk_score < 0.3:
+        return "recommend"        # High confidence, low risk = auto
+    return "approve"</pre>
+
+<h3>12.2 Decision Record Schema</h3>
+<pre>{
+  "decision_id": "dec_001",
+  "question": "PostgreSQL or MongoDB?",
+  "options": [{"id": "opt_a", "label": "PostgreSQL"}, {"id": "opt_b", "label": "MongoDB"}],
+  "recommendation": {"option_id": "opt_a", "rationale": "...", "confidence": 0.88},
+  "authority_required": "approve",
+  "status": "pending"
+}</pre>
+
+<!-- 13. FAILURE HANDLING -->
+<div class="page-break"></div>
+<h1>13. Failure Handling</h1>
+
+<h3>13.1 LLM Provider Failure</h3>
+<div class="diagram">LLM call fails
+  → Retry (backoff: 1s, 2s, 4s)
+  → Fallback to next provider in chain
+  → If all fail: return degraded (cached or simplified) response
+  → Health Monitor updates error rate metric
+  → If error rate > 5% in 5min → disable provider → auto-re-enable after cooldown</div>
+
+<h3>13.2 Module Failure</h3>
+<pre>Detection: Heartbeat missed ≥3 checks (15s) or task >2x expected duration
+Recovery: Mark unhealthy → restart from Module Registry
+  → Restore state from snapshot → replay in-flight tasks
+  → If restart fails ≥3 times → escalate to human</pre>
+
+<h3>13.3 Agent Failure</h3>
+<pre>Detection: Heartbeat + task timeout
+Recovery: Log failure → retry on different agent
+  → If no alternative → request Org Generator spawn
+  → After 3 failures from same dept → trigger restructuring</pre>
+
+<h3>13.4 Global Error Taxonomy</h3>
+<table>
+<thead><tr><th>Code</th><th>Name</th><th>HTTP</th><th>Retryable</th></tr></thead>
+<tbody>
+<tr><td>E-001</td><td>LLM_PROVIDER_ERROR</td><td>502</td><td>Yes (5 retries)</td></tr>
+<tr><td>E-002</td><td>MODULE_TIMEOUT</td><td>504</td><td>Yes (3 retries)</td></tr>
+<tr><td>E-003</td><td>AGENT_FAILURE</td><td>500</td><td>Yes (3 retries)</td></tr>
+<tr><td>E-004</td><td>DB_CONNECTION_ERROR</td><td>503</td><td>Yes</td></tr>
+<tr><td>E-005</td><td>VALIDATION_ERROR</td><td>422</td><td>No</td></tr>
+<tr><td>E-006</td><td>AUTH_ERROR</td><td>401</td><td>No</td></tr>
+<tr><td>E-007</td><td>RESOURCE_EXHAUSTED</td><td>429</td><td>Yes</td></tr>
+<tr><td>E-008</td><td>DEADLOCK_DETECTED</td><td>409</td><td>Yes (3 retries)</td></tr>
+</tbody>
+</table>
+
+<!-- 14. API SPECIFICATION -->
+<div class="page-break"></div>
+<h1>14. API Specification</h1>
+<h3>14.1 REST Endpoints</h3>
+<pre>Objectives:
+  POST   /api/v1/objectives              Create
+  GET    /api/v1/objectives              List
+  GET    /api/v1/objectives/:id          Get with compiled spec
+  POST   /api/v1/objectives/:id/compile  Re-compile
+  DELETE /api/v1/objectives/:id          Delete
+
+Plans:
+  GET    /api/v1/plans                   List
+  GET    /api/v1/plans/:id               Get details
+  POST   /api/v1/plans                   Create from objective
+  POST   /api/v1/plans/:id/simulate      Run simulation
+  POST   /api/v1/plans/:id/approve       Approve
+
+Departments:
+  GET    /api/v1/departments             List
+  GET    /api/v1/departments/:id         Get details
+  POST   /api/v1/departments/:id/restructure  Restructure
+  GET    /api/v1/departments/:id/health  Get health
+
+Agents:
+  GET    /api/v1/agents                  List
+  GET    /api/v1/agents/:id              Get details
+  PATCH  /api/v1/agents/:id              Update config
+  POST   /api/v1/agents/:id/reset        Reset
+
+Tasks:
+  GET    /api/v1/tasks                   List
+  GET    /api/v1/tasks/:id               Get details
+  PATCH  /api/v1/tasks/:id/status        Update status
+  POST   /api/v1/tasks/:id/assign        Assign
+
+Decisions:
+  GET    /api/v1/decisions               List
+  GET    /api/v1/decisions/:id           Get with evidence
+  POST   /api/v1/decisions/:id/approve   Approve
+  POST   /api/v1/decisions/:id/reject    Reject
+
+Memory:
+  POST   /api/v1/memory/insert           Store entry
+  POST   /api/v1/memory/query            Semantic search
+  GET    /api/v1/memory/types            List types
+  DELETE /api/v1/memory/:id              Delete
+
+Health:
+  GET    /api/v1/health                  Overall health
+  GET    /api/v1/health/history          Time-series
+  GET    /api/v1/health/alerts           Active alerts</pre>
+
+<h3>14.2 WebSocket Events</h3>
+<pre>Client subscribes to:
+  objectives:{id}:state       Objective state changes
+  plans:{id}:state            Plan state changes
+  decisions:new               New decisions requiring review
+  departments:{id}:state      Department changes
+  agents:{id}:state           Agent lifecycle events
+  health:alerts               Health threshold alerts</pre>
+
+<!-- 15. DATABASE SCHEMA -->
+<div class="page-break"></div>
+<h1>15. Database Schema</h1>
+<h3>15.1 Entity Relationship</h3>
+<div class="diagram">organizations ─── users
+      │
+      ├── objectives ─── plans ─── tasks
+      │                     │
+      │                decisions ─── evidence
+      │                     │
+      │               risk_assessments
+      │               simulations
+      │               decision_log (audit)
+      │
+      ├── departments ─── agents
+      ├── memory_entries (pgvector)
+      └── organizational_health (time-series)</div>
+
+<h3>15.2 Core Tables</h3>
+<pre>CREATE TABLE organizations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    plan_tier VARCHAR(50) DEFAULT 'starter',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE objectives (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    raw_input TEXT NOT NULL,
+    compiled_spec JSONB,
+    status VARCHAR(50) DEFAULT 'pending',
+    trace_id VARCHAR(64),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE plans (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    objective_id UUID REFERENCES objectives(id) ON DELETE CASCADE,
+    plan_data JSONB NOT NULL,
+    status VARCHAR(50) DEFAULT 'draft',
+    version INT DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE decisions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    objective_id UUID REFERENCES objectives(id) ON DELETE CASCADE,
+    question TEXT NOT NULL,
+    options JSONB DEFAULT '[]',
+    recommendation JSONB,
+    confidence DECIMAL(4,3),
+    authority_level VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'pending',
+    outcome VARCHAR(50),
+    rejection_reason TEXT,
+    resolved_by UUID REFERENCES users(id),
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE memory_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    memory_type VARCHAR(50) NOT NULL,
+    content TEXT NOT NULL,
+    embedding VECTOR(1536),
+    metadata JSONB DEFAULT '{}',
+    importance DECIMAL(3,2) DEFAULT 0.5,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- + departments, agents, tasks, evidence, risk_assessments, simulations,
+--   organizational_health, decision_log (see .md for full definitions)</pre>
+
+<h3>15.3 Indexes</h3>
+<pre>CREATE INDEX idx_memory_embedding ON memory_entries
+    USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+CREATE INDEX idx_objectives_search ON objectives
+    USING gin(to_tsvector('english', raw_input));
+-- + standard B-tree indexes on org_id, status, objective_id, etc.</pre>
+
+<!-- 16. AGENT ARCHITECTURE -->
+<div class="page-break"></div>
+<h1>16. Agent Architecture</h1>
+<table>
+<thead><tr><th>Agent</th><th>Responsibilities</th><th>LLM Model</th></tr></thead>
+<tbody>
+<tr><td>Project Manager</td><td>Break down objectives, assign tasks, track status</td><td>gpt-4o</td></tr>
+<tr><td>Frontend Engineer</td><td>Implement UI, integrate APIs, optimize performance</td><td>claude-3.5-sonnet</td></tr>
+<tr><td>Backend Engineer</td><td>Design APIs, business logic, data management</td><td>claude-3.5-sonnet</td></tr>
+<tr><td>Designer</td><td>Create mockups, design system, accessibility</td><td>gpt-4o</td></tr>
+<tr><td>QA Engineer</td><td>Test plans, execute tests, report bugs</td><td>gpt-4o-mini</td></tr>
+<tr><td>DevOps</td><td>CI/CD, infra, deployment, monitoring</td><td>claude-3.5-haiku</td></tr>
+<tr><td>Marketing</td><td>Copy, campaigns, market analysis</td><td>gpt-4o</td></tr>
+<tr><td>Research</td><td>Research, evaluate tech, gather intelligence</td><td>claude-3.5-haiku</td></tr>
+</tbody>
+</table>
+
+<!-- 17. LLM ABSTRACTION LAYER -->
+<div class="page-break"></div>
+<h1>17. LLM Abstraction Layer</h1>
+<table>
+<thead><tr><th>Route</th><th>Model</th><th>Max Tokens</th><th>Cost / 1K</th></tr></thead>
+<tbody>
+<tr><td>simple</td><td>gpt-4o-mini</td><td>1000</td><td>$0.00015</td></tr>
+<tr><td>complex</td><td>gpt-4o</td><td>4000</td><td>$0.0025</td></tr>
+<tr><td>reasoning</td><td>o3-mini</td><td>8000</td><td>$0.0011</td></tr>
+<tr><td>code</td><td>claude-3.5-sonnet</td><td>8000</td><td>$0.003</td></tr>
+<tr><td>research</td><td>claude-3.5-haiku</td><td>4000</td><td>$0.0008</td></tr>
+<tr><td>fallback</td><td>gemini-2.0-flash</td><td>4000</td><td>$0.0001</td></tr>
+</tbody>
+</table>
+<h3>17.1 Provider Fallback Chain</h3>
+<pre>OpenAI → Anthropic → Google → OpenRouter → Degraded Response</pre>
+<h3>17.2 Caching</h3>
+<table>
+<thead><tr><th>Layer</th><th>Technology</th><th>TTL</th><th>Invalidation</th></tr></thead>
+<tbody>
+<tr><td>L1</td><td>Python lru_cache</td><td>60s</td><td>Time-based</td></tr>
+<tr><td>L2 (semantic)</td><td>Redis</td><td>300s</td><td>Semantic hash (cosine &gt;0.95)</td></tr>
+<tr><td>L3</td><td>pgvector</td><td>Indefinite</td><td>Importance prune</td></tr>
+</tbody>
+</table>
+
+<!-- 18. FRONTEND ARCHITECTURE -->
+<div class="page-break"></div>
+<h1>18. Frontend Architecture</h1>
+<h3>18.1 Pages</h3>
+<table>
+<thead><tr><th>Page</th><th>Route</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>Dashboard</td><td>/</td><td>Decision Surface — active decisions, health</td></tr>
+<tr><td>Objectives</td><td>/objectives</td><td>List and create objectives</td></tr>
+<tr><td>Objective Detail</td><td>/objectives/:id</td><td>Full spec, plan, risks</td></tr>
+<tr><td>Organization Graph</td><td>/organization</td><td>Interactive department graph</td></tr>
+<tr><td>Simulation View</td><td>/simulation/:id</td><td>Three-column plan comparison</td></tr>
+<tr><td>Decision History</td><td>/decisions</td><td>Searchable decision log</td></tr>
+<tr><td>Settings</td><td>/settings</td><td>User preferences, API keys</td></tr>
+</tbody>
+</table>
+<h3>18.2 Key Libraries</h3>
+<p>React Flow (org graph), TanStack Query (server state), Zustand (client state), Supabase JS (real-time), Framer Motion (animations), Recharts (charts).</p>
+
+<!-- 19. FOLDER STRUCTURE -->
+<div class="page-break"></div>
+<h1>19. Folder Structure</h1>
+<h3>19.1 Per-Module Internal Structure</h3>
+<p>Every module follows a consistent pattern:</p>
+<pre>backend/app/core/planner/
+    __init__.py                 # Public interface
+    planner.py                  # Main orchestration
+    planner_service.py          # Internal helpers
+    planner_schema.py           # Pydantic I/O models
+    planner_prompt.md           # LLM system prompt (separated)
+    planner_tests.py            # Unit tests</pre>
+
+<h3>19.2 Full Structure</h3>
+<pre>orchestraos/
+  docs/ 01_TPRD.md, 02_ARCHITECTURE.md
+  backend/
+    app/
+      main.py, config.py, dependencies.py
+      api/v1/ (objectives, plans, departments, agents, tasks, decisions, memory, health, ws)
+      core/
+        objective_compiler/    (__init__, compiler, service, schema, prompt, tests)
+        planner/               (same structure)
+        org_generator/         (same structure)
+        risk_engine/           (same structure)
+        simulation_engine/     (same structure)
+        evidence_engine/       (same structure)
+        health_engine/         (same structure)
+        decision_engine/       (same structure)
+      kernel/                  (scheduler, memory_manager, message_bus, module_registry,
+                                state_manager, health_monitor, resource_allocator)
+      agents/                  (base_agent + 8 agent subdirs with prompt.md per agent)
+      llm/                     (provider, model_router, openai/anthropic/google/openrouter,
+                                rate_limiter, cost_tracker)
+      observability/           (logger, metrics, tracer, audit)
+      models/                  (domain, schemas, enums)
+      db/                      (session, repositories/)
+      utils/                   (auth, logging, metrics, error_handlers)
+    tests/
+    requirements.txt, Dockerfile
+  frontend/
+    app/                       (7 pages)
+    components/                (layout, dashboard, organization, objectives, decisions, simulation, ui)
+    lib/                       (api, supabase, websocket, store, types)
+    styles/, public/
+    next.config.js, tailwind.config.ts, package.json, Dockerfile
+  docker-compose.yml, .env.example, README.md</pre>
+
+<!-- 20. DEPLOYMENT -->
+<div class="page-break"></div>
+<h1>20. Deployment Architecture</h1>
+<div class="diagram">┌──────────────────────────────────────────────────┐
+│                  Reverse Proxy (Nginx)             │
+└────────┬──────────────┬──────────────┬────────────┘
+         │              │              │
+┌────────▼────────┐ ┌──▼───────────┐ ┌▼────────────┐
+│   FastAPI App    │ │  Next.js SSR  │ │   Redis     │
+│  (uvicorn:8000) │ │  (node:3000)  │ │   (6379)    │
+└─────────────────┘ └──────────────┘ └─────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────┐
+│              Supabase (Managed)                   │
+│    PostgreSQL + pgvector + Auth + Realtime        │
+└──────────────────────────────────────────────────┘</pre>
+
+<pre>version: '3.8'
+services:
+  api:     build: ./backend,   ports: ["8000:8000"], depends_on: [redis]
+  frontend: build: ./frontend, ports: ["3000:3000"], depends_on: [api]
+  redis:   image: redis:7-alpine, ports: ["6379:6379"]
+  otel-collector: image: otel/opentelemetry-collector-contrib, ports: ["4318:4318"]</pre>
+
+<!-- 21. DEVELOPMENT SETUP -->
+<div class="page-break"></div>
+<h1>21. Development Setup</h1>
+<pre># Backend
+cd backend && python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && uvicorn app.main:app --reload --port 8000
+
+# Frontend
+cd frontend && npm install && npm run dev</pre>
+<p><strong>Prerequisites:</strong> Python 3.12+, Node.js 20+, Docker Desktop, Supabase account (free tier), OpenAI/Anthropic API keys.</p>
+
+<!-- 22. TESTING -->
+<div class="page-break"></div>
+<h1>22. Testing Strategy</h1>
+<table>
+<thead><tr><th>Level</th><th>Scope</th><th>Framework</th><th>Coverage Target</th></tr></thead>
+<tbody>
+<tr><td>Unit</td><td>Individual modules</td><td>pytest</td><td>90%</td></tr>
+<tr><td>Integration</td><td>Module interactions</td><td>pytest + httpx</td><td>80%</td></tr>
+<tr><td>E2E</td><td>Full pipeline</td><td>Playwright</td><td>Critical paths</td></tr>
+<tr><td>LLM</td><td>Prompt output validation</td><td>pytest</td><td>Per template</td></tr>
+<tr><td>Load</td><td>Performance benchmarks</td><td>locust</td><td>Per endpoint</td></tr>
+</tbody>
+</table>
+
+<!-- 23. OBSERVABILITY -->
+<div class="page-break"></div>
+<h1>23. Observability</h1>
+<h3>23.1 Three Pillars</h3>
+<p><strong>Logging:</strong> Structured JSON via structlog. Fields: timestamp, level, module, trace_id, message, duration_ms. No file logging in containers.</p>
+<p><strong>Metrics:</strong> OpenTelemetry export. Key metrics: objective_compile_duration, plan_generate_count, decision_approval_latency, llm_request_duration, llm_token_usage, module_health_status, memory_query_duration, active_objectives.</p>
+<p><strong>Tracing:</strong> OpenTelemetry OTLP with head-based sampling (10% P0, 100% errors). Export to Jaeger via OpenTelemetry Collector.</p>
+
+<h3>23.2 Audit Trail</h3>
+<p>All state-changing operations recorded in decision_log table: objective.created, plan.generated, organization.restructured, decision.approved/rejected, system.error.</p>
+
+<h3>23.3 Health Check Endpoints</h3>
+<pre>GET /health          → {"status": "ok", "version": "2.0", "uptime_seconds": 3600}
+GET /health/readiness → Database, Redis, LLM providers reachable?
+GET /health/liveness  → App process alive?
+GET /health/modules   → Status of each registered module
+GET /health/providers → Status of each LLM provider</pre>
+
+<!-- 24. PERFORMANCE -->
+<div class="page-break"></div>
+<h1>24. Performance Targets</h1>
+<table>
+<thead><tr><th>Operation</th><th>Target</th><th>P95 Target</th></tr></thead>
+<tbody>
+<tr><td>Objective compilation</td><td>&lt;5s</td><td>&lt;3s</td></tr>
+<tr><td>Plan generation</td><td>&lt;10s</td><td>&lt;7s</td></tr>
+<tr><td>Org synthesis</td><td>&lt;3s</td><td>&lt;2s</td></tr>
+<tr><td>Evidence validation</td><td>&lt;3s</td><td>&lt;2s</td></tr>
+<tr><td>Risk assessment</td><td>&lt;5s</td><td>&lt;3s</td></tr>
+<tr><td>Simulation</td><td>&lt;10s</td><td>&lt;7s</td></tr>
+<tr><td>Full pipeline</td><td>&lt;30s</td><td>&lt;20s</td></tr>
+<tr><td>Decision surface load</td><td>&lt;2s</td><td>&lt;1s</td></tr>
+<tr><td>Memory search</td><td>&lt;500ms</td><td>&lt;200ms</td></tr>
+<tr><td>WebSocket push</td><td>&lt;200ms</td><td>&lt;100ms</td></tr>
+<tr><td>LLM failover</td><td>&lt;10s</td><td>&lt;5s</td></tr>
+<tr><td>Module restart</td><td>&lt;5s</td><td>&lt;3s</td></tr>
+</tbody>
+</table>
+
+<!-- 25. SECURITY -->
+<div class="page-break"></div>
+<h1>25. Security Architecture</h1>
+<p><strong>Authentication:</strong> JWT via Supabase Auth. Refresh token rotation (7-day refresh, 1-hour access).</p>
+<p><strong>Authorization:</strong> Roles: Admin (full org), Manager (department), Viewer (read-only), Agent (system). Row-Level Security per organization.</p>
+<p><strong>Decision Authority:</strong> Recommend (auto, low-risk), Approve (manager, medium-risk), Execute (human, high-risk/strategic).</p>
+<p><strong>Data Protection:</strong> TLS 1.3 in transit, encryption at rest, audit logging for all state changes, API rate limiting per key (100/1000 req/min).</p>
+
+<!-- 26. SEQUENCE DIAGRAMS -->
+<div class="page-break"></div>
+<h1>26. Appendix: Sequence Diagrams</h1>
+
+<h3>26.1 Full Pipeline</h3>
+<div class="diagram">User          Decision Surface    AI Kernel    Modules         Agents      Memory
+ │                    │               │            │              │           │
+ ├─Objective─────────►               │            │              │           │
+ │                    │──compile─────►│            │              │           │
+ │                    │               │──objective─►Objective    │           │
+ │                    │               │◄─goal──────│  Compiler   │           │
+ │                    │               │──plan──────►Planner      │           │
+ │                    │               │──simulate──►Simulation   │           │
+ │                    │               │──organize──►Org Generator│           │
+ │                    │               │──assess────►Risk Engine   │           │
+ │                    │               │──register──►              ├─Agents───►│
+ │                    │◄─dashboard────│            │              │           │
+ │◄─Decisions─────────┤               │            │              │           │
+ ├─Approve───────────►│               │            │              │           │
+ │                    │──execute─────►│            │              │           │
+ │                    │               │──dispatch──►              │           │
+ │                    │               │            │              ├─result───►│
+ │                    │◄─complete─────│            │              │           │
+ │◄─Complete──────────┤               │            │              │           │</div>
+
+<h3>26.2 Failure Recovery</h3>
+<div class="diagram">Agent A         Health Monitor     Module Registry    State Manager    Org Generator
+   │                    │                  │                │               │
+   ├─heartbeat─────────►                  │                │               │
+   │         (missed ×3) │                  │                │               │
+   │                    │──detect_failure──►                │               │
+   │                    │──get_snapshot────────────────────►│               │
+   │                    │◄─snapshot────────│                │               │
+   │                    │──restart_module──►                │               │
+   │                    │                  ├─new_instance───►               │
+   │                    │◄─ready───────────│                │               │
+   │         [if fails ×3]                 │                │               │
+   │                    │──request_human───────────────────────────────────►│</div>
+
+<hr class="div">
+<p style="text-align:center; margin-top:3em; color:#888;">— End of Software Architecture Specification —</p>
+</body>
+</html>
