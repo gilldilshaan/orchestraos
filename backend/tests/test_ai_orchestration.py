@@ -273,8 +273,8 @@ class TestModelRouter:
     def test_get_route_exists(self):
         router = ModelRouter()
         route = router.get_route("plan")
-        assert route["model"] == "gpt-4o"
-        assert route["provider"] == "openai"
+        assert route["model"] == "llama-3.3-70b-versatile"
+        assert route["provider"] == "groq"
         assert route["temperature"] == 0.4
 
     def test_get_route_fallback(self):
@@ -285,13 +285,13 @@ class TestModelRouter:
     def test_get_preferred_provider_default(self):
         router = ModelRouter()
         provider = router.get_preferred_provider("plan")
-        assert provider == "openai"
+        assert provider == "groq"
 
     def test_mark_unavailable_fallback(self):
         router = ModelRouter()
-        router.mark_unavailable("openai")
+        router.mark_unavailable("groq")
         provider = router.get_preferred_provider("plan")
-        assert provider != "openai"
+        assert provider == "openai"
 
     def test_get_task_temperature(self):
         router = ModelRouter()

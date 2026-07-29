@@ -36,6 +36,9 @@ class RetryEngine:
         "scenario": {"max_retries": 2, "base_delay": 1.0},
         "replan": {"max_retries": 2, "base_delay": 1.0},
         "simulation": {"max_retries": 2, "base_delay": 1.0},
+        "executive": {"max_retries": 2, "base_delay": 1.0},
+        "specialist": {"max_retries": 2, "base_delay": 1.0},
+        "ceo_synthesis": {"max_retries": 2, "base_delay": 1.0},
     }
 
     def __init__(self) -> None:

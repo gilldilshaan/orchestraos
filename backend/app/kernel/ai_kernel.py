@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import time
 from typing import Any
 
@@ -9,6 +10,7 @@ from pydantic import BaseModel
 from app.kernel.cache_manager import CacheManager
 from app.kernel.context_manager import ContextManager
 from app.kernel.event_bus import EventBus
+from app.kernel.event_system import TelemetryBus
 from app.kernel.model_router import ModelRouter
 from app.kernel.observability import CostTracker, ObservabilityTracker, TokenTracker
 from app.kernel.output_validator import OutputValidator
@@ -16,6 +18,8 @@ from app.kernel.prompt_manager import PromptManager
 from app.kernel.retry_engine import RetryEngine
 from app.kernel.state_machine import WorkflowStateMachine
 from app.llm.client import llm_client
+
+logger = logging.getLogger(__name__)
 
 
 class AIKernel:
@@ -44,7 +48,36 @@ class AIKernel:
         self.token_tracker = TokenTracker()
         self.cost_tracker = CostTracker()
         self.event_bus = EventBus()
+        self.telemetry_bus = TelemetryBus()
         self.state_machine = WorkflowStateMachine()
+
+    def _agent_name(self, task_type: str) -> str:
+        """Convert task_type to readable agent name."""
+        name_map = {
+            "compile": "Compile",
+            "readiness": "Readiness",
+            "plan": "Plan",
+            "organization": "Organization",
+            "risk": "Risk",
+            "decision": "Decision",
+            "devils_advocate": "Devil's Advocate",
+            "success_probability": "Success Probability",
+            "resource_gap": "Resource Gap",
+            "dependency_graph": "Dependency Graph",
+            "bottleneck": "Bottleneck",
+            "dashboard": "Dashboard",
+            "missing_info": "Missing Info",
+            "scenario": "Scenario",
+            "replan": "Replan",
+            "simulation": "Simulation",
+            "intelligence": "Intelligence",
+            "ceo_analysis": "CEO",
+            "organization_generator": "Org Generator",
+            "executive": "Dynamic Executive",
+            "specialist": "Dynamic Specialist",
+            "ceo_synthesis": "CEO Synthesis",
+        }
+        return name_map.get(task_type, task_type.replace("_", " ").title())
 
     async def run(
         self,
@@ -60,14 +93,13 @@ class AIKernel:
         use_cache: bool = True,
         system_prompt: str | None = None,
     ) -> dict[str, Any]:
+        agent_name = self._agent_name(task_type)
         start_time = time.monotonic()
         retry_count = 0
 
         # 1. Resolve prompt
         if prompt_template:
-            resolved_prompt = self.prompt_manager.render(
-                prompt_template, context or {}
-            )
+            resolved_prompt = self.prompt_manager.render(prompt_template, context or {})
         elif prompt_text:
             resolved_prompt = prompt_text
         else:
@@ -75,6 +107,7 @@ class AIKernel:
             raise ValueError(msg)
 
         prompt_version = prompt_template or "inline"
+        logger.info("[%s] START", agent_name)
 
         # 2. Check cache
         if use_cache:
@@ -89,12 +122,26 @@ class AIKernel:
                     success=True,
                     cached=True,
                 )
+                logger.info(
+                    "[%s] Cache HIT  (%.1fs)",
+                    agent_name, elapsed_ms / 1000,
+                )
                 return cached
 
         # 3. Determine model route
         route = self.model_router.get_route(task_type)
         model = route.get("model", "gpt-4o")
-        effective_temperature = temperature if temperature is not None else route.get("temperature", 0.3)
+        effective_temperature = (
+            temperature if temperature is not None else route.get("temperature", 0.3)
+        )
+
+        provider = getattr(llm_client, "provider_name", "unknown")
+        token_estimate = len(resolved_prompt) // 4
+
+        logger.info(
+            "[%s] Provider=%s Model=%s Tokens=~%d",
+            agent_name, provider, model, token_estimate,
+        )
 
         # 4. Execute with retry
         async def _call_llm() -> str:
@@ -102,13 +149,12 @@ class AIKernel:
                 prompt=resolved_prompt,
                 system_prompt=system_prompt,
                 temperature=effective_temperature,
+                task_type=task_type,
             )
 
         try:
             task_id = f"{task_type}:{hashlib.md5(resolved_prompt.encode()).hexdigest()[:12]}"
-            raw_output, attempts = await self.retry_engine.execute(
-                task_type, task_id, _call_llm
-            )
+            raw_output, attempts = await self.retry_engine.execute(task_type, task_id, _call_llm)
             retry_count = len([a for a in attempts if a.get("error")])
         except Exception as e:
             elapsed_ms = (time.monotonic() - start_time) * 1000
@@ -121,6 +167,10 @@ class AIKernel:
                 failure_reason=str(e),
                 retry_count=retry_count,
             )
+            logger.error(
+                "[%s] FAILED  (%.1fs)  %s",
+                agent_name, elapsed_ms / 1000, str(e),
+            )
             raise
 
         # 5. Validate and repair output
@@ -131,6 +181,9 @@ class AIKernel:
             field_defaults=field_defaults,
             business_rules=business_rules,
         )
+
+        has_errors = "_validation_errors" in validated
+        validation_status = "Failed" if has_errors else "Passed"
 
         # 6. Cache the result
         if use_cache:
@@ -156,7 +209,43 @@ class AIKernel:
         cost = self.observability.estimate_cost(model, input_tokens, output_tokens)
         self.cost_tracker.add(model, cost)
 
+        logger.info(
+            "[%s] Finished in %.1fs  Validation=%s",
+            agent_name, elapsed_ms / 1000, validation_status,
+        )
+
         return validated
+
+    def print_summary(self) -> None:
+        """Print a formatted execution summary table."""
+        records = self.observability.get_recent_calls(50)
+        if not records:
+            print("No execution records available.")
+            return
+
+        total_time = 0.0
+        total_tokens = self.token_tracker.total
+        total_calls = len(records)
+
+        print()
+        print("-" * 55)
+        print(f"{'Agent':<25} {'Time':>10} {'Status':>10}")
+        print("-" * 55)
+
+        for r in records:
+            agent = self._agent_name(r.get("task_type", "unknown"))
+            latency = r.get("latency_ms", 0) / 1000
+            total_time += latency
+            status = "OK" if r.get("success") else "FAIL"
+            if r.get("cached"):
+                status = "CACHED"
+            print(f"{agent:<25} {latency:>8.1f}s {status:>10}")
+
+        print("-" * 55)
+        print(f"{'Total Time':<25} {total_time:>8.1f}s")
+        print(f"{'Total Tokens':<25} {total_tokens:>8}")
+        print(f"{'Total API Calls':<25} {total_calls:>8}")
+        print()
 
     def get_stats(self) -> dict[str, Any]:
         return {
@@ -178,3 +267,4 @@ class AIKernel:
         self.cache_manager.clear()
         self.context_manager.clear()
         self.event_bus.clear()
+        self.telemetry_bus.clear()

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.agents import BaseAgent
 from app.models.features import DevilsAdvocateCritique
 from app.repositories.extensions_repository import (
@@ -14,6 +12,7 @@ from app.repositories.extensions_repository import (
 )
 from app.repositories.features_repository import DevilsAdvocateRepository
 from app.repositories.objective_repository import ObjectiveRepository
+from app.schemas.llm_outputs import DevilsAdvocateOutputSchema
 
 
 class DevilsAdvocateAgent(BaseAgent):
@@ -52,15 +51,26 @@ class DevilsAdvocateAgent(BaseAgent):
                 "roadmap": plan.roadmap if plan else None,
                 "timeline": plan.timeline if plan else None,
                 "total_cost": plan.total_cost if plan else None,
-            } if plan else None,
+            }
+            if plan
+            else None,
             "milestones": [
-                {"name": m.name, "status": m.status, "order": m.order,
-                 "dependencies": m.dependencies or []}
+                {
+                    "name": m.name,
+                    "status": m.status,
+                    "order": m.order,
+                    "dependencies": m.dependencies or [],
+                }
                 for m in milestones
             ],
             "risks": [
-                {"title": r.title, "risk_level": r.risk_level, "probability": r.probability,
-                 "impact": r.impact, "category": r.category}
+                {
+                    "title": r.title,
+                    "risk_level": r.risk_level,
+                    "probability": r.probability,
+                    "impact": r.impact,
+                    "category": r.category,
+                }
                 for r in risks[:10]
             ],
             "departments": [
@@ -73,6 +83,7 @@ class DevilsAdvocateAgent(BaseAgent):
             task_type="devils_advocate",
             prompt_template="devils_advocate_v1.md",
             context=context,
+            schema=DevilsAdvocateOutputSchema,
         )
 
         critique = DevilsAdvocateCritique(
@@ -95,7 +106,11 @@ class DevilsAdvocateAgent(BaseAgent):
             reasoning="Rigorous challenge of strategy and execution plan via AIKernel",
             evidence=[str(result)],
             confidence=0.85,
-            risk_level="high" if critique.critique_score > 70 else "medium" if critique.critique_score > 40 else "low",
+            risk_level="high"
+            if critique.critique_score > 70
+            else "medium"
+            if critique.critique_score > 40
+            else "low",
             assumptions=[a.get("assumption", "") for a in (result.get("assumptions", []) or [])],
             model_used=self._llm.model_router.get_preferred_provider("devils_advocate"),
         )

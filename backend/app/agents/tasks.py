@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.agents import BaseAgent
-from app.kernel import ai_kernel
 from app.models.extensions import (
     Decision,
     DecisionOption,
@@ -26,6 +23,13 @@ from app.repositories.extensions_repository import (
     RoleRepository,
 )
 from app.repositories.objective_repository import ObjectiveRepository
+from app.schemas.llm_outputs import (
+    DashboardOutputSchema,
+    DecisionOutputSchema,
+    OrganizationOutputSchema,
+    PlanOutputSchema,
+    RiskOutputSchema,
+)
 
 
 class PlannerAgent(BaseAgent):
@@ -55,6 +59,7 @@ class PlannerAgent(BaseAgent):
             task_type="plan",
             prompt_template="planner_v1.md",
             context=context,
+            schema=PlanOutputSchema,
         )
 
         plan = Plan(
@@ -75,7 +80,7 @@ class PlannerAgent(BaseAgent):
         for i, ms in enumerate(milestones_data):
             milestone = Milestone(
                 plan_id=plan.id,
-                name=ms.get("name", f"Milestone {i+1}"),
+                name=ms.get("name", f"Milestone {i + 1}"),
                 description=ms.get("description"),
                 status=ms.get("status", "pending"),
                 order=ms.get("order", i + 1),
@@ -116,6 +121,7 @@ class RiskAgent(BaseAgent):
             task_type="risk",
             prompt_template="risk_v1.md",
             context=context,
+            schema=RiskOutputSchema,
         )
 
         risks_data = result.get("risks", [])
@@ -130,7 +136,9 @@ class RiskAgent(BaseAgent):
                 probability=r_data.get("probability", 0.5),
                 impact=r_data.get("impact", 0.5),
                 risk_level=r_data.get("risk_level", "medium"),
-                risk_score=r_data.get("risk_score", r_data.get("probability", 0.5) * r_data.get("impact", 0.5)),
+                risk_score=r_data.get(
+                    "risk_score", r_data.get("probability", 0.5) * r_data.get("impact", 0.5)
+                ),
                 mitigation=r_data.get("mitigation"),
                 contingency=r_data.get("contingency"),
                 owner=r_data.get("owner"),
@@ -168,6 +176,7 @@ class OrganizationAgent(BaseAgent):
             task_type="organization",
             prompt_template="organization_v1.md",
             context=context,
+            schema=OrganizationOutputSchema,
         )
 
         departments_data = result.get("departments", [])
@@ -234,6 +243,7 @@ class DecisionAgent(BaseAgent):
             task_type="decision",
             prompt_template="decision_v1.md",
             context=context,
+            schema=DecisionOutputSchema,
         )
 
         decision = Decision(
@@ -319,6 +329,7 @@ class DashboardAgent(BaseAgent):
             task_type="dashboard",
             prompt_template="dashboard_v1.md",
             context=context,
+            schema=DashboardOutputSchema,
         )
 
         return {

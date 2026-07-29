@@ -1,0 +1,37 @@
+[
+  {
+    "name": "food_delivery_app",
+    "industry": "food_tech",
+    "complexity": "low",
+    "raw": "Launch a food delivery mobile app for downtown Metro City within 3 months with $150k budget targeting 5000 users in first month.",
+    "description": "Simple B2C mobile app launch with clear scope and timeline"
+  },
+  {
+    "name": "saas_analytics_platform",
+    "industry": "saas",
+    "complexity": "medium",
+    "raw": "Build and launch a SaaS analytics platform for mid-market e-commerce companies. Must support real-time dashboards, custom report builder, team collaboration, and API access. Target 100 paid customers in 6 months with $500k seed funding. Team of 8 people available.",
+    "description": "Medium-complexity B2B SaaS with multiple features and clear constraints"
+  },
+  {
+    "name": "healthcare_digital_transformation",
+    "industry": "healthcare",
+    "complexity": "high",
+    "raw": "Transform a regional healthcare provider's digital infrastructure. Scope includes: patient portal modernization, HIPAA-compliant telemedicine platform, EHR system integration with 3 existing systems, AI-assisted diagnosis support for radiology, and patient data analytics dashboard. Must comply with healthcare regulations across 5 states. Budget of $2M with 18-month timeline. Current IT team of 12 people, need to scale to 30.",
+    "description": "High-complexity regulated industry with multiple interconnected systems"
+  },
+  {
+    "name": "fintech_microinvesting",
+    "industry": "fintech",
+    "complexity": "medium",
+    "raw": "Create a micro-investing mobile app that rounds up purchases and invests spare change into diversified ETF portfolios. Must include: bank integration via Plaid, FDIC-insured cash accounts, fractional share trading, automated tax-loss harvesting, and social features (investment clubs). Regulatory compliance required across US and EU markets. $3M Series A, 12 months, team of 15.",
+    "description": "Regulated fintech with complex integrations and multi-region compliance"
+  },
+  {
+    "name": "edtech_adaptive_learning",
+    "industry": "edtech",
+    "complexity": "low",
+    "raw": "Develop an adaptive learning platform for K-12 mathematics. Features include personalized learning paths, real-time progress tracking, interactive exercises, and teacher dashboards. Target 10,000 students in first year. Budget $200k, 4 months, small team of 5.",
+    "description": "Straightforward edtech platform with clear educational scope"
+  }
+]

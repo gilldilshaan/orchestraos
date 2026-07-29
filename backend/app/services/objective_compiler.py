@@ -5,7 +5,10 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.ceo_agent import CEOAgent
 from app.agents.devils_advocate_agent import DevilsAdvocateAgent
+from app.agents.organization_executor import OrganizationExecutor
+from app.agents.organization_generator import OrganizationGenerator
 from app.agents.tasks import (
     DecisionAgent,
     OrganizationAgent,
@@ -13,6 +16,7 @@ from app.agents.tasks import (
     RiskAgent,
 )
 from app.kernel import ai_kernel
+from app.kernel.intelligence_engine import IntelligenceEngine
 from app.kernel.orchestrator import AgentOrchestrator, PipelineStep
 from app.kernel.state_machine import WorkflowStateMachine
 from app.models.extensions import ObjectiveCompilation
@@ -216,6 +220,76 @@ class ObjectiveCompilerService:
                 "completed_steps": pipeline_result["completed_steps"],
                 "errors": pipeline_result["errors"],
             },
+            "status": "completed",
+        }
+
+    async def run_dynamic_pipeline(self, objective_id: str) -> dict[str, Any]:
+        objective = await self._obj_repo.get(objective_id)
+        if not objective:
+            return {"error": "Objective not found"}
+
+        await self._transition_state(objective_id, "executing")
+
+        # Step 1: Intelligence Engine analyzes the objective
+        engine = IntelligenceEngine(self._session, kernel=ai_kernel)
+        intelligence = await engine.analyze(objective_id)
+
+        await ai_kernel.event_bus.publish(
+            "org.intelligence_ready",
+            objective_id,
+            data={
+                "domain": intelligence.domain,
+                "complexity": intelligence.complexity,
+                "estimated_team_size": intelligence.estimated_team_size,
+            },
+        )
+
+        # Step 2: CEO sets strategy and tone (deliberation deferred to Phase 9)
+        ceo = CEOAgent(self._session, kernel=ai_kernel)
+        ceo_analysis = await ceo.run(objective_id)
+        if "error" in ceo_analysis:
+            await self._transition_state(objective_id, "failed")
+            return {"error": f"CEO analysis failed: {ceo_analysis['error']}"}
+
+        # Step 3: Organization Generator builds the custom org structure
+        org_gen = OrganizationGenerator(self._session, kernel=ai_kernel)
+        organization = await org_gen.generate(objective_id, intelligence)
+
+        # Step 4: Organization Executor runs the dynamic org hierarchy
+        executor = OrganizationExecutor(self._session, ai_kernel)
+        org_result = await executor.execute(objective_id, organization)
+
+        # Step 5: Save context
+        context = ai_kernel.context_manager.get_or_create(objective_id)
+        context.ceo_analysis = ceo_analysis
+        context.dynamic_org = org_result
+        context.metadata["pipeline_mode"] = "dynamic_org"
+        context.metadata["organization_name"] = organization.company_name
+        context.metadata["intelligence"] = intelligence.model_dump()
+
+        await self._transition_state(objective_id, "completed")
+
+        return {
+            "intelligence": intelligence.model_dump(),
+            "ceo_analysis": ceo_analysis,
+            "organization": {
+                "company_name": organization.company_name,
+                "industry": organization.industry,
+                "executives": [
+                    {"title": e.title, "purpose": e.purpose}
+                    for e in organization.executives
+                ],
+            },
+            "results": [
+                {
+                    "title": r["title"],
+                    "role_type": r["role_type"],
+                    "status": r["status"],
+                    "summary": r.get("summary"),
+                }
+                for r in org_result.get("results", [])
+            ],
+            "final_report": org_result.get("final_report"),
             "status": "completed",
         }
 

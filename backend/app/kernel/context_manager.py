@@ -39,6 +39,9 @@ class ExecutionContext:
     dependency_graph: dict[str, Any] | None = None
     bottlenecks: list[dict[str, Any]] = field(default_factory=list)
 
+    ceo_analysis: dict[str, Any] | None = None
+    dynamic_org: dict[str, Any] | None = None
+
     errors: list[dict[str, Any]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
