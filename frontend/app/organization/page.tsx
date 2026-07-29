@@ -1,12 +1,14 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "motion/react";
+import { useLatestObjectiveIdQuery, useOrganizationQuery } from "@/hooks/use-api";
 import { OrganizationUniverse } from "@/components/3d/scene-wrapper";
 
 interface LevelMember {
   name: string;
   status: "completed" | "running" | "pending";
-  confidence: number;
+  confidence: number | null;
 }
 
 interface LevelGroup {
@@ -14,52 +16,47 @@ interface LevelGroup {
   members: LevelMember[];
 }
 
-const ceo: LevelMember = {
-  name: "Strategic Director",
-  status: "completed",
-  confidence: 0.95,
-};
-
-const groups: LevelGroup[] = [
-  {
-    title: "Executives",
-    members: [
-      { name: "CTO", status: "completed", confidence: 0.92 },
-      { name: "CFO", status: "completed", confidence: 0.88 },
-      { name: "COO", status: "running", confidence: 0.76 },
-      { name: "CMO", status: "completed", confidence: 0.90 },
-      { name: "CPO", status: "pending", confidence: 0.0 },
-    ],
-  },
-  {
-    title: "Specialists",
-    members: [
-      { name: "ML Engineer", status: "completed", confidence: 0.91 },
-      { name: "Data Analyst", status: "completed", confidence: 0.87 },
-      { name: "UX Researcher", status: "running", confidence: 0.72 },
-      { name: "Infra Engineer", status: "completed", confidence: 0.89 },
-      { name: "Security Analyst", status: "pending", confidence: 0.0 },
-      { name: "QA Lead", status: "running", confidence: 0.68 },
-    ],
-  },
-];
-
-const universeNodes = [
-  { id: "ceo_01", type: "ceo" as const, title: "Strategic Director", status: "completed", confidence: 0.95, runtime: 1.2 },
-  { id: "exec_01", type: "executive" as const, title: "CTO", status: "completed", confidence: 0.92, runtime: 2.1 },
-  { id: "exec_02", type: "executive" as const, title: "CFO", status: "completed", confidence: 0.88, runtime: 1.8 },
-  { id: "exec_03", type: "executive" as const, title: "COO", status: "running", confidence: 0.76, runtime: 0.5 },
-  { id: "exec_04", type: "executive" as const, title: "CMO", status: "completed", confidence: 0.90, runtime: 1.5 },
-  { id: "exec_05", type: "executive" as const, title: "CPO", status: "pending", confidence: 0.0, runtime: 0 },
-  { id: "spec_01", type: "specialist" as const, title: "ML Engineer", status: "completed", confidence: 0.91, runtime: 0.8 },
-  { id: "spec_02", type: "specialist" as const, title: "Data Analyst", status: "completed", confidence: 0.87, runtime: 0.6 },
-  { id: "spec_03", type: "specialist" as const, title: "UX Researcher", status: "running", confidence: 0.72, runtime: 0.3 },
-  { id: "spec_04", type: "specialist" as const, title: "Infra Engineer", status: "completed", confidence: 0.89, runtime: 0.7 },
-  { id: "spec_05", type: "specialist" as const, title: "Security Analyst", status: "pending", confidence: 0.0, runtime: 0 },
-  { id: "spec_06", type: "specialist" as const, title: "QA Lead", status: "running", confidence: 0.68, runtime: 0.2 },
-];
-
 export default function OrganizationPage() {
+  const { data: latestObjectiveId } = useLatestObjectiveIdQuery();
+  const { data: org } = useOrganizationQuery(latestObjectiveId);
+
+  const departments = useMemo(() => org?.departments ?? [], [org]);
+
+  const ceo: LevelMember | null = useMemo(() => {
+    if (!departments.length) return null;
+    const firstRole = departments[0]?.roles?.[0];
+    if (!firstRole) return null;
+    return {
+      name: departments[0].name,
+      status: departments[0].status === "active" ? "completed" : departments[0].status === "proposed" ? "pending" : "running",
+      confidence: null,
+    };
+  }, [departments]);
+
+  const groups: LevelGroup[] = useMemo(() => {
+    return departments.map((dept) => ({
+      title: dept.name,
+      members: (dept.roles ?? []).map((role) => ({
+        name: role.title,
+        status: role.status === "active" ? "completed" : role.status === "proposed" ? "pending" : "running",
+        confidence: null,
+      })),
+    }));
+  }, [departments]);
+
+  const universeNodes = useMemo(() => {
+    return departments.flatMap((dept, di) => {
+      return (dept.roles ?? []).map((role, ri) => ({
+        id: `role_${dept.id ?? di}_${role.id ?? ri}`,
+        type: di === 0 && ri === 0 ? "ceo" as const : "executive" as const,
+        title: role.title,
+        status: role.status === "active" ? "completed" as const : role.status === "proposed" ? "pending" as const : "running" as const,
+        confidence: 0,
+        runtime: 0,
+      }));
+    });
+  }, [departments]);
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -75,56 +72,65 @@ export default function OrganizationPage() {
         </p>
       </motion.div>
 
-      {/* 3D Organization Universe */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, delay: 0.05 }}
-        className="h-[400px] overflow-hidden rounded-xl border border-border/50 bg-card/30"
-      >
-        <OrganizationUniverse
-          nodes={universeNodes}
-          isExecuting
-          className="h-full w-full"
-        />
-      </motion.div>
-
-      {/* CEO level */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="rounded-xl border border-border/50 bg-card"
-      >
-        <div className="border-b border-border/50 px-5 py-3">
-          <h3 className="text-sm font-medium">CEO</h3>
+      {!departments.length ? (
+        <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            No organization data yet. Run a pipeline to generate an organization structure.
+          </p>
         </div>
-        <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
-          <MemberCard {...ceo} />
-        </div>
-      </motion.div>
-
-      {/* Group levels */}
-      <div className="space-y-6">
-        {groups.map((group, gi) => (
+      ) : (
+        <>
           <motion.div
-            key={group.title}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 + gi * 0.1 }}
-            className="rounded-xl border border-border/50 bg-card"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.05 }}
+            className="h-[400px] overflow-hidden rounded-xl border border-border/50 bg-card/30"
           >
-            <div className="border-b border-border/50 px-5 py-3">
-              <h3 className="text-sm font-medium">{group.title}</h3>
-            </div>
-            <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
-              {group.members.map((m) => (
-                <MemberCard key={m.name} {...m} />
-              ))}
-            </div>
+            <OrganizationUniverse
+              nodes={universeNodes}
+              isExecuting
+              className="h-full w-full"
+            />
           </motion.div>
-        ))}
-      </div>
+
+          {ceo && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-xl border border-border/50 bg-card"
+            >
+              <div className="border-b border-border/50 px-5 py-3">
+                <h3 className="text-sm font-medium">Lead Department</h3>
+              </div>
+              <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                <MemberCard {...ceo} />
+              </div>
+            </motion.div>
+          )}
+
+          <div className="space-y-6">
+            {groups.map((group, gi) => (
+              <motion.div
+                key={group.title}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 + gi * 0.1 }}
+                className="rounded-xl border border-border/50 bg-card"
+              >
+                <div className="border-b border-border/50 px-5 py-3">
+                  <h3 className="text-sm font-medium">{group.title}</h3>
+                </div>
+                <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.members.map((m) => (
+                    <MemberCard key={m.name} {...m} />
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -158,7 +164,7 @@ function MemberCard({ name, status, confidence }: LevelMember) {
           {status.charAt(0).toUpperCase() + status.slice(1)}
         </span>
       </div>
-      {confidence > 0 && (
+      {confidence != null && confidence > 0 && (
         <div className="mt-3">
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span>Confidence</span>
@@ -171,6 +177,13 @@ function MemberCard({ name, status, confidence }: LevelMember) {
               animate={{ width: `${confidence * 100}%` }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             />
+          </div>
+        </div>
+      )}
+      {confidence == null && (
+        <div className="mt-3">
+          <div className="text-[11px] text-muted-foreground/50">
+            Confidence: Not Available
           </div>
         </div>
       )}

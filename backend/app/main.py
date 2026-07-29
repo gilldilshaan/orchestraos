@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app import process_info  # noqa: F401  (import records process start time)
+
 from app.api.v1.router import router as api_router
 from app.api.v1.ws import router as ws_router
 from app.config import settings

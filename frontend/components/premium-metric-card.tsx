@@ -13,7 +13,7 @@ interface SparklinePoint {
 interface PremiumMetricCardProps {
   icon: ReactNode;
   label: string;
-  value: number;
+  value: number | null;
   format?: "number" | "percent" | "time" | "decimal";
   trend?: { value: string; direction: "up" | "down" | "neutral" };
   subtitle?: string;
@@ -75,7 +75,11 @@ export function PremiumMetricCard({
 
       {/* Value */}
       <div className="text-2xl font-semibold tracking-tight">
-        <AnimatedCounter value={value} format={format} />
+        {value != null ? (
+          <AnimatedCounter value={value} format={format} />
+        ) : (
+          <span className="font-mono text-xl tabular-nums">—</span>
+        )}
       </div>
 
       {/* Label */}

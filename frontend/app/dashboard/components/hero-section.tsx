@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
-import { useSystemHealth } from "@/hooks/use-dashboard";
+import { useSystemHealth, useAggregateMetrics } from "@/hooks/use-dashboard";
+import { useHealthAiQuery } from "@/hooks/use-api";
 import { AiCoreScene } from "@/components/3d/scene-wrapper";
+import { NewRunModal } from "@/components/new-run-modal";
 import {
   Play,
   RotateCcw,
@@ -13,7 +16,10 @@ import {
 } from "lucide-react";
 
 export function HeroSection() {
+  const [showNewRun, setShowNewRun] = useState(false);
   const { health } = useSystemHealth();
+  const { metrics } = useAggregateMetrics();
+  const { data: ai } = useHealthAiQuery();
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-b from-primary/3 via-background to-background">
@@ -21,7 +27,7 @@ export function HeroSection() {
       <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 opacity-60 sm:h-80 sm:w-80 md:h-96 md:w-96">
         <AiCoreScene
           isExecuting={health.active_runs > 0}
-          confidence={0.87}
+          confidence={metrics.avgConfidence}
           intensity={0.5}
           compact
           className="h-full w-full"
@@ -74,10 +80,18 @@ export function HeroSection() {
           }}
         >
           {[
-            { label: "Provider", value: "OpenAI", color: "text-primary" },
-            { label: "Model", value: "gpt-4o", color: "text-primary" },
-            { label: "Avg. Confidence", value: "87%", color: "text-success" },
-            { label: "Health Score", value: "91%", color: "text-success" },
+            { label: "Provider", value: ai?.provider ?? "—", color: "text-primary" },
+            { label: "Model", value: ai?.model ?? "—", color: "text-primary" },
+            {
+              label: "Avg. Confidence",
+              value: `${Math.round(metrics.avgConfidence * 100)}%`,
+              color: "text-success",
+            },
+            {
+              label: "Health Score",
+              value: `${Math.round(metrics.healthScore * 100)}%`,
+              color: "text-success",
+            },
           ].map((item) => (
             <motion.div
               key={item.label}
@@ -103,13 +117,13 @@ export function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
-          <Link
-            href="/execution"
+          <button
+            onClick={() => setShowNewRun(true)}
             className="group inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
           >
             <Play className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
             New Run
-          </Link>
+          </button>
           <Link
             href="/execution"
             className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-secondary px-4 py-2 text-xs font-medium text-secondary-foreground transition-all hover:bg-muted/50 active:scale-[0.98]"
@@ -156,6 +170,8 @@ export function HeroSection() {
           </span>
         </motion.div>
       </div>
+
+      <NewRunModal open={showNewRun} onClose={() => setShowNewRun(false)} />
     </section>
   );
 }

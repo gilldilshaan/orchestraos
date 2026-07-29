@@ -27,7 +27,7 @@ async def list_dashboards(
     from app.repositories.objective_repository import ObjectiveRepository
 
     obj_repo = ObjectiveRepository(session)
-    objectives = await obj_repo.list(limit=50, order_by="created_at", descending=True)
+    objectives = await obj_repo.list(limit=100, order_by="created_at", descending=True)
     dashboards = []
     for obj in objectives:
         aggregator = DashboardAggregator(session)

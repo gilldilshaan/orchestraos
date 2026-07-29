@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState, useCallback, useRef, useEffect } from "react";
+import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface PanelLayoutProps {
@@ -18,27 +18,25 @@ export function PanelLayout({
   left,
   center,
   right,
-  defaultLeftWidth = 320,
+  defaultLeftWidth = 300,
   defaultRightWidth = 320,
 }: PanelLayoutProps) {
-  const [leftWidth, setLeftWidth] = useState(defaultLeftWidth);
-  const [rightWidth, setRightWidth] = useState(defaultRightWidth);
-  const containerRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div ref={containerRef} className="flex h-full w-full overflow-hidden">
-      {/* Left Panel */}
-      <div style={{ width: leftWidth, minWidth: MIN_PANEL }} className="shrink-0 overflow-hidden border-r border-border/50 bg-card/30">
+    <div className="flex h-full w-full overflow-hidden">
+      <div className="shrink-0 overflow-hidden border-r border-border/30 bg-card/20" style={{ width: defaultLeftWidth, minWidth: MIN_PANEL, maxWidth: MAX_PANEL }}>
         <div className="h-full overflow-y-auto scrollbar-thin">{left}</div>
       </div>
-
-      {/* Center Panel */}
-      <div className="flex-1 min-w-0 overflow-hidden bg-background">
+      <div className="relative flex-1 min-w-0 overflow-hidden bg-gradient-to-br from-background via-background to-muted/10">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `linear-gradient(hsl(var(--muted-foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--muted-foreground)) 1px, transparent 1px)`,
+            backgroundSize: '24px 24px',
+          }}
+        />
         {center}
       </div>
-
-      {/* Right Panel */}
-      <div style={{ width: rightWidth, minWidth: MIN_PANEL }} className="shrink-0 overflow-hidden border-l border-border/50 bg-card/30">
+      <div className="shrink-0 overflow-hidden border-l border-border/30 bg-card/20" style={{ width: defaultRightWidth, minWidth: MIN_PANEL, maxWidth: MAX_PANEL }}>
         <div className="h-full overflow-y-auto scrollbar-thin">{right}</div>
       </div>
     </div>

@@ -72,14 +72,14 @@ interface MetricsState {
 }
 
 export const useMetricsStore = create<MetricsState>((set) => ({
-  averageConfidence: 0.87,
-  totalRuntime: 12.4,
-  successRate: 0.94,
-  executivesSpawned: 5,
-  specialistsSpawned: 12,
-  healthScore: 0.91,
-  averageRetries: 0.3,
-  averageExecutionTime: 2.8,
+  averageConfidence: 0,
+  totalRuntime: 0,
+  successRate: 0,
+  executivesSpawned: 0,
+  specialistsSpawned: 0,
+  healthScore: 0,
+  averageRetries: 0,
+  averageExecutionTime: 0,
   setMetrics: (metrics) => set(metrics),
 }));
 

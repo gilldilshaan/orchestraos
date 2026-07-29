@@ -8,14 +8,17 @@ import {
   Pause,
   SkipBack,
   SkipForward,
-  ChevronLeft,
-  ChevronRight,
+  Sliders,
   LayoutGrid,
   GitBranch,
-  Sliders,
 } from "lucide-react";
 
 const speeds = [0.25, 0.5, 1, 2, 5];
+
+const viewOptions = [
+  { key: "organization" as const, label: "Org", icon: LayoutGrid },
+  { key: "dag" as const, label: "DAG", icon: GitBranch },
+];
 
 export function TopToolbar() {
   const { centerView, setCenterView } = useViewStore();
@@ -23,40 +26,33 @@ export function TopToolbar() {
   const { isPlaying, togglePlaying, active, setActive, setPosition } = useReplayStore();
 
   return (
-    <div className="flex items-center gap-2 border-b border-border/50 bg-card/50 px-4 py-2">
+    <div className="flex items-center gap-2 border-b border-border/20 bg-muted/[0.02] px-3 py-1.5">
       {/* View toggle */}
-      <div className="flex items-center rounded-lg border border-border/30 bg-muted/30 p-0.5">
-        <button
-          onClick={() => setCenterView("organization")}
-          className={cn(
-            "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all",
-            centerView === "organization" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <LayoutGrid className="h-3 w-3" />
-          Org
-        </button>
-        <button
-          onClick={() => setCenterView("dag")}
-          className={cn(
-            "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all",
-            centerView === "dag" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <GitBranch className="h-3 w-3" />
-          DAG
-        </button>
+      <div className="flex items-center rounded-md border border-border/20 bg-muted/20 p-0.5">
+        {viewOptions.map((v) => (
+          <button
+            key={v.key}
+            onClick={() => setCenterView(v.key)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-medium transition-all",
+              centerView === v.key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground"
+            )}
+          >
+            <v.icon className="h-3 w-3" />
+            {v.label}
+          </button>
+        ))}
       </div>
 
-      <div className="mx-2 h-4 w-px bg-border/50" />
+      <div className="h-3 w-px bg-border/20" />
 
-      {/* Replay controls */}
+      {/* Replay */}
       <div className="flex items-center gap-1">
         <button
           onClick={() => setActive(!active)}
           className={cn(
-            "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all",
-            active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            "flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-medium transition-all",
+            active ? "bg-primary/10 text-primary" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/20"
           )}
         >
           <Sliders className="h-3 w-3" />
@@ -64,24 +60,23 @@ export function TopToolbar() {
         </button>
         {active && (
           <>
-            <button onClick={() => setPosition(0)} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-              <SkipBack className="h-3.5 w-3.5" />
+            <button onClick={() => setPosition(0)} className="rounded p-1 text-muted-foreground/50 hover:bg-muted/20 hover:text-foreground">
+              <SkipBack className="h-3 w-3" />
             </button>
-            <button onClick={togglePlaying} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-              {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            <button onClick={togglePlaying} className="rounded p-1 text-muted-foreground/50 hover:bg-muted/20 hover:text-foreground">
+              {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
             </button>
-            <button className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-              <SkipForward className="h-3.5 w-3.5" />
+            <button className="rounded p-1 text-muted-foreground/50 hover:bg-muted/20 hover:text-foreground">
+              <SkipForward className="h-3 w-3" />
             </button>
-
-            <div className="ml-2 flex items-center gap-1 rounded-lg border border-border/30 bg-muted/30 px-1.5 py-0.5">
+            <div className="ml-1 flex items-center gap-0.5 rounded-md border border-border/20 bg-muted/20 px-1 py-0.5">
               {speeds.map((s) => (
                 <button
                   key={s}
                   onClick={() => setSpeed(s)}
                   className={cn(
-                    "rounded px-1.5 py-0.5 text-[10px] font-mono transition-all",
-                    speed === s ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    "rounded px-1.5 py-0.5 text-[9px] font-mono transition-all",
+                    speed === s ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/50 hover:text-foreground"
                   )}
                 >
                   {s}×

@@ -34,14 +34,14 @@ class WorkflowStateMachine:
 
     TRANSITIONS: dict[str, list[str]] = {
         "draft": ["compiled", "failed"],
-        "compiled": ["planning", "failed"],
+        "compiled": ["planning", "planned", "failed"],
         "planning": ["planned", "failed"],
-        "planned": ["organizing", "failed"],
+        "planned": ["organizing", "organized", "failed"],
         "organizing": ["organized", "failed"],
-        "organized": ["risk_analysis", "failed"],
+        "organized": ["risk_analysis", "risks_analyzed", "failed"],
         "risk_analysis": ["risks_analyzed", "failed"],
         "risks_analyzed": ["decision_pending", "failed"],
-        "decision_pending": ["approved", "failed", "cancelled"],
+        "decision_pending": ["approved", "completed", "failed", "cancelled"],
         "approved": ["executing", "adapting", "failed"],
         "executing": ["monitoring", "adapting", "failed", "completed"],
         "monitoring": ["adapting", "completed", "failed"],

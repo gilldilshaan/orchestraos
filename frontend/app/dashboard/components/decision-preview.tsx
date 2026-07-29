@@ -4,8 +4,12 @@ import { motion } from "motion/react";
 import Link from "next/link";
 import { HealthBadge } from "@/components/health-badge";
 import { ArrowRight, Lightbulb } from "lucide-react";
+import { useDecisions } from "@/hooks/use-dashboard";
 
 export function DecisionPreview() {
+  const { decisions } = useDecisions();
+  const latest = decisions[0];
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
@@ -31,23 +35,27 @@ export function DecisionPreview() {
             </motion.div>
             <div>
               <h2 className="text-sm font-semibold">Latest Decision</h2>
-              <h3 className="mt-1.5 text-sm font-medium">
-                Technology Stack Selection
-              </h3>
-              <p className="mt-0.5 max-w-md text-xs text-muted-foreground">
-                Evaluate React Native vs Flutter vs native development for mobile
-                platform initiative across team capability, performance, and time
-                to market.
-              </p>
-              <div className="mt-3 flex items-center gap-3">
-                <HealthBadge status="low" type="risk" size="sm" />
-                <span className="text-xs text-muted-foreground">
-                  Confidence: 88%
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  3 options
-                </span>
-              </div>
+              {latest ? (
+                <>
+                  <h3 className="mt-1.5 text-sm font-medium">{latest.title}</h3>
+                  <p className="mt-0.5 max-w-md text-xs text-muted-foreground line-clamp-2">
+                    {latest.executive_summary}
+                  </p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <HealthBadge status={latest.risk_level} type="risk" size="sm" />
+                    <span className="text-xs text-muted-foreground">
+                      Confidence: {Math.round(latest.confidence * 100)}%
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {latest.tradeoffs.length} option(s)
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  No decisions yet. Run a pipeline to generate strategic decisions.
+                </p>
+              )}
             </div>
           </div>
           <Link

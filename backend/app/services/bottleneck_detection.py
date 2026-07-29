@@ -37,8 +37,11 @@ class BottleneckDetectionService:
         for bn in bottlenecks_data:
             description = bn.get("description", bn.get("name", "Unknown"))
             severity = bn.get("severity", "medium")
-            impact = bn.get("impact", "")
-            recommendation = bn.get("recommendation", "")
+            bottleneck_type = bn.get("bottleneck_type", bn.get("type", "process"))
+            title = bn.get("title", description[:200])
+            root_cause = bn.get("root_cause", bn.get("cause", ""))
+            recommended_resolution = bn.get("recommended_resolution", bn.get("recommendation", bn.get("resolution", "")))
+            affected_entity_type = bn.get("affected_entity_type", "")
 
             existing = next(
                 (e for e in existing_list if e.description == description),
@@ -47,18 +50,21 @@ class BottleneckDetectionService:
             if existing:
                 await self._repo.update(existing.id, {
                     "severity": severity,
-                    "impact": impact,
-                    "recommendation": recommendation,
+                    "root_cause": root_cause,
+                    "recommended_resolution": recommended_resolution,
                 })
                 b = existing
             else:
                 b = Bottleneck(
                     objective_id=objective_id,
+                    bottleneck_type=bottleneck_type,
+                    title=title,
                     description=description,
                     severity=severity,
-                    impact=impact,
-                    recommendation=recommendation,
-                    resolved=False,
+                    root_cause=root_cause,
+                    recommended_resolution=recommended_resolution,
+                    affected_entity_type=affected_entity_type,
+                    status="active",
                 )
                 b = await self._repo.create(b)
 
@@ -66,9 +72,9 @@ class BottleneckDetectionService:
                 "id": b.id,
                 "description": b.description,
                 "severity": b.severity,
-                "impact": b.impact,
-                "recommendation": b.recommendation,
-                "resolved": b.resolved,
+                "root_cause": b.root_cause,
+                "recommended_resolution": b.recommended_resolution,
+                "status": b.status,
             })
 
         return {"bottlenecks": bottlenecks}
@@ -83,26 +89,26 @@ class BottleneckDetectionService:
                 "id": b.id,
                 "description": b.description,
                 "severity": b.severity,
-                "impact": b.impact,
-                "recommendation": b.recommendation,
-                "resolved": b.resolved,
+                "root_cause": b.root_cause,
+                "recommended_resolution": b.recommended_resolution,
+                "status": b.status,
             }
             for b in items
         ]
 
     async def resolve(self, bottleneck_id: str) -> dict[str, Any] | None:
-        b = await self._repo.update(bottleneck_id, {"resolved": True})
+        b = await self._repo.update(bottleneck_id, {"status": "resolved"})
         if not b:
             return None
         return {
             "id": b.id,
             "description": b.description,
             "severity": b.severity,
-            "impact": b.impact,
-            "recommendation": b.recommendation,
-            "resolved": b.resolved,
+            "root_cause": b.root_cause,
+            "recommended_resolution": b.recommended_resolution,
+            "status": b.status,
         }
 
     async def count_active(self, objective_id: str) -> int:
         items = await self._repo.get_by_objective(objective_id)
-        return sum(1 for b in items if not b.resolved)
+        return sum(1 for b in items if b.status == "active")

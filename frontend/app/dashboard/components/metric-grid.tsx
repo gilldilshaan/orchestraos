@@ -1,6 +1,6 @@
 "use client";
 
-import { useMetrics } from "@/hooks/use-dashboard";
+import { useAggregateMetrics } from "@/hooks/use-dashboard";
 import { PremiumMetricCard } from "@/components/premium-metric-card";
 import {
   PlayCircle,
@@ -20,7 +20,6 @@ const metricsConfig = [
     label: "Total Runs",
     key: "totalRuns" as const,
     format: "number" as const,
-    trend: { value: "+12.4%", direction: "up" as const },
     subtitle: "All-time across all organizations",
   },
   {
@@ -28,7 +27,6 @@ const metricsConfig = [
     label: "Success Rate",
     key: "successRate" as const,
     format: "percent" as const,
-    trend: { value: "+2.1%", direction: "up" as const },
     subtitle: "Last 100 runs",
   },
   {
@@ -36,7 +34,6 @@ const metricsConfig = [
     label: "Average Runtime",
     key: "avgRuntime" as const,
     format: "time" as const,
-    trend: { value: "-0.3s", direction: "down" as const },
     subtitle: "Per execution",
   },
   {
@@ -44,7 +41,6 @@ const metricsConfig = [
     label: "Executives Spawned",
     key: "executivesSpawned" as const,
     format: "number" as const,
-    trend: { value: "+2", direction: "up" as const },
     subtitle: "Per run average",
   },
   {
@@ -52,7 +48,6 @@ const metricsConfig = [
     label: "Specialists Spawned",
     key: "specialistsSpawned" as const,
     format: "number" as const,
-    trend: { value: "+5", direction: "up" as const },
     subtitle: "Per run average",
   },
   {
@@ -60,7 +55,6 @@ const metricsConfig = [
     label: "Average Confidence",
     key: "avgConfidence" as const,
     format: "percent" as const,
-    trend: { value: "+1.8%", direction: "up" as const },
     subtitle: "Decision quality score",
   },
   {
@@ -68,15 +62,13 @@ const metricsConfig = [
     label: "Parallelism",
     key: "parallelism" as const,
     format: "number" as const,
-    trend: { value: "2.4x", direction: "up" as const },
-    subtitle: "Peak concurrent nodes",
+    subtitle: "Peak concurrent nodes (not yet tracked)",
   },
   {
     icon: <Heart className="h-4 w-4" />,
     label: "Health Score",
     key: "healthScore" as const,
     format: "percent" as const,
-    trend: { value: "+0.5%", direction: "up" as const },
     subtitle: "Organization health",
   },
   {
@@ -84,13 +76,12 @@ const metricsConfig = [
     label: "Average Retries",
     key: "avgRetries" as const,
     format: "decimal" as const,
-    trend: { value: "-0.1", direction: "down" as const },
-    subtitle: "Per node attempt",
+    subtitle: "Per node attempt (not yet tracked)",
   },
 ];
 
 export function MetricGrid() {
-  const { metrics } = useMetrics();
+  const { metrics } = useAggregateMetrics();
 
   return (
     <section>
@@ -110,7 +101,6 @@ export function MetricGrid() {
             label={cfg.label}
             value={metrics[cfg.key]}
             format={cfg.format}
-            trend={cfg.trend}
             subtitle={cfg.subtitle}
             delay={0.05 + i * 0.03}
           />

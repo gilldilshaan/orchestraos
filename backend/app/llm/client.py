@@ -15,6 +15,8 @@ class LLMClient:
         self._provider = self._detect_provider()
 
     def _detect_provider(self) -> str:
+        if settings.openrouter_api_key:
+            return "openrouter"
         if settings.groq_api_key:
             return "groq"
         if settings.openai_api_key:
@@ -34,6 +36,14 @@ class LLMClient:
     @property
     def provider_name(self) -> str:
         return self._provider
+
+    @property
+    def default_model(self) -> str | None:
+        return {
+            "openrouter": "openai/gpt-4o-mini",
+            "groq": "llama-3.3-70b-versatile",
+            "openai": "gpt-4o",
+        }.get(self._provider)
 
     async def generate(
         self,
@@ -144,20 +154,51 @@ class LLMClient:
             or "missing information" in prompt_lower
             or "clarification" in prompt_lower
         ):
-            return json.dumps(
-                {
-                    "missing_fields": ["budget", "target_audience", "success_metrics"],
-                    "critical_missing": ["budget", "success_metrics"],
-                    "clarification_questions": [
-                        "What is the total budget available for this initiative?",
-                        "Who is the target audience or customer segment?",
-                        "How will success be measured (specific KPIs)?",
-                        "What is the expected timeline for completion?",
-                        "How large is the team that will work on this?",
-                    ],
-                    "is_complete": False,
-                }
-            )
+            missing = []
+            critical = []
+            questions = []
+
+            if not any(w in prompt_lower for w in ["budget", "cost", "funding", "dollar", "$"]):
+                missing.append("budget")
+                critical.append("budget")
+                questions.append("What is the total budget available for this initiative?")
+            if not any(w in prompt_lower for w in ["timeline", "month", "quarter", "q1", "q2", "q3", "q4", "year", "week", "day"]):
+                missing.append("timeline")
+                critical.append("timeline")
+                questions.append("What is the expected timeline for completion?")
+            if not any(w in prompt_lower for w in ["audience", "customer", "user", "b2b", "b2c", "client", "market"]):
+                missing.append("target_audience")
+                questions.append("Who is the target audience or customer segment?")
+            if not any(w in prompt_lower for w in ["team", "engineer", "developer", "staff", "people", "headcount"]):
+                missing.append("team_size")
+                questions.append("What is the team size and composition?")
+            if not any(w in prompt_lower for w in ["business model", "subscription", "saas", "revenue", "freemium", "license"]):
+                missing.append("business_model")
+                critical.append("business_model")
+                questions.append("What is the business model for this platform?")
+            if not any(w in prompt_lower for w in ["revenue", "subscription", "pricing", "price", "paid", "monthly", "annual"]):
+                missing.append("revenue_model")
+                questions.append("How will the platform generate revenue?")
+            if not any(w in prompt_lower for w in ["market", "competitor", "industry", "sector", "b2b", "b2c"]):
+                missing.append("market")
+                questions.append("What is the target market and competitive landscape?")
+            if not any(w in prompt_lower for w in ["constraint", "integration", "compliance", "requirement", "soc2", "gdpr", "limit"]):
+                missing.append("constraints")
+                questions.append("What are the key constraints and requirements?")
+            if not any(w in prompt_lower for w in ["metric", "kpi", "success", "users", "uptime", "revenue"]):
+                missing.append("success_metrics")
+                critical.append("success_metrics")
+                questions.append("How will success be measured?")
+
+            return json.dumps({
+                "missing_fields": missing,
+                "critical_missing": critical,
+                "clarification_questions": questions,
+                "is_complete": len(critical) == 0,
+                "reasoning": "Analyzed user input for all required fields.",
+                "confidence": 0.85 if len(critical) == 0 else 0.6,
+                "risk_level": "low" if len(critical) == 0 else "medium",
+            })
 
         if "success probability" in prompt_lower or "success_probability" in prompt_lower:
             return json.dumps(
@@ -318,6 +359,22 @@ class LLMClient:
         self, prompt: str, system_prompt: str | None, temperature: float, model: str | None = None
     ) -> str:
         from openai import AsyncOpenAI
+
+        if self._provider == "openrouter":
+            client = AsyncOpenAI(
+                api_key=settings.openrouter_api_key,
+                base_url="https://openrouter.ai/api/v1",
+            )
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            response = await client.chat.completions.create(
+                model=model or "openai/gpt-4o-mini",
+                messages=messages,
+                temperature=temperature,
+            )
+            return response.choices[0].message.content or ""
 
         if self._provider == "groq":
             client = AsyncOpenAI(

@@ -11,8 +11,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.kernel.ai_kernel import AIKernel
 from app.kernel.context_manager import ExecutionContext
 from app.kernel.event_bus import EventBus
+from app.services.execution_events import sse_manager
 
 logger = logging.getLogger(__name__)
+
+STAGE_LABELS: dict[str, str] = {
+    "compiler": "Compiling objective",
+    "readiness": "Assessing readiness",
+    "planner": "Planning",
+    "organization": "Building organization",
+    "risk": "Analyzing risks",
+    "decision": "Running decision engine",
+    "devils_advocate": "Devil's advocate review",
+    "success_probability": "Calculating success probability",
+    "resource_gap": "Identifying resource gaps",
+    "dependency_graph": "Building dependency graph",
+    "bottleneck": "Detecting bottlenecks",
+    "dashboard": "Aggregating dashboard",
+    "scenario": "Running scenario simulation",
+    "ceo_analysis": "CEO analysis",
+    "dynamic_org": "Dynamic organization",
+}
 
 
 StepHandler = Callable[..., Awaitable[dict[str, Any]]]
@@ -124,6 +143,14 @@ class AgentOrchestrator:
         """Execute a single pipeline step and return its result."""
         step.status = "running"
         step.started_at = datetime.now(UTC)
+        label = STAGE_LABELS.get(step.name, step.name.replace("_", " ").title())
+        await sse_manager.emit_stage(
+            objective_id,
+            stage=step.name,
+            status="started",
+            message=label,
+            progress=0.0,
+        )
         coro = step.handler(
             objective_id=objective_id,
             context=context,
@@ -148,6 +175,14 @@ class AgentOrchestrator:
         completed.add(step.name)
         results[step.name] = result
         self._update_context(step, result, context)
+        label = STAGE_LABELS.get(step.name, step.name.replace("_", " ").title())
+        await sse_manager.emit_stage(
+            objective_id,
+            stage=step.name,
+            status="completed",
+            message=f"{label} complete",
+            progress=0.0,
+        )
         await self._event_bus.publish(
             f"{step.name}.completed",
             objective_id,
@@ -155,7 +190,7 @@ class AgentOrchestrator:
             context=context,
         )
 
-    def _handle_step_error(
+    async def _handle_step_error(
         self,
         step: PipelineStep,
         error: Exception,
@@ -175,6 +210,14 @@ class AgentOrchestrator:
             "error": error_msg,
             "timestamp": datetime.now(UTC).isoformat(),
         })
+        label = STAGE_LABELS.get(step.name, step.name.replace("_", " ").title())
+        await sse_manager.emit_stage(
+            objective_id,
+            stage=step.name,
+            status="error",
+            message=f"{label} failed: {error_msg}",
+            progress=0.0,
+        )
 
         if is_timeout and not step.optional:
             context.errors.append({"step": step.name, "error": error_msg})
@@ -211,6 +254,9 @@ class AgentOrchestrator:
             and all(dep in completed for dep in s.depends_on)
         ]
 
+    async def _progress(self, completed: set[str], total: int) -> float:
+        return round((len(completed) / total) * 100, 1) if total else 0.0
+
     async def run_pipeline(
         self,
         objective_id: str,
@@ -222,8 +268,17 @@ class AgentOrchestrator:
         completed: set[str] = set()
         results: dict[str, Any] = {}
         errors: list[dict[str, Any]] = []
+        total_steps = len(steps)
 
-        while len(completed) < len(steps):
+        await sse_manager.emit_stage(
+            objective_id,
+            stage="pipeline",
+            status="started",
+            message="Pipeline started",
+            progress=0.0,
+        )
+
+        while len(completed) < total_steps:
             ready = self._find_ready_steps(steps, completed, set())
 
             if not ready:
@@ -244,7 +299,7 @@ class AgentOrchestrator:
 
             for step, result in zip(ready, step_results):
                 if isinstance(result, Exception):
-                    err = self._handle_step_error(
+                    err = await self._handle_step_error(
                         step, result, objective_id, context,
                         completed, results, errors,
                     )
@@ -252,6 +307,13 @@ class AgentOrchestrator:
                         err["completed_steps"] = list(completed)
                         err["results"] = results
                         err["errors"] = errors
+                        await sse_manager.emit_stage(
+                            objective_id,
+                            stage="pipeline",
+                            status="error",
+                            message=err.get("error", "Pipeline failed"),
+                            progress=await self._progress(completed, total_steps),
+                        )
                         return err
 
                     # Optional step failure published via event bus
@@ -267,8 +329,25 @@ class AgentOrchestrator:
                         completed, results,
                     )
 
+                await sse_manager.emit_stage(
+                    objective_id,
+                    stage="pipeline",
+                    status="progress",
+                    message=f"Completed step: {step.name}",
+                    progress=await self._progress(completed, total_steps),
+                )
+
+        pipeline_status = "completed" if not errors else "completed_with_errors"
+        await sse_manager.emit_stage(
+            objective_id,
+            stage="pipeline",
+            status=pipeline_status,
+            message="Pipeline finished",
+            progress=100.0,
+        )
+
         return {
-            "status": "completed" if not errors else "completed_with_errors",
+            "status": pipeline_status,
             "completed_steps": list(completed),
             "results": results,
             "errors": errors if errors else None,

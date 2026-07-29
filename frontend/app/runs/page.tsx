@@ -3,56 +3,31 @@
 import { motion } from "motion/react";
 import { HealthBadge } from "@/components/health-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
+import { useDashboardsQuery } from "@/hooks/use-api";
 
-const runs = [
-  {
-    id: "run_01j...",
-    objective: "E-commerce Platform Expansion",
-    date: "2026-07-28 12:00",
-    duration: "4.2s",
-    confidence: 0.92,
-    nodes: 18,
-    status: "completed" as const,
-  },
-  {
-    id: "run_01i...",
-    objective: "AI Customer Support System",
-    date: "2026-07-28 11:30",
-    duration: "3.8s",
-    confidence: 0.88,
-    nodes: 14,
-    status: "completed" as const,
-  },
-  {
-    id: "run_01h...",
-    objective: "Supply Chain Optimization",
-    date: "2026-07-28 10:45",
-    duration: "2.1s",
-    confidence: 0.76,
-    nodes: 8,
-    status: "running" as const,
-  },
-  {
-    id: "run_01g...",
-    objective: "Data Pipeline Migration",
-    date: "2026-07-28 09:15",
-    duration: "1.5s",
-    confidence: 0.45,
-    nodes: 6,
-    status: "failed" as const,
-  },
-  {
-    id: "run_01f...",
-    objective: "Mobile App Launch Strategy",
-    date: "2026-07-28 08:00",
-    duration: "5.1s",
-    confidence: 0.95,
-    nodes: 22,
-    status: "completed" as const,
-  },
-];
+function runtimeSeconds(createdAt: string | null, updatedAt: string | null, isTerminal: boolean): number {
+  if (!createdAt) return 0;
+  const start = new Date(createdAt).getTime();
+  const end = isTerminal && updatedAt ? new Date(updatedAt).getTime() : Date.now();
+  return Math.max(0, (end - start) / 1000);
+}
 
 export default function RunsPage() {
+  const { data: dashboards } = useDashboardsQuery();
+
+  const runs = (dashboards ?? []).map((d) => {
+    const isTerminal = d.objective?.status === "completed" || d.objective?.status === "failed";
+    return {
+      id: d.objective?.id ?? "—",
+      objective: d.objective?.summary ?? "Unknown Objective",
+      date: d.objective?.created_at ?? null,
+      duration: runtimeSeconds(d.objective?.created_at ?? null, d.objective?.updated_at ?? null, isTerminal),
+      confidence: d.objective?.confidence ?? null,
+      nodes: d.organization?.total_head_count ?? 0,
+      status: d.objective?.status === "completed" ? "completed" as const : d.objective?.status === "failed" ? "failed" as const : "running" as const,
+    };
+  });
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -68,72 +43,89 @@ export default function RunsPage() {
         </p>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-        className="rounded-lg border border-border/50 bg-card"
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border/50">
-                <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Run
-                </th>
-                <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Objective
-                </th>
-                <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Duration
-                </th>
-                <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Nodes
-                </th>
-                <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Confidence
-                </th>
-                <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {runs.map((run, i) => (
-                <motion.tr
-                  key={i}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="cursor-pointer transition-colors hover:bg-muted/20"
-                >
-                  <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
-                    {run.id}
-                  </td>
-                  <td className="px-5 py-3.5 font-medium">{run.objective}</td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums text-muted-foreground">
-                    {run.duration}
-                  </td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums text-muted-foreground">
-                    {run.nodes}
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <ConfidenceBar
-                      value={run.confidence}
-                      size="sm"
-                      className="w-20 ml-auto"
-                      showValue
-                    />
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <HealthBadge status={run.status} size="sm" />
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </motion.div>
+      {runs.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="rounded-xl border border-border/50 bg-card p-8 text-center"
+        >
+          <p className="text-sm text-muted-foreground">
+            No runs yet. Start a new run to see execution history.
+          </p>
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="rounded-lg border border-border/50 bg-card"
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/50">
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Run
+                  </th>
+                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Objective
+                  </th>
+                  <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Duration
+                  </th>
+                  <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Nodes
+                  </th>
+                  <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Confidence
+                  </th>
+                  <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {runs.map((run, i) => (
+                  <motion.tr
+                    key={run.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="cursor-pointer transition-colors hover:bg-muted/20"
+                  >
+                    <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
+                      {run.id.length > 12 ? `${run.id.slice(0, 12)}...` : run.id}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium">{run.objective}</td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums text-muted-foreground">
+                      {run.duration.toFixed(1)}s
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums text-muted-foreground">
+                      {run.nodes}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      {run.confidence != null ? (
+                        <ConfidenceBar
+                          value={run.confidence}
+                          size="sm"
+                          className="w-20 ml-auto"
+                          showValue
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground/50">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <HealthBadge status={run.status} size="sm" />
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

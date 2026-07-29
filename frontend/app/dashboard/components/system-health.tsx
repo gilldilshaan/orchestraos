@@ -2,6 +2,8 @@
 
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { useHealthAiQuery, useHealthOrganizationQuery } from "@/hooks/use-api";
+import { useAggregateMetrics } from "@/hooks/use-dashboard";
 import { PulseRing } from "@/components/premium/telemetry-viz";
 
 interface GaugeProps {
@@ -12,7 +14,7 @@ interface GaugeProps {
   color?: "primary" | "success" | "warning" | "destructive";
 }
 
-function Gauge({ label, value, max = 100, unit = "%", color = "primary" }: GaugeProps) {
+function Gauge({ label, value, max = 100, unit = "", color = "primary" }: GaugeProps) {
   const pct = Math.min((value / max) * 100, 100);
   const colorMap = {
     primary: { bg: "bg-primary", ring: "hsl(var(--primary))" },
@@ -33,8 +35,7 @@ function Gauge({ label, value, max = 100, unit = "%", color = "primary" }: Gauge
           {label}
         </span>
         <span className="font-mono text-xs font-medium tabular-nums">
-          {value}
-          {unit}
+          {value}{unit}
         </span>
       </div>
       <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -58,16 +59,20 @@ function Gauge({ label, value, max = 100, unit = "%", color = "primary" }: Gauge
   );
 }
 
-const gauges = [
-  { label: "Telemetry Health", value: 98, color: "success" as const },
-  { label: "Organization Health", value: 91, color: "success" as const },
-  { label: "Execution Queue", value: 23, color: "primary" as const },
-  { label: "Retry Queue", value: 5, color: "warning" as const },
-  { label: "Supervisor Health", value: 95, color: "success" as const },
-  { label: "Decision Confidence", value: 87, color: "success" as const },
-];
-
 export function SystemHealth() {
+  const { data: ai } = useHealthAiQuery();
+  const { data: orgHealth } = useHealthOrganizationQuery();
+  const { metrics } = useAggregateMetrics();
+
+  const gauges = [
+    { label: "Provider Health", value: ai?.status === "healthy" ? 100 : ai?.status === "degraded" ? 60 : 0, color: ai?.status === "healthy" ? "success" as const : "warning" as const },
+    { label: "Organization Health", value: Math.round((metrics.healthScore ?? 0) * 100), color: (metrics.healthScore ?? 0) > 0.8 ? "success" as const : "warning" as const },
+    { label: "Active Runs", value: ai?.active_runs ?? 0, max: 10, unit: "", color: "primary" as const },
+    { label: "Queue Depth", value: ai?.queue_depth ?? 0, max: 10, unit: "", color: "warning" as const },
+    { label: "Active Agents", value: (ai?.active_agents ?? 0) + (ai?.active_executives ?? 0) + (ai?.active_specialists ?? 0), max: 20, unit: "", color: "success" as const },
+    { label: "Uptime", value: Math.min(Math.round((ai?.uptime_seconds ?? 0) / 3600 * 100) / 100, 100), unit: "h", color: "primary" as const },
+  ];
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}

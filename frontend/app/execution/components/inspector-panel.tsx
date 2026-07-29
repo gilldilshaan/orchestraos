@@ -1,11 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { useInspectorStore } from "@/store";
 import { useExecutionNodes } from "@/hooks/use-execution";
+import { useSSEStore } from "@/store/sse-store";
+import { useDashboardQuery } from "@/hooks/use-api";
+import { useSearchParams } from "next/navigation";
 import { HealthBadge } from "@/components/health-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
 import { cn } from "@/lib/utils";
-import { X, Crown, Briefcase, UserCircle, Activity, FileText, Clock, RotateCcw, Cpu } from "lucide-react";
+import { X, Crown, Briefcase, UserCircle, Activity, Clock, RotateCcw, Cpu } from "lucide-react";
 
 export function InspectorPanel() {
   const { selectedNodeId, close } = useInspectorStore();
@@ -68,7 +72,7 @@ function NodeInspector({ node }: { node: NonNullable<ReturnType<typeof useExecut
         {[
           { label: "Confidence", value: node.confidence > 0 ? `${(node.confidence * 100).toFixed(0)}%` : "—", icon: Activity },
           { label: "Runtime", value: node.runtime > 0 ? `${node.runtime.toFixed(2)}s` : "—", icon: Clock },
-          { label: "Retries", value: String(node.retries), icon: RotateCcw },
+          { label: "Retries", value: node.retries > 0 ? String(node.retries) : "—", icon: RotateCcw },
           { label: "Token Usage", value: node.tokenUsage > 0 ? `${node.tokenUsage.toLocaleString()}` : "—", icon: Cpu },
         ].map((s) => (
           <div key={s.label} className="rounded-lg border border-border/30 bg-background/50 p-2.5">
@@ -100,11 +104,40 @@ function NodeInspector({ node }: { node: NonNullable<ReturnType<typeof useExecut
 }
 
 function OrgSummary() {
+  const searchParams = useSearchParams();
+  const objectiveId = searchParams.get("id");
+  const { data: dashboard } = useDashboardQuery(objectiveId);
+  const sseEvents = useSSEStore((s) => s.events);
   const { nodes } = useExecutionNodes();
-  const completed = nodes.filter((n) => n.status === "completed").length;
-  const running = nodes.filter((n) => n.status === "running").length;
-  const failed = nodes.filter((n) => n.status === "failed").length;
-  const pending = nodes.filter((n) => n.status === "pending" || n.status === "ready").length;
+
+  // Count stages by status from SSE events
+  const stageStatuses = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (sseEvents.length > 0) {
+      for (const ev of sseEvents) {
+        if (ev.stage && ev.stage !== "pipeline") {
+          if (ev.status === "completed" || ev.status === "error") map[ev.stage] = ev.status;
+          else if (!map[ev.stage]) map[ev.stage] = ev.status;
+        }
+      }
+    }
+    const values = Object.values(map);
+    return {
+      completed: values.filter(v => v === "completed").length,
+      running: values.filter(v => v === "started" || v === "progress").length,
+      failed: values.filter(v => v === "error").length,
+      pending: values.filter(v => v !== "completed" && v !== "started" && v !== "progress" && v !== "error" && v !== "started").length,
+    };
+  }, [sseEvents]);
+
+  // Fallback: if no SSE, use org node data
+  const completed = sseEvents.length > 0 ? stageStatuses.completed : nodes.filter((n) => n.status === "completed").length;
+  const running = sseEvents.length > 0 ? stageStatuses.running : nodes.filter((n) => n.status === "running").length;
+  const failed = sseEvents.length > 0 ? stageStatuses.failed : nodes.filter((n) => n.status === "failed").length;
+  const pending = sseEvents.length > 0 ? stageStatuses.pending : nodes.filter((n) => n.status === "pending" || n.status === "ready").length;
+
+  const deptCount = dashboard?.organization?.departments?.length ?? 0;
+  const headCount = dashboard?.organization?.total_head_count ?? 0;
 
   return (
     <div className="space-y-4 p-4">
@@ -112,9 +145,9 @@ function OrgSummary() {
         <h4 className="text-xs font-medium">Execution Status</h4>
         <div className="mt-3 grid grid-cols-2 gap-2">
           {[
-            { label: "Completed", value: completed, color: "text-success" },
-            { label: "Running", value: running, color: "text-primary" },
-            { label: "Failed", value: failed, color: "text-destructive" },
+            { label: "Completed", value: completed, color: "text-emerald-400" },
+            { label: "Running", value: running, color: "text-blue-400" },
+            { label: "Failed", value: failed, color: "text-red-400" },
             { label: "Pending", value: pending, color: "text-muted-foreground" },
           ].map((s) => (
             <div key={s.label} className="rounded-lg bg-background/50 px-3 py-2">
@@ -125,20 +158,31 @@ function OrgSummary() {
         </div>
       </div>
 
+      {deptCount > 0 && (
+        <div className="rounded-lg border border-border/30 bg-muted/20 p-3">
+          <h4 className="text-xs font-medium">Organization</h4>
+          <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+            <div className="flex justify-between"><span>Departments</span><span className="font-mono tabular-nums">{deptCount}</span></div>
+            <div className="flex justify-between"><span>Total Headcount</span><span className="font-mono tabular-nums">{headCount}</span></div>
+            <div className="flex justify-between"><span>Health</span><span className={cn("font-mono tabular-nums", (dashboard?.organization?.health_score ?? 0) >= 0.8 ? "text-emerald-400" : "text-amber-400")}>{((dashboard?.organization?.health_score ?? 0) * 100).toFixed(0)}%</span></div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-1">
         {nodes.map((n) => (
           <div key={n.id} className="flex items-center justify-between rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-muted/20">
             <div className="flex items-center gap-2">
               <span className={cn(
-                "h-1.5 w-1.5 rounded-full",
+                "h-1.5 w-1.5 rounded-full shrink-0",
                 n.status === "running" ? "bg-primary animate-pulse-dot" :
-                n.status === "completed" ? "bg-success" :
-                n.status === "failed" ? "bg-destructive" :
-                n.status === "retrying" ? "bg-warning" : "bg-muted-foreground/30"
+                n.status === "completed" ? "bg-emerald-400" :
+                n.status === "failed" ? "bg-red-400" :
+                n.status === "retrying" ? "bg-amber-400" : "bg-muted-foreground/30"
               )} />
-              <span>{n.title}</span>
+              <span className="truncate">{n.title}</span>
             </div>
-            <span className="font-mono text-[10px] tabular-nums">
+            <span className="font-mono text-[10px] tabular-nums shrink-0 ml-2">
               {n.confidence > 0 ? `${(n.confidence * 100).toFixed(0)}%` : "—"}
             </span>
           </div>

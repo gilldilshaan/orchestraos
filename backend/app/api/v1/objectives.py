@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+import asyncio
+import json
+
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_session
@@ -13,6 +17,7 @@ from app.schemas import (
     ObjectiveResponse,
     ObjectiveUpdate,
 )
+from app.services.execution_events import sse_manager
 from app.services.objective_compiler import ObjectiveCompilerService
 
 router = APIRouter(prefix="/objectives", tags=["Objectives"])
@@ -135,3 +140,32 @@ async def generate_full_pipeline(
     if "error" in result:
         return ApiResponse(data=None, meta={"message": result["error"]})
     return ApiResponse(data=result)
+
+
+@router.get("/{objective_id}/events")
+async def stream_execution_events(objective_id: str, request: Request) -> StreamingResponse:
+    async def event_generator() -> str:
+        q = sse_manager.subscribe(objective_id)
+        try:
+            # Send initial connection event
+            yield f"data: {json.dumps({'timestamp': None, 'stage': 'pipeline', 'status': 'connected', 'message': 'Connected to execution stream', 'progress': 0.0})}\n\n"
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    event = await asyncio.wait_for(q.get(), timeout=15.0)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            sse_manager.unsubscribe(objective_id, q)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

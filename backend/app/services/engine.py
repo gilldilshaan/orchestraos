@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.kernel import ai_kernel
+from app.kernel.state_machine import WorkflowStateMachine
 from app.models.extensions import KnowledgeGraphEdge, PlanVersion, Scenario
 from app.repositories.extensions_repository import (
     DecisionRepository,
@@ -308,7 +309,11 @@ class DashboardAggregator:
                 "status": objective.status if objective else None,
                 "current_stage": objective.current_stage if objective else None,
                 "confidence": objective.confidence if objective else None,
-                "progress_percent": (completed_ms / len(milestones) * 100) if milestones else 0,
+                "created_at": objective.created_at.isoformat() if objective else None,
+                "updated_at": objective.updated_at.isoformat() if objective else None,
+                "progress_percent": (
+                    WorkflowStateMachine.get_progress_percent(objective.status) if objective else 0
+                ),
             },
             "organization": {
                 "departments": [

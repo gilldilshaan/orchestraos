@@ -78,17 +78,22 @@ class ObjectiveCompilerService:
         if not objective:
             return {"error": "Objective not found"}
 
-        # Step 0: Check for missing information
-        from app.services.missing_info_detector import MissingInfoDetectorService
+        # Step 0: Check for missing information (skipped if input is sufficiently detailed)
+        has_critical_fields = any(
+            keyword in (objective.raw_input or "").lower()
+            for keyword in ["budget", "timeline", "audience", "constraint", "metric", "revenue", "market"]
+        )
+        if not has_critical_fields:
+            from app.services.missing_info_detector import MissingInfoDetectorService
 
-        missing_info_service = MissingInfoDetectorService(self._session)
-        missing_check = await missing_info_service.check(objective_id)
-        if not missing_check.get("is_complete", False):
-            return {
-                "status": "needs_clarification",
-                "missing_info_check": missing_check,
-                "message": "Critical information is missing. Please provide clarification first.",
-            }
+            missing_info_service = MissingInfoDetectorService(self._session)
+            missing_check = await missing_info_service.check(objective_id)
+            if not missing_check.get("is_complete", False):
+                return {
+                    "status": "needs_clarification",
+                    "missing_info_check": missing_check,
+                    "message": "Critical information is missing. Please provide clarification first.",
+                }
 
         # ── Pipeline step handlers ────────────────────────────────────────
 

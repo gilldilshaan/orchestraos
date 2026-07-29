@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # LLM Providers
+    openrouter_api_key: str = ""
     groq_api_key: str = ""
     openai_api_key: str = ""
     anthropic_api_key: str = ""

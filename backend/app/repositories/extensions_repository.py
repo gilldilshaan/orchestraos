@@ -192,6 +192,16 @@ class RoleRepository(BaseRepository[Role]):
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
+    async def sum_head_count_by_status(self, status: str) -> int:
+        from sqlalchemy import func
+
+        stmt = select(func.coalesce(func.sum(Role.head_count), 0)).where(
+            Role.status == status,
+            Role.deleted_at.is_(None),
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar() or 0
+
 
 class RiskRepository(BaseRepository[Risk]):
     def __init__(self, session: AsyncSession) -> None:

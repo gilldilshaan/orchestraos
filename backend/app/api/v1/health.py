@@ -1,12 +1,21 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.database.session import check_database_health, get_session
 from app.dependencies import get_redis_health
-from app.database.session import check_database_health
+from app.repositories.extensions_repository import DecisionRepository, DepartmentRepository, RoleRepository
+from app.repositories.objective_repository import ObjectiveRepository
 
 router = APIRouter(tags=["Health"])
+
+AGENT_MODULES = [
+    "objective_compiler", "planner", "risk_analyzer",
+    "organization_generator", "decision_engine",
+    "devils_advocate", "readiness", "bottleneck",
+]
 
 
 @router.get("/system")
@@ -34,20 +43,35 @@ async def health_system() -> dict:
 
 
 @router.get("/ai")
-async def health_ai() -> dict:
+async def health_ai(session: AsyncSession = Depends(get_session)) -> dict:
     from app.kernel import ai_kernel
+    from app.llm.client import llm_client
+    from app.process_info import uptime_seconds
 
     stats = ai_kernel.get_stats()
+    obj_repo = ObjectiveRepository(session)
+    dept_repo = DepartmentRepository(session)
+    role_repo = RoleRepository(session)
+
+    active_runs = await obj_repo.count_active()
+    active_executives = await dept_repo.count({"status": "active"})
+    active_specialists = await role_repo.sum_head_count_by_status("active")
+
     return {
         "data": {
             "status": "healthy",
-            "modules": [
-                "objective_compiler", "planner", "risk_analyzer",
-                "organization_generator", "decision_engine",
-                "devils_advocate", "readiness", "bottleneck",
-            ],
-            "active_agents": 8,
+            "modules": AGENT_MODULES,
+            "active_agents": len(AGENT_MODULES),
+            "active_executives": active_executives,
+            "active_specialists": active_specialists,
+            "provider": llm_client.provider_name,
+            "model": llm_client.default_model,
+            "active_runs": active_runs,
+            # Execution is fully synchronous today — there is no background
+            # job queue, so there is nothing to report a depth for.
+            "queue_depth": 0,
             "pending_tasks": 0,
+            "uptime_seconds": round(uptime_seconds(), 1),
             "kernel": {
                 "total_calls": stats["observability"]["total_calls"],
                 "cache_hit_rate": stats["cache"]["hit_rate"],
@@ -59,19 +83,26 @@ async def health_ai() -> dict:
 
 
 @router.get("/organization")
-async def health_organization() -> dict:
+async def health_organization(session: AsyncSession = Depends(get_session)) -> dict:
+    obj_repo = ObjectiveRepository(session)
+    dept_repo = DepartmentRepository(session)
+    role_repo = RoleRepository(session)
+    decision_repo = DecisionRepository(session)
+
+    objective_counts = await obj_repo.count_by_status()
+    active_objectives = await obj_repo.count_active()
+    active_departments = await dept_repo.count({"status": "active"})
+    active_specialists = await role_repo.sum_head_count_by_status("active")
+    decision_counts = await decision_repo.count_by_status()
+
     return {
         "data": {
             "status": "healthy",
-            "metrics": {
-                "execution_score": None,
-                "coordination_score": None,
-                "risk_index": None,
-                "trust_score": None,
-                "decision_quality": None,
-            },
-            "active_objectives": 0,
-            "active_departments": 0,
-            "pending_decisions": 0,
+            "active_objectives": active_objectives,
+            "active_departments": active_departments,
+            "active_specialists": active_specialists,
+            "pending_decisions": decision_counts.get("PENDING", 0),
+            "completed_objectives": objective_counts.get("completed", 0),
+            "failed_objectives": objective_counts.get("failed", 0),
         }
     }
