@@ -44,7 +44,8 @@ export default function ObjectivePage() {
   }
 
   const status = objective.status as string;
-  const badgeStatus = status === "completed" || status === "failed"
+  const TERMINAL = new Set(["completed", "failed", "cancelled"]);
+  const badgeStatus = TERMINAL.has(status)
     ? status as "completed" | "failed"
     : "running" as const;
 

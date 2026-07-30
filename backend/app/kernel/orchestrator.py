@@ -8,9 +8,11 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database.session import async_session_factory
 from app.kernel.ai_kernel import AIKernel
 from app.kernel.context_manager import ExecutionContext
 from app.kernel.event_bus import EventBus
+from app.services.artifact_service import ArtifactService
 from app.services.execution_events import sse_manager
 
 logger = logging.getLogger(__name__)
@@ -87,6 +89,10 @@ class AgentOrchestrator:
     Resolves step dependencies (DAG), runs steps in dependency order,
     supports optional steps (non-fatal failures), shares ExecutionContext
     across all steps, and publishes events for each completed step.
+
+    When an ArtifactService is provided, every lifecycle event is
+    automatically persisted to the execution artifact store and
+    per-step agent telemetry is captured.
     """
 
     def __init__(
@@ -94,10 +100,97 @@ class AgentOrchestrator:
         session: AsyncSession,
         kernel: AIKernel,
         event_bus: EventBus | None = None,
+        artifact_service: ArtifactService | None = None,
     ) -> None:
         self._session = session
         self._kernel = kernel
         self._event_bus = event_bus or kernel.event_bus
+        self._artifact_service = artifact_service
+        self._artifact_session: AsyncSession | None = None
+
+    def _ensure_artifact_session(self) -> AsyncSession:
+        """Return a dedicated session for artifact persistence so it never
+        conflicts with the main pipeline session."""
+        if self._artifact_session is None:
+            self._artifact_session = async_session_factory()
+        if self._artifact_service is None:
+            self._artifact_service = ArtifactService(self._artifact_session)
+        return self._artifact_session
+
+    async def _persist_event(
+        self,
+        objective_id: str,
+        stage: str,
+        status: str,
+        *,
+        message: str | None = None,
+        progress: float = 0.0,
+        event_order: int = 0,
+    ) -> None:
+        session = self._ensure_artifact_session()
+        svc = self._artifact_service
+        if not svc:
+            return
+        await svc.persist_event(
+            objective_id, stage, status,
+            message=message, progress=progress, event_order=event_order,
+        )
+
+    async def _persist_telemetry(
+        self,
+        objective_id: str,
+        step: PipelineStep,
+        status: str,
+        result: dict[str, Any] | None = None,
+        error: str | None = None,
+    ) -> None:
+        self._ensure_artifact_session()
+        svc = self._artifact_service
+        if not svc:
+            return
+        stats = self._kernel.get_stats()
+        recent_calls = self._kernel.observability.get_recent_calls(10)
+        step_records = [r for r in recent_calls if r["task_type"] == step.name]
+        last_call = step_records[-1] if step_records else None
+
+        runtime_ms = None
+        if step.started_at:
+            end = step.completed_at or datetime.now(UTC)
+            runtime_ms = (end - step.started_at).total_seconds() * 1000
+
+        provider = self._kernel.model_router.get_preferred_provider(step.name)
+        route = self._kernel.model_router.get_route(step.name)
+        model = route.get("model", last_call.get("model") if last_call else None)
+        temperature = route.get("temperature")
+
+        await svc.persist_telemetry(
+            objective_id=objective_id,
+            agent_id=f"{step.name}_{objective_id[:8]}",
+            stage=step.name,
+            status=status,
+            agent_name=STAGE_LABELS.get(step.name, step.name.replace("_", " ").title()),
+            start_time=step.started_at,
+            finish_time=step.completed_at,
+            runtime_ms=runtime_ms,
+            provider=provider,
+            model=model,
+            temperature=temperature,
+            prompt_tokens=last_call.get("input_tokens") if last_call else None,
+            completion_tokens=last_call.get("output_tokens") if last_call else None,
+            total_tokens=(
+                (last_call.get("input_tokens", 0) + last_call.get("output_tokens", 0))
+                if last_call else None
+            ),
+            input_cost=stats.get("total_cost") if last_call else None,
+            output_cost=last_call.get("estimated_cost") if last_call else None,
+            total_cost=last_call.get("estimated_cost") if last_call else None,
+            retries=last_call.get("retry_count", 0) if last_call else 0,
+            error=error,
+            confidence=result.get("confidence") if result else None,
+            reasoning_summary=result.get("reasoning") if result else None,
+            tool_calls=result.get("tool_calls") if result else None,
+            artifacts_produced=result.get("artifacts_produced") if result else None,
+        )
 
     def _update_context(self, step: PipelineStep, result: dict[str, Any], context: ExecutionContext) -> None:
         field = step.context_field
@@ -151,6 +244,10 @@ class AgentOrchestrator:
             message=label,
             progress=0.0,
         )
+        await self._persist_event(
+            objective_id, step.name, "started",
+            message=f"{label} started", event_order=0,
+        )
         coro = step.handler(
             objective_id=objective_id,
             context=context,
@@ -183,6 +280,11 @@ class AgentOrchestrator:
             message=f"{label} complete",
             progress=0.0,
         )
+        await self._persist_event(
+            objective_id, step.name, "completed",
+            message=f"{label} complete", event_order=0,
+        )
+        await self._persist_telemetry(objective_id, step, "completed", result=result)
         await self._event_bus.publish(
             f"{step.name}.completed",
             objective_id,
@@ -218,6 +320,11 @@ class AgentOrchestrator:
             message=f"{label} failed: {error_msg}",
             progress=0.0,
         )
+        await self._persist_event(
+            objective_id, step.name, "failed",
+            message=f"{label} failed: {error_msg}", event_order=0,
+        )
+        await self._persist_telemetry(objective_id, step, "failed", error=error_msg)
 
         if is_timeout and not step.optional:
             context.errors.append({"step": step.name, "error": error_msg})
@@ -277,6 +384,10 @@ class AgentOrchestrator:
             message="Pipeline started",
             progress=0.0,
         )
+        await self._persist_event(
+            objective_id, "pipeline", "started",
+            message="Pipeline started", progress=0.0, event_order=-1,
+        )
 
         while len(completed) < total_steps:
             ready = self._find_ready_steps(steps, completed, set())
@@ -291,11 +402,14 @@ class AgentOrchestrator:
                     })
                 break
 
-            # Run all ready steps concurrently
-            step_results = await asyncio.gather(
-                *(self._execute_single_step(s, objective_id, context) for s in ready),
-                return_exceptions=True,
-            )
+            # Run ready steps sequentially to avoid session conflicts
+            step_results: list[Exception | dict[str, Any]] = []
+            for s in ready:
+                try:
+                    result = await self._execute_single_step(s, objective_id, context)
+                except Exception as exc:
+                    result = exc
+                step_results.append(result)
 
             for step, result in zip(ready, step_results):
                 if isinstance(result, Exception):
@@ -313,6 +427,12 @@ class AgentOrchestrator:
                             status="error",
                             message=err.get("error", "Pipeline failed"),
                             progress=await self._progress(completed, total_steps),
+                        )
+                        await self._persist_event(
+                            objective_id, "pipeline", "failed",
+                            message=err.get("error", "Pipeline failed"),
+                            progress=await self._progress(completed, total_steps),
+                            event_order=-1,
                         )
                         return err
 
@@ -345,6 +465,32 @@ class AgentOrchestrator:
             message="Pipeline finished",
             progress=100.0,
         )
+        await self._persist_event(
+            objective_id, "pipeline", pipeline_status,
+            message="Pipeline finished",
+            progress=100.0, event_order=-1,
+        )
+
+        # Save execution snapshot at pipeline completion
+        if self._artifact_service:
+            try:
+                from app.services.engine import DashboardAggregator
+                aggregator = DashboardAggregator(self._session)
+                dashboard = await aggregator.get_dashboard(objective_id)
+                stats = self._kernel.get_stats()
+
+                snapshot_data = {
+                    "dashboard": dashboard,
+                    "stats": stats,
+                    "completed_steps": list(completed),
+                    "results_count": len(results),
+                }
+                await self._artifact_service.save_snapshot(
+                    objective_id, snapshot_data,
+                    snapshot_version=1,
+                )
+            except Exception:
+                logger.exception("Failed to save execution snapshot")
 
         return {
             "status": pipeline_status,

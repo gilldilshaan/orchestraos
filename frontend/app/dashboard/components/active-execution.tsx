@@ -6,6 +6,7 @@ import { HealthBadge } from "@/components/health-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
 import { ArrowRight } from "lucide-react";
 import { PulseRing } from "@/components/premium/telemetry-viz";
+import { useSSEStore } from "@/store/sse-store";
 import {
   useLatestObjectiveIdQuery,
   useObjectiveQuery,
@@ -42,8 +43,12 @@ export function ActiveExecution() {
   const { data: latestObjectiveId } = useLatestObjectiveIdQuery();
   const { data: objective } = useObjectiveQuery(latestObjectiveId);
   const { data: dashboard } = useDashboardQuery(latestObjectiveId);
+  const ssePipelineStatus = useSSEStore((s) => s.pipelineStatus);
 
-  const isActive = !!objective && !TERMINAL_STATUSES.has(objective.status);
+  // Pipeline is done if objective is terminal OR SSE says pipeline finished
+  const sseDone = ssePipelineStatus === "completed" || ssePipelineStatus === "completed_with_errors" || ssePipelineStatus === "error";
+  const objDone = !!objective && TERMINAL_STATUSES.has(objective.status);
+  const isActive = !sseDone && !objDone && !!objective;
   const stageIndex = STAGE_ORDER.indexOf(objective?.current_stage ?? "");
 
   const phases = PHASES.map((p) => {

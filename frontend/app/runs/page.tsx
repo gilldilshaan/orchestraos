@@ -15,8 +15,10 @@ function runtimeSeconds(createdAt: string | null, updatedAt: string | null, isTe
 export default function RunsPage() {
   const { data: dashboards } = useDashboardsQuery();
 
+  const TERMINAL_STATES = new Set(["completed", "failed", "cancelled"]);
   const runs = (dashboards ?? []).map((d) => {
-    const isTerminal = d.objective?.status === "completed" || d.objective?.status === "failed";
+    const objStatus = d.objective?.status ?? "";
+    const isTerminal = TERMINAL_STATES.has(objStatus);
     return {
       id: d.objective?.id ?? "—",
       objective: d.objective?.summary ?? "Unknown Objective",
@@ -24,7 +26,7 @@ export default function RunsPage() {
       duration: runtimeSeconds(d.objective?.created_at ?? null, d.objective?.updated_at ?? null, isTerminal),
       confidence: d.objective?.confidence ?? null,
       nodes: d.organization?.total_head_count ?? 0,
-      status: d.objective?.status === "completed" ? "completed" as const : d.objective?.status === "failed" ? "failed" as const : "running" as const,
+      status: objStatus === "completed" ? "completed" as const : objStatus === "failed" ? "failed" as const : "running" as const,
     };
   });
 

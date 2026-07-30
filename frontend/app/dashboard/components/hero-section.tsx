@@ -27,7 +27,7 @@ export function HeroSection() {
       <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 opacity-60 sm:h-80 sm:w-80 md:h-96 md:w-96">
         <AiCoreScene
           isExecuting={health.active_runs > 0}
-          confidence={metrics.avgConfidence}
+          confidence={metrics.avgConfidence ?? undefined}
           intensity={0.5}
           compact
           className="h-full w-full"
@@ -84,12 +84,12 @@ export function HeroSection() {
             { label: "Model", value: ai?.model ?? "—", color: "text-primary" },
             {
               label: "Avg. Confidence",
-              value: `${Math.round(metrics.avgConfidence * 100)}%`,
+              value: metrics.avgConfidence != null ? `${Math.round(metrics.avgConfidence * 100)}%` : "—",
               color: "text-success",
             },
             {
               label: "Health Score",
-              value: `${Math.round(metrics.healthScore * 100)}%`,
+              value: metrics.healthScore != null ? `${Math.round(metrics.healthScore * 100)}%` : "—",
               color: "text-success",
             },
           ].map((item) => (

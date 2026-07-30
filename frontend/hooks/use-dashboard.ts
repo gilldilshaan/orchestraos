@@ -14,9 +14,11 @@ import {
   useDashboardQuery,
   useDashboardsQuery,
   useDecisionsQuery,
+  useAggregateMetricsQuery,
   type ApiDashboardData,
   type ApiDecision,
   type ApiHealthAi,
+  type ApiAggregateMetrics,
 } from "./use-api";
 
 function runtimeSeconds(createdAt: string | null, updatedAt: string | null, isTerminal: boolean): number {
@@ -35,10 +37,13 @@ function adaptHealth(systemHealth: { status: string } | undefined, ai: ApiHealth
   };
 }
 
+const TERMINAL_STATES = new Set(["completed", "failed", "cancelled"]);
+const isTerminalStatus = (s: string | null | undefined): boolean => s ? TERMINAL_STATES.has(s) : false;
+
 function adaptDashboard(api: ApiDashboardData | undefined): DashboardSummary | null {
   if (!api?.objective) return null;
   const sh = api.system_health;
-  const isTerminal = api.objective.status === "completed" || api.objective.status === "failed";
+  const isTerminal = isTerminalStatus(api.objective.status);
   const deptCount = api.organization?.departments?.length ?? 0;
   const headCount = api.organization?.total_head_count ?? 0;
   return {
@@ -63,7 +68,7 @@ function adaptDashboard(api: ApiDashboardData | undefined): DashboardSummary | n
 function adaptRuns(dashboards: ApiDashboardData[] | undefined): RunSummary[] {
   if (!dashboards?.length) return [];
   return dashboards.map((d, i) => {
-    const isTerminal = d.objective?.status === "completed" || d.objective?.status === "failed";
+    const isTerminal = isTerminalStatus(d.objective?.status);
     return {
       id: d.objective?.id ?? `obj_${i}`,
       objective: d.objective?.summary ?? "Unknown Objective",
@@ -149,7 +154,7 @@ export function useMetrics(objectiveId?: string | null) {
   const resolvedObjectiveId = objectiveId !== undefined ? objectiveId : latestObjectiveId;
   const { data } = useDashboardQuery(resolvedObjectiveId);
   const sh = data?.system_health;
-  const isTerminal = data?.objective?.status === "completed" || data?.objective?.status === "failed";
+  const isTerminal = isTerminalStatus(data?.objective?.status);
   const deptCount = data?.organization?.departments?.length ?? 0;
   const headCount = data?.organization?.total_head_count ?? 0;
   return {
@@ -169,18 +174,36 @@ export function useMetrics(objectiveId?: string | null) {
   };
 }
 
-// System-wide aggregates across every run, for the dashboard homepage's
-// "Runtime Metrics" grid ("All-time across all organizations", "Last 100
-// runs", "Per run average" — genuinely cross-run stats, not one objective's).
+// System-wide aggregates across every run — sourced from the backend
+// /metrics/aggregate endpoint which computes from persisted database rows.
+// Falls back to client-side aggregation only when the backend is unreachable.
 export function useAggregateMetrics() {
+  const { data: agg } = useAggregateMetricsQuery();
   const { data: org } = useHealthOrganizationQuery();
   const { data: dashboards } = useDashboardsQuery();
 
+  // Prefer backend-computed metrics
+  if (agg) {
+    return {
+      metrics: {
+        totalRuns: agg.total_runs,
+        successRate: agg.success_rate ?? 0,
+        avgRuntime: agg.average_runtime_seconds ?? null,
+        executivesSpawned: agg.average_executives_spawned ?? null,
+        specialistsSpawned: agg.average_specialists_spawned ?? null,
+        avgConfidence: agg.average_confidence ?? agg.average_plan_confidence ?? null,
+        healthScore: null,  // not persisted per-objective
+        parallelism: null,
+        avgRetries: null,
+      },
+    };
+  }
+
+  // Fallback: client-side aggregation from dashboard data
   const list = dashboards ?? [];
   const withConfidence = list.filter((d) => d.objective?.confidence != null);
-  const withOrg = list.filter((d) => d.organization?.departments?.length);
   const terminal = list.filter(
-    (d) => d.objective?.status === "completed" || d.objective?.status === "failed",
+    (d) => isTerminalStatus(d.objective?.status),
   );
 
   const avg = (values: number[]) =>
@@ -203,18 +226,10 @@ export function useAggregateMetrics() {
           runtimeSeconds(d.objective?.created_at ?? null, d.objective?.updated_at ?? null, true),
         ),
       ),
-      executivesSpawned: avg(withOrg.map((d) => d.organization?.departments?.length ?? 0)),
-      specialistsSpawned: avg(withOrg.map((d) => {
-        const dc = d.organization?.departments?.length ?? 0;
-        const hc = d.organization?.total_head_count ?? 0;
-        return hc - dc;
-      })),
+      executivesSpawned: null,
+      specialistsSpawned: null,
       avgConfidence: avg(withConfidence.map((d) => d.objective?.confidence ?? 0)),
-      healthScore: avg(
-        list
-          .map((d) => d.system_health?.trust_score ?? d.system_health?.execution_score ?? null)
-          .filter((v): v is number => v != null),
-      ),
+      healthScore: null,
       parallelism: null,
       avgRetries: null,
     },

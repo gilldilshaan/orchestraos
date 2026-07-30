@@ -4,11 +4,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.extensions import (
+    KPI,
+    AgentTelemetry,
     Decision,
     DecisionOption,
     Department,
+    ExecutionSnapshot,
     Explanation,
-    KPI,
     KnowledgeGraphEdge,
     Milestone,
     ObjectiveCompilation,
@@ -17,6 +19,7 @@ from app.models.extensions import (
     Risk,
     Role,
     Scenario,
+    StoredExecutionEvent,
 )
 from app.repositories.base import BaseRepository
 
@@ -447,3 +450,93 @@ class KPIRepository(BaseRepository[KPI]):
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+
+# ─── Execution Artifact Repositories ────────────────────────────────────
+
+
+class StoredExecutionEventRepository(BaseRepository[StoredExecutionEvent]):
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session, StoredExecutionEvent)
+
+    async def list_by_objective(
+        self, objective_id: str, *, skip: int = 0, limit: int = 500
+    ) -> list[StoredExecutionEvent]:
+        stmt = (
+            select(StoredExecutionEvent)
+            .where(
+                StoredExecutionEvent.objective_id == objective_id,
+                StoredExecutionEvent.deleted_at.is_(None),
+            )
+            .order_by(StoredExecutionEvent.event_order.asc())
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def delete_by_objective(self, objective_id: str) -> None:
+        stmt = select(StoredExecutionEvent).where(
+            StoredExecutionEvent.objective_id == objective_id,
+            StoredExecutionEvent.deleted_at.is_(None),
+        )
+        result = await self._session.execute(stmt)
+        for event in result.scalars().all():
+            await self.soft_delete(event.id)
+
+
+class AgentTelemetryRepository(BaseRepository[AgentTelemetry]):
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session, AgentTelemetry)
+
+    async def list_by_objective(
+        self, objective_id: str, *, skip: int = 0, limit: int = 200
+    ) -> list[AgentTelemetry]:
+        stmt = (
+            select(AgentTelemetry)
+            .where(
+                AgentTelemetry.objective_id == objective_id,
+                AgentTelemetry.deleted_at.is_(None),
+            )
+            .order_by(AgentTelemetry.start_time.asc().nullslast())
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_by_agent(self, agent_id: str) -> AgentTelemetry | None:
+        stmt = select(AgentTelemetry).where(
+            AgentTelemetry.agent_id == agent_id,
+            AgentTelemetry.deleted_at.is_(None),
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def list_by_stage(
+        self, objective_id: str, stage: str
+    ) -> list[AgentTelemetry]:
+        stmt = (
+            select(AgentTelemetry)
+            .where(
+                AgentTelemetry.objective_id == objective_id,
+                AgentTelemetry.stage == stage,
+                AgentTelemetry.deleted_at.is_(None),
+            )
+            .order_by(AgentTelemetry.start_time.asc().nullslast())
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+
+class ExecutionSnapshotRepository(BaseRepository[ExecutionSnapshot]):
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session, ExecutionSnapshot)
+
+    async def get_by_objective(self, objective_id: str) -> ExecutionSnapshot | None:
+        stmt = select(ExecutionSnapshot).where(
+            ExecutionSnapshot.objective_id == objective_id,
+            ExecutionSnapshot.deleted_at.is_(None),
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()

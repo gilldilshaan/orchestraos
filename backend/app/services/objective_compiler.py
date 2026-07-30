@@ -22,6 +22,7 @@ from app.kernel.state_machine import WorkflowStateMachine
 from app.models.extensions import ObjectiveCompilation
 from app.repositories.extensions_repository import ObjectiveCompilationRepository
 from app.repositories.objective_repository import ObjectiveRepository
+from app.services.artifact_service import ArtifactService
 
 
 logger = logging.getLogger(__name__)
@@ -47,9 +48,14 @@ class ObjectiveCompilerService:
         )
 
         existing = await self._comp_repo.get_by_objective(objective_id)
+        model_fields = {
+            "mission", "vision", "business_type", "industry",
+            "stakeholders", "kpis", "timeline", "budget",
+            "dependencies", "assumptions", "risks", "success_metrics",
+        }
         if existing:
             compilation = existing
-            update_data = {k: v for k, v in result.items() if v is not None}
+            update_data = {k: v for k, v in result.items() if v is not None and k in model_fields}
             await self._comp_repo.update(compilation.id, update_data)
         else:
             compilation = ObjectiveCompilation(
@@ -189,7 +195,8 @@ class ObjectiveCompilerService:
 
         steps = core_steps + analysis_steps
 
-        orchestrator = AgentOrchestrator(self._session, ai_kernel)
+        artifact_svc = ArtifactService(self._session)
+        orchestrator = AgentOrchestrator(self._session, ai_kernel, artifact_service=artifact_svc)
         pipeline_result = await orchestrator.run_pipeline(objective_id, steps)
 
         if pipeline_result["status"] == "failed":

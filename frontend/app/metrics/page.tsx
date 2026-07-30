@@ -1,26 +1,27 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "motion/react";
 import { MetricCard } from "@/components/metric-card";
-import { BarChart3, TrendingUp, PieChart, Activity } from "lucide-react";
-import { useHealthOrganizationQuery, useHealthAiQuery } from "@/hooks/use-api";
-import { useAggregateMetrics } from "@/hooks/use-dashboard";
+import { BarChart3, TrendingUp, PieChart, Activity, CheckCircle2, Clock, Users, UserPlus, GitBranch, RotateCcw, DollarSign, Zap } from "lucide-react";
+import { useAggregateMetricsQuery, useChartDataQuery, useHealthAiQuery } from "@/hooks/use-api";
 
 export default function MetricsPage() {
-  const { data: org } = useHealthOrganizationQuery();
+  const { data: agg } = useAggregateMetricsQuery();
+  const { data: charts } = useChartDataQuery();
   const { data: ai } = useHealthAiQuery();
-  const { metrics } = useAggregateMetrics();
-
-  const totalExecutions = org
-    ? org.completed_objectives + org.failed_objectives + org.active_objectives
-    : null;
 
   const avgTokensPerCall =
     ai?.kernel && ai.kernel.total_calls > 0
       ? Math.round(ai.kernel.tokens_used / ai.kernel.total_calls)
       : null;
 
-  const activeNodes = org?.active_specialists ?? null;
+  const chartData = charts?.runtime_over_time ?? [];
+  const hasChartData = chartData.length > 0 && chartData.some(d => d.average_runtime_seconds != null);
+
+  const runtimeMinutes = agg?.average_runtime_seconds != null
+    ? Math.round(agg.average_runtime_seconds / 60 * 10) / 10
+    : null;
 
   return (
     <div className="space-y-6">
@@ -33,7 +34,7 @@ export default function MetricsPage() {
           Runtime Metrics
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Detailed execution metrics and performance data
+          Aggregated from {agg?.total_runs ?? "—"} total objectives ({agg?.completed_runs ?? 0} completed, {agg?.failed_runs ?? 0} failed)
         </p>
       </motion.div>
 
@@ -44,16 +45,40 @@ export default function MetricsPage() {
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
         <MetricCard
-          label="Total Executions"
-          value={totalExecutions != null ? totalExecutions : "—"}
+          label="Total Runs"
+          value={agg?.total_runs ?? "—"}
           format="number"
           icon={<BarChart3 className="h-4 w-4" />}
         />
         <MetricCard
+          label="Success Rate"
+          value={agg?.success_rate != null ? agg.success_rate : "—"}
+          format="percent"
+          icon={<CheckCircle2 className="h-4 w-4" />}
+        />
+        <MetricCard
+          label="Avg Runtime"
+          value={runtimeMinutes != null ? runtimeMinutes : "—"}
+          format="number"
+          icon={<Clock className="h-4 w-4" />}
+        />
+        <MetricCard
           label="Avg Confidence"
-          value={metrics.avgConfidence != null ? metrics.avgConfidence : "—"}
+          value={agg?.average_confidence ?? agg?.average_plan_confidence ?? "—"}
           format="percent"
           icon={<TrendingUp className="h-4 w-4" />}
+        />
+        <MetricCard
+          label="Executives Spawned"
+          value={agg?.average_executives_spawned != null ? Math.round(agg.average_executives_spawned) : "—"}
+          format="number"
+          icon={<Users className="h-4 w-4" />}
+        />
+        <MetricCard
+          label="Specialists Spawned"
+          value={agg?.average_specialists_spawned != null ? Math.round(agg.average_specialists_spawned) : "—"}
+          format="number"
+          icon={<UserPlus className="h-4 w-4" />}
         />
         <MetricCard
           label="Avg Tokens/Call"
@@ -63,7 +88,7 @@ export default function MetricsPage() {
         />
         <MetricCard
           label="Active Nodes"
-          value={activeNodes != null ? activeNodes : "—"}
+          value={ai?.active_specialists ?? ai?.active_agents ?? "—"}
           format="number"
           icon={<Activity className="h-4 w-4" />}
         />
@@ -72,16 +97,70 @@ export default function MetricsPage() {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.15 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <MetricCard
+          label="Avg Decisions"
+          value={agg?.average_decisions != null ? Math.round(agg.average_decisions * 10) / 10 : "—"}
+          format="number"
+          icon={<GitBranch className="h-4 w-4" />}
+        />
+        <MetricCard
+          label="Avg Milestones"
+          value={agg?.average_milestones != null ? Math.round(agg.average_milestones * 10) / 10 : "—"}
+          format="number"
+          icon={<Zap className="h-4 w-4" />}
+        />
+        <MetricCard
+          label="Avg Retries"
+          value={agg?.average_retries != null ? agg.average_retries : "—"}
+          format="number"
+          icon={<RotateCcw className="h-4 w-4" />}
+        />
+        <MetricCard
+          label="Avg Cost"
+          value={agg?.average_cost != null ? `$${Math.round(agg.average_cost)}` : "—"}
+          format="number"
+          icon={<DollarSign className="h-4 w-4" />}
+        />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.25 }}
         className="rounded-lg border border-border/50 bg-card"
       >
         <div className="border-b border-border/50 px-5 py-3.5">
           <h3 className="text-sm font-medium">Performance Over Time</h3>
         </div>
         <div className="flex h-80 items-center justify-center">
-          <div className="text-center text-sm text-muted-foreground">
-            <p>Charts are not yet available. Time-series trend data will be exposed once the telemetry backend service collects sufficient history.</p>
-          </div>
+          {hasChartData ? (
+            <div className="w-full max-w-3xl px-6">
+              <p className="mb-4 text-xs text-muted-foreground">Runtime per day (seconds)</p>
+              <div className="flex items-end gap-2" style={{ height: 200 }}>
+                {chartData.map((d) => {
+                  const maxRt = Math.max(...chartData.map(x => x.average_runtime_seconds ?? 0));
+                  const h = maxRt > 0 ? ((d.average_runtime_seconds ?? 0) / maxRt) * 100 : 0;
+                  return (
+                    <div key={d.date} className="flex flex-1 flex-col items-center gap-1">
+                      <span className="text-[9px] text-muted-foreground">{Math.round(d.average_runtime_seconds ?? 0)}s</span>
+                      <div
+                        className="w-full rounded-t bg-primary/60 transition-all"
+                        style={{ height: `${Math.max(h, 4)}%` }}
+                      />
+                      <span className="text-[8px] text-muted-foreground">{d.date.slice(5)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-sm text-muted-foreground">
+              <p>Time-series chart data will populate as more executions complete.</p>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>

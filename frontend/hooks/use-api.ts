@@ -348,3 +348,149 @@ export function usePlanQuery(planId: string | null | undefined) {
     refetchInterval: LIVE_POLL_INTERVAL,
   });
 }
+
+// ─── Runtime Metrics ────────────────────────────────────
+
+export interface ApiAggregateMetrics {
+  total_runs: number;
+  completed_runs: number;
+  failed_runs: number;
+  success_rate: number | null;
+  average_runtime_seconds: number | null;
+  average_confidence: number | null;
+  average_plan_confidence: number | null;
+  average_organization_health: number | null;
+  average_executives_spawned: number | null;
+  average_specialists_spawned: number | null;
+  average_decisions: number | null;
+  average_milestones: number | null;
+  average_tokens: number | null;
+  average_cost: number | null;
+  peak_parallelism: number | null;
+  average_parallelism: number | null;
+  average_retries: number | null;
+  average_stage_duration_seconds: number | null;
+  average_event_count: number | null;
+}
+
+export interface ApiChartData {
+  runtime_over_time: Array<{
+    date: string;
+    average_runtime_seconds: number | null;
+    run_count: number;
+  }>;
+  confidence_trend: Array<{
+    date: string;
+    average_confidence: number | null;
+    run_count: number;
+  }>;
+  success_rate_trend: Array<{
+    date: string;
+    success_rate: number | null;
+    total_runs: number;
+    succeeded: number;
+  }>;
+}
+
+export function useAggregateMetricsQuery() {
+  return useQuery({
+    queryKey: ["metrics", "aggregate"],
+    queryFn: () => apiClient.get<ApiAggregateMetrics>("/metrics/aggregate"),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useChartDataQuery() {
+  return useQuery({
+    queryKey: ["metrics", "charts"],
+    queryFn: () => apiClient.get<ApiChartData>("/metrics/charts"),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+}
+
+// ─── Artifacts / Telemetry ───────────────────────────────
+
+export interface ApiStoredEvent {
+  id: string;
+  objective_id: string;
+  stage: string;
+  status: string;
+  message: string | null;
+  progress: number;
+  event_order: number;
+  created_at: string | null;
+}
+
+export interface ApiAgentTelemetry {
+  id: string;
+  objective_id: string;
+  agent_id: string;
+  agent_name: string | null;
+  stage: string;
+  role: string | null;
+  department: string | null;
+  status: string;
+  start_time: string | null;
+  finish_time: string | null;
+  runtime_ms: number | null;
+  provider: string | null;
+  model: string | null;
+  temperature: number | null;
+  max_tokens: number | null;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  total_tokens: number | null;
+  input_cost: number | null;
+  output_cost: number | null;
+  total_cost: number | null;
+  retries: number;
+  error: string | null;
+  tool_calls: Array<Record<string, unknown>> | null;
+  reasoning_summary: string | null;
+  decision_summary: string | null;
+  artifacts_produced: Array<Record<string, unknown>> | null;
+  confidence: number | null;
+}
+
+export interface ApiTelemetrySummary {
+  total_agents: number;
+  completed: number;
+  failed: number;
+  total_cost: number;
+  total_tokens: number;
+  total_runtime_ms: number;
+  by_stage: Record<string, number>;
+}
+
+export function useEventsQuery(objectiveId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["events", objectiveId],
+    queryFn: () => apiClient.get<ApiStoredEvent[]>(`/artifacts/${objectiveId}/events`),
+    enabled: !!objectiveId,
+    staleTime: 10_000,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useTelemetryQuery(objectiveId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["telemetry", objectiveId],
+    queryFn: () => apiClient.get<ApiAgentTelemetry[]>(`/artifacts/${objectiveId}/telemetry`),
+    enabled: !!objectiveId,
+    staleTime: 15_000,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useTelemetrySummaryQuery(objectiveId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["telemetry", objectiveId, "summary"],
+    queryFn: () =>
+      apiClient.get<ApiTelemetrySummary>(`/artifacts/${objectiveId}/telemetry/summary`),
+    enabled: !!objectiveId,
+    staleTime: 15_000,
+    refetchInterval: 15_000,
+  });
+}

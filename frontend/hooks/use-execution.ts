@@ -103,12 +103,15 @@ export function useExecutionRun() {
   const { data: objective } = useObjectiveQuery(objectiveId);
   const { data: dashboard } = useDashboardQuery(objectiveId);
 
+  const TERMINAL = new Set(["completed", "failed", "cancelled"]);
   const status: "running" | "completed" | "failed" | "idle" =
     objective?.status === "completed"
       ? "completed"
       : objective?.status === "failed"
         ? "failed"
-        : "running";
+        : objective?.status && !TERMINAL.has(objective.status)
+          ? "running"
+          : "idle";
 
   return {
     run: {
