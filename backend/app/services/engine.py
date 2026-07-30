@@ -302,6 +302,20 @@ class DashboardAggregator:
         mem_repo = DecisionMemoryRepository(self._session)
         memory_entries = await mem_repo.list_by_objective(objective_id, limit=5)
 
+        from app.repositories.extensions_repository import ExplanationRepository
+        expl_repo = ExplanationRepository(self._session)
+        explanations = await expl_repo.list_by_entity("Dashboard", objective_id, limit=1)
+        executive_report = None
+        if explanations:
+            e = explanations[0]
+            executive_report = {
+                "summary": e.recommendation,
+                "reasoning": e.reasoning,
+                "confidence": e.confidence,
+                "risk_level": e.risk_level,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+
         return {
             "objective": {
                 "id": objective.id if objective else None,
@@ -328,6 +342,7 @@ class DashboardAggregator:
                 "name": active_plan.name if active_plan else None,
                 "status": active_plan.status if active_plan else None,
                 "plan_version": active_plan.plan_version if active_plan else 0,
+                "confidence": active_plan.confidence if active_plan else None,
                 "milestone_count": len(milestones),
                 "completed_milestones": completed_ms,
                 "progress_percent": (completed_ms / len(milestones) * 100) if milestones else 0,
@@ -336,8 +351,21 @@ class DashboardAggregator:
                 "total": len(risks),
                 **risk_counts,
                 "top_risks": [
-                    {"id": r.id, "title": r.title, "risk_level": r.risk_level, "probability": r.probability, "impact": r.impact}
-                    for r in risks[:5]
+                    {
+                        "id": r.id,
+                        "title": r.title,
+                        "description": r.description,
+                        "category": r.category,
+                        "probability": r.probability,
+                        "impact": r.impact,
+                        "risk_level": r.risk_level,
+                        "risk_score": r.risk_score,
+                        "mitigation": r.mitigation,
+                        "contingency": r.contingency,
+                        "owner": r.owner,
+                        "status": r.status,
+                    }
+                    for r in risks[:10]
                 ],
             },
             "decisions": {
@@ -381,6 +409,7 @@ class DashboardAggregator:
                     for m in memory_entries
                 ],
             },
+            "executive_report": executive_report,
             "system_health": {
                 "execution_score": 0.82,
                 "coordination_score": 0.75,

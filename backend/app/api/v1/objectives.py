@@ -8,10 +8,13 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_session
+from app.repositories.extensions_repository import (
+    AgentTelemetryRepository,
+    StoredExecutionEventRepository,
+)
 from app.repositories.objective_repository import ObjectiveRepository
 from app.schemas import (
     ApiResponse,
-    ObjectiveCompileResponse,
     ObjectiveCompilationSchema,
     ObjectiveCreate,
     ObjectiveResponse,
@@ -44,15 +47,32 @@ async def list_objectives(
     session: AsyncSession = Depends(get_session),
 ) -> ApiResponse:
     repo = ObjectiveRepository(session)
+    event_repo = StoredExecutionEventRepository(session)
+    telemetry_repo = AgentTelemetryRepository(session)
+
     if status:
         objectives = await repo.list_by_status(status, skip=skip, limit=limit)
     else:
         objectives = await repo.list(skip=skip, limit=limit, order_by="created_at", descending=True)
-    return ApiResponse(data=[
-        {"id": o.id, "raw_input": o.raw_input[:200], "status": o.status, "current_stage": o.current_stage,
-         "created_at": o.created_at.isoformat() if o.created_at else None}
-        for o in objectives
-    ])
+
+    result = []
+    for o in objectives:
+        event_count = await event_repo.count({"objective_id": o.id})
+        telemetry_count = await telemetry_repo.count({"objective_id": o.id})
+        total_artifacts = event_count + telemetry_count
+        result.append({
+            "id": o.id,
+            "raw_input": o.raw_input[:200],
+            "status": o.status,
+            "current_stage": o.current_stage,
+            "created_at": o.created_at.isoformat() if o.created_at else None,
+            "event_count": event_count,
+            "telemetry_count": telemetry_count,
+            "artifact_count": total_artifacts,
+            "has_artifacts": total_artifacts > 0,
+        })
+
+    return ApiResponse(data=result)
 
 
 @router.get("/{objective_id}", response_model=ApiResponse)

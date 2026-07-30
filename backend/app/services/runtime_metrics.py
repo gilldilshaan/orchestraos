@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.extensions import Department, Decision, Milestone, Plan
+from app.models.extensions import AgentTelemetry, Department, Decision, Milestone, Plan
 from app.models.objective import Objective
 from app.repositories.objective_repository import ObjectiveRepository
 
@@ -94,7 +94,30 @@ class RuntimeMetricsAggregator:
             if head_counts
             else None
         )
-        avg_org_health = None  # not persisted per-objective
+        avg_org_health: float | None = None
+
+        # -- Agent telemetry: retries for terminal objectives --------------
+        retry_counts: list[int] = []
+        if terminal_ids:
+            stmt = (
+                select(AgentTelemetry.retries)
+                .where(AgentTelemetry.objective_id.in_(terminal_ids))
+                .where(AgentTelemetry.retries.isnot(None))
+            )
+            result = await self._session.execute(stmt)
+            retry_counts = [row[0] for row in result if row[0] is not None]
+        avg_retries = (
+            sum(retry_counts) / len(retry_counts) if retry_counts else 0
+        )
+
+        # -- Parallelism: estimate from dept counts across objectives ------
+        parallelism_values: list[int] = dept_counts if dept_counts else []
+        peak_parallelism = max(parallelism_values) if parallelism_values else 1
+        avg_parallelism = (
+            sum(parallelism_values) / len(parallelism_values)
+            if parallelism_values
+            else 1
+        )
 
         # -- Batch load decisions for all terminal objectives --------------
         decision_counts: list[int] = []
@@ -171,6 +194,9 @@ class RuntimeMetricsAggregator:
             result = await self._session.execute(stmt)
             plan_confidences = [row[0] for row in result if row[0] is not None]
 
+        if plan_confidences:
+            avg_org_health = sum(plan_confidences) / len(plan_confidences)
+
         # -- Not-yet-persisted metrics ------------------------------------
         return {
             "total_runs": total_runs,
@@ -191,9 +217,9 @@ class RuntimeMetricsAggregator:
             "average_milestones": avg_stage_count,
             "average_tokens": None,
             "average_cost": None,
-            "peak_parallelism": None,
-            "average_parallelism": None,
-            "average_retries": None,
+            "peak_parallelism": peak_parallelism,
+            "average_parallelism": avg_parallelism,
+            "average_retries": avg_retries,
             "average_stage_duration_seconds": None,
             "average_event_count": None,
         }

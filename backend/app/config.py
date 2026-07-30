@@ -35,8 +35,19 @@ class Settings(BaseSettings):
     litellm_master_key: str = ""
 
     # Auth
-    jwt_secret: str = "dev-jwt-secret"
-    secret_key: str = "dev-secret-key"
+    jwt_secret: str = ""
+    secret_key: str = ""
+
+    def model_post_init(self, /, __context: object) -> None:
+        if self.app_env != "development":
+            if not self.jwt_secret:
+                import warnings
+                warnings.warn("JWT_SECRET is not set! Using insecure default. Set a strong secret for production.")
+                self.jwt_secret = "dev-jwt-secret"
+            if not self.secret_key:
+                import warnings
+                warnings.warn("SECRET_KEY is not set! Using insecure default. Set a strong secret for production.")
+                self.secret_key = "dev-secret-key"
 
 
 settings = Settings()

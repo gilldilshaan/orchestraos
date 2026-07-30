@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_session
-from app.models.extensions import Decision, DecisionOption
 from app.repositories.extensions_repository import (
     DecisionOptionRepository,
     DecisionRepository,
+    ExplanationRepository,
 )
 from app.schemas import ApiResponse, DecisionApproveRequest, DecisionRejectRequest
 
@@ -28,8 +28,45 @@ async def list_decisions(
     elif status:
         decisions = await repo.list_by_status(status, skip=skip, limit=limit)
     else:
-        from app.repositories.base import BaseRepository
         decisions = await repo.list(skip=skip, limit=limit, order_by="created_at", descending=True)
+
+    decision_ids = [d.id for d in decisions]
+    options_by_decision: dict[str, list[dict]] = {}
+    explanations_by_entity: dict[str, dict] = {}
+    if decision_ids:
+        opt_repo = DecisionOptionRepository(session)
+        all_options = []
+        for did in decision_ids:
+            all_options.extend(await opt_repo.list_by_decision(did))
+        for o in all_options:
+            options_by_decision.setdefault(o.decision_id, []).append({
+                "id": o.id,
+                "name": o.name,
+                "description": o.description,
+                "pros": o.pros,
+                "cons": o.cons,
+                "risks": o.risks,
+                "cost": o.cost,
+                "confidence": o.confidence,
+                "is_recommended": o.is_recommended,
+            })
+        expl_repo = ExplanationRepository(session)
+        for did in decision_ids:
+            expls = await expl_repo.list_by_entity("Decision", did)
+            if expls:
+                e = expls[0]
+                explanations_by_entity[did] = {
+                    "recommendation": e.recommendation,
+                    "reasoning": e.reasoning,
+                    "evidence": e.evidence,
+                    "assumptions": e.assumptions,
+                    "confidence": e.confidence,
+                    "risk_level": e.risk_level,
+                    "affected_departments": e.affected_departments,
+                    "model_used": e.model_used,
+                    "created_at": e.created_at.isoformat() if e.created_at else None,
+                }
+
     return ApiResponse(data=[
         {
             "id": d.id,
@@ -38,9 +75,13 @@ async def list_decisions(
             "decision_type": d.decision_type,
             "recommendation": d.recommendation,
             "reasoning": d.reasoning,
+            "evidence": d.evidence,
             "confidence": d.confidence,
             "risk_level": d.risk_level,
             "status": d.status,
+            "review_notes": d.review_notes,
+            "options": options_by_decision.get(d.id, []),
+            "explanation": explanations_by_entity.get(d.id),
             "created_at": d.created_at.isoformat() if d.created_at else None,
         }
         for d in decisions

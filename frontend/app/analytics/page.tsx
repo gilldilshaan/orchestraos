@@ -339,7 +339,7 @@ function ChartCard({
         <div className="p-4">{children}</div>
       ) : (
         <div className="flex h-60 items-center justify-center text-sm text-muted-foreground">
-          Chart data will populate as more executions complete.
+          No data available for this execution.
         </div>
       )}
     </motion.div>

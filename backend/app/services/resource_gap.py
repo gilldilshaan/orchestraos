@@ -29,13 +29,18 @@ class ResourceGapService:
             context=context,
         )
 
+        estimated_cost = result.get("estimated_cost")
+        if isinstance(estimated_cost, dict):
+            cost_values = [v for v in estimated_cost.values() if isinstance(v, (int, float))]
+            estimated_cost = sum(cost_values) if cost_values else None
+
         existing = await self._repo.get_by_objective(objective_id)
         if existing:
             await self._repo.update(existing.id, {
                 "missing_roles": result.get("missing_roles", []),
                 "missing_skills": result.get("missing_skills", []),
                 "hiring_needs": result.get("hiring_needs", []),
-                "estimated_cost": result.get("estimated_cost"),
+                "estimated_cost": estimated_cost,
                 "estimated_hiring_timeline": result.get("estimated_hiring_timeline"),
                 "hiring_priority": result.get("hiring_priority", []),
                 "available_resources": result.get("available_resources"),
@@ -48,7 +53,7 @@ class ResourceGapService:
                 missing_roles=result.get("missing_roles", []),
                 missing_skills=result.get("missing_skills", []),
                 hiring_needs=result.get("hiring_needs", []),
-                estimated_cost=result.get("estimated_cost"),
+                estimated_cost=estimated_cost,
                 estimated_hiring_timeline=result.get("estimated_hiring_timeline"),
                 hiring_priority=result.get("hiring_priority", []),
                 available_resources=result.get("available_resources"),

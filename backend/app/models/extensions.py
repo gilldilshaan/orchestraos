@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -400,7 +401,7 @@ class ExecutionSnapshot(Base, BaseEntity):
 
 
 # Forward reference for relationships
-from app.models.objective import Objective
+from app.models.objective import Objective  # noqa: E402
 
 # ─── Sprint 8: Agent Communication ────────────────────────────────────────────
 
@@ -411,14 +412,14 @@ class AgentMessage(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
     from_agent: Mapped[str] = mapped_column(String(100), nullable=False)
     to_agent: Mapped[str] = mapped_column(String(100), nullable=False)
-    message_type: Mapped[str] = mapped_column(String(50), nullable=False, default="reply")
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
-    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    message_type: Mapped[str] = mapped_column(String(50), nullable=False, default="reply")
+    body: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     parent_message_id: Mapped[str | None] = mapped_column(
-        UUID(as_uuid=False), ForeignKey("agent_messages.id"), nullable=True, index=True
+        UUID(as_uuid=False), ForeignKey("agent_messages.id"), nullable=True, default=None, index=True
     )
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="sent", index=True)
-    read_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, default=None)
 
 
 # ─── Sprint 8: Agent Conflicts ────────────────────────────────────────────────
@@ -432,12 +433,12 @@ class AgentConflict(Base, BaseEntity):
     agent_b: Mapped[str] = mapped_column(String(100), nullable=False)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
     disagreement: Mapped[str] = mapped_column(Text, nullable=False)
-    evidence_a: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
-    evidence_b: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
-    alternatives: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
-    resolution: Mapped[str | None] = mapped_column(Text, nullable=True)
-    resolved_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    evidence_a: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=None)
+    evidence_b: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=None)
+    alternatives: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True, default=None)
+    resolution: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    resolved_by: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, default=None)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="open", index=True)
 
 
@@ -450,12 +451,12 @@ class ApprovalGate(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
     gate_type: Mapped[str] = mapped_column(String(100), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     proposed_by: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending", index=True)
-    review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    reviewed_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    reviewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    review_notes: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    reviewed_by: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    reviewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, default=None)
     execution_paused: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
@@ -468,13 +469,13 @@ class ExecutionCheckpoint(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, unique=True, index=True
     )
-    checkpoint_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    checkpoint_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=None)
     completed_steps: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
-    current_step: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    current_step: Mapped[str | None] = mapped_column(String(200), nullable=True, default=None)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="in_progress", index=True)
-    cursor: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cursor: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     resume_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    last_resumed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    last_resumed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, default=None)
     failure_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
@@ -486,14 +487,14 @@ class WatchdogAlert(Base, BaseEntity):
 
     objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
     alert_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    severity: Mapped[str] = mapped_column(String(50), nullable=False, default="warning")
     source: Mapped[str] = mapped_column(String(200), nullable=False)
     message: Mapped[str] = mapped_column(String(2000), nullable=False)
-    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    severity: Mapped[str] = mapped_column(String(50), nullable=False, default="warning")
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=None)
     acknowledged: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    acknowledged_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, default=None)
     resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, default=None)
 
 
 # ─── Sprint 8: Self-Healing Actions ───────────────────────────────────────────
@@ -507,8 +508,8 @@ class SelfHealingAction(Base, BaseEntity):
     action_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target: Mapped[str] = mapped_column(String(200), nullable=False)
     result: Mapped[str] = mapped_column(String(50), nullable=False)
-    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
-    duration_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=None)
+    duration_ms: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
 
 
 # ─── Indexes ─────────────────────────────────────────────────────────────────

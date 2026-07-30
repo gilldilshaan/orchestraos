@@ -111,7 +111,7 @@ class DevilsAdvocateAgent(BaseAgent):
             else "medium"
             if critique.critique_score > 40
             else "low",
-            assumptions=[a.get("assumption", "") for a in (result.get("assumptions", []) or [])],
+            assumptions=[a.get("assumption", str(a)) if isinstance(a, dict) else str(a) for a in (result.get("assumptions", []) or [])],
             model_used=self._llm.model_router.get_preferred_provider("devils_advocate"),
         )
 

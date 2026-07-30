@@ -121,6 +121,18 @@ export const useCommandPaletteStore = create<CommandPaletteState>((set) => ({
   toggle: () => set((s) => ({ isOpen: !s.isOpen })),
 }));
 
+interface ObjectiveContextState {
+  activeObjectiveId: string | null;
+  setActiveObjectiveId: (id: string | null) => void;
+  clearActiveObjectiveId: () => void;
+}
+
+export const useObjectiveContextStore = create<ObjectiveContextState>((set) => ({
+  activeObjectiveId: null,
+  setActiveObjectiveId: (id) => set({ activeObjectiveId: id }),
+  clearActiveObjectiveId: () => set({ activeObjectiveId: null }),
+}));
+
 interface InspectorState {
   isOpen: boolean;
   selectedNodeId: string | null;

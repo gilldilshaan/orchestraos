@@ -14,6 +14,7 @@ import {
   useExecuteAction,
   useMarketplaceQuery,
   PROVIDER_META,
+  DEFAULT_PROVIDER_META,
   type ConnectorConfig,
   type MarketplaceEntry,
 } from "@/hooks/use-connectors";
@@ -128,7 +129,8 @@ export default function ConnectorsPage() {
 
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                     {marketplace.map((entry) => {
-                      const meta = PROVIDER_META[entry.provider] ?? { color: "text-white bg-muted", icon: "🔌" };
+                      const meta = PROVIDER_META[entry.provider] ?? DEFAULT_PROVIDER_META;
+                      const Icon = meta.icon;
                       return (
                         <button
                           key={entry.provider}
@@ -138,13 +140,15 @@ export default function ConnectorsPage() {
                             setConfigFields({});
                           }}
                           className={cn(
-                            "flex flex-col items-center gap-2 rounded-xl border p-4 transition-all hover:border-primary/50",
+                            "flex flex-col items-center gap-2 rounded-xl border p-4 transition-all duration-150 hover:border-primary/50",
                             selectedProvider === entry.provider
                               ? "border-primary bg-primary/10"
                               : "border-border/40 bg-muted/20",
                           )}
                         >
-                          <span className="text-2xl">{meta.icon}</span>
+                          <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg", meta.color)}>
+                            <Icon className="h-4 w-4" />
+                          </span>
                           <span className="text-[11px] font-medium capitalize">{entry.provider.replace(/_/g, " ")}</span>
                         </button>
                       );
@@ -243,7 +247,8 @@ export default function ConnectorsPage() {
 
             <div className="space-y-3">
               {connectors.map((conn) => {
-                const meta = PROVIDER_META[conn.provider] ?? { color: "text-white bg-muted", icon: "🔌" };
+                const meta = PROVIDER_META[conn.provider] ?? DEFAULT_PROVIDER_META;
+                const Icon = meta.icon;
                 const isExpanded = expandedConnector === conn.id;
                 return (
                   <div
@@ -251,7 +256,9 @@ export default function ConnectorsPage() {
                     className="rounded-xl border border-border/40 bg-card/30 transition-colors hover:border-border/60"
                   >
                     <div className="flex items-center gap-3 px-4 py-3">
-                      <span className="text-lg">{meta.icon}</span>
+                      <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", meta.color)}>
+                        <Icon className="h-4 w-4" />
+                      </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold">{conn.name}</span>

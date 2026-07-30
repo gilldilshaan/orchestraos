@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { useReplayStore, useViewStore } from "@/store/execution-stores";
 import { useTimelineStore } from "@/store/execution-stores";
 import { cn } from "@/lib/utils";
@@ -28,21 +29,28 @@ export function TopToolbar() {
   return (
     <div className="flex items-center gap-2 border-b border-border/20 bg-muted/[0.02] px-3 py-1.5">
       {/* View toggle */}
-      <div className="flex items-center rounded-md border border-border/20 bg-muted/20 p-0.5">
+      <motion.div
+        className="flex items-center rounded-md border border-border/20 bg-muted/20 p-0.5"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3, delay: 0.05 }}
+      >
         {viewOptions.map((v) => (
-          <button
+          <motion.button
             key={v.key}
             onClick={() => setCenterView(v.key)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
             className={cn(
-              "flex items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-medium transition-all",
+              "flex items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-medium transition-colors",
               centerView === v.key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground"
             )}
           >
             <v.icon className="h-3 w-3" />
             {v.label}
-          </button>
+          </motion.button>
         ))}
-      </div>
+      </motion.div>
 
       <div className="h-3 w-px bg-border/20" />
 
@@ -60,16 +68,41 @@ export function TopToolbar() {
         </button>
         {active && (
           <>
-            <button onClick={() => setPosition(0)} className="rounded p-1 text-muted-foreground/50 hover:bg-muted/20 hover:text-foreground">
+            <motion.button
+              initial={{ opacity: 0, x: -4 }}
+              animate={{ opacity: 1, x: 0 }}
+              onClick={() => setPosition(0)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="rounded p-1 text-muted-foreground/50 hover:bg-muted/20 hover:text-foreground"
+            >
               <SkipBack className="h-3 w-3" />
-            </button>
-            <button onClick={togglePlaying} className="rounded p-1 text-muted-foreground/50 hover:bg-muted/20 hover:text-foreground">
+            </motion.button>
+            <motion.button
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              onClick={togglePlaying}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="rounded p-1 text-muted-foreground/50 hover:bg-muted/20 hover:text-foreground"
+            >
               {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-            </button>
-            <button className="rounded p-1 text-muted-foreground/50 hover:bg-muted/20 hover:text-foreground">
+            </motion.button>
+            <motion.button
+              initial={{ opacity: 0, x: 4 }}
+              animate={{ opacity: 1, x: 0 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="rounded p-1 text-muted-foreground/50 hover:bg-muted/20 hover:text-foreground"
+            >
               <SkipForward className="h-3 w-3" />
-            </button>
-            <div className="ml-1 flex items-center gap-0.5 rounded-md border border-border/20 bg-muted/20 px-1 py-0.5">
+            </motion.button>
+            <motion.div
+              className="ml-1 flex items-center gap-0.5 rounded-md border border-border/20 bg-muted/20 px-1 py-0.5"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.05 }}
+            >
               {speeds.map((s) => (
                 <button
                   key={s}
@@ -82,7 +115,7 @@ export function TopToolbar() {
                   {s}×
                 </button>
               ))}
-            </div>
+            </motion.div>
           </>
         )}
       </div>

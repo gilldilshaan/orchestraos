@@ -45,6 +45,39 @@ export interface ApiHealthOrganization {
   failed_objectives: number;
 }
 
+export interface ApiExecutiveReport {
+  summary: string | null;
+  reasoning: string | null;
+  confidence: number | null;
+  risk_level: string | null;
+  created_at: string | null;
+}
+
+export interface ApiDashboardBusinessReadiness {
+  overall_score: number | null;
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+}
+
+export interface ApiDashboardSuccessProbability {
+  success_probability: number | null;
+  failure_risk: number | null;
+}
+
+export interface ApiDashboardBottleneckSeverity {
+  low: number;
+  medium: number;
+  high: number;
+  critical: number;
+}
+
+export interface ApiDashboardBottlenecks {
+  active: number;
+  by_severity: ApiDashboardBottleneckSeverity;
+  recent: any[];
+}
+
 export interface ApiDashboardData {
   objective: ApiDashboardObjective | null;
   organization: ApiDashboardOrganization | null;
@@ -52,7 +85,13 @@ export interface ApiDashboardData {
   risks: ApiDashboardRisks | null;
   decisions: ApiDashboardDecisions | null;
   jobs: Record<string, number>;
+  executive_report: ApiExecutiveReport | null;
   system_health: ApiDashboardSystemHealth | null;
+  business_readiness: ApiDashboardBusinessReadiness | null;
+  success_probability: ApiDashboardSuccessProbability | null;
+  bottlenecks: ApiDashboardBottlenecks | null;
+  devils_advocate: any | null;
+  decision_memory: any | null;
 }
 
 export interface ApiDashboardObjective {
@@ -77,14 +116,34 @@ export interface ApiDashboardPlan {
   name: string | null;
   status: string | null;
   plan_version: number;
+  confidence: number | null;
   milestone_count: number;
   completed_milestones: number;
   progress_percent: number;
 }
 
+export interface ApiDashboardRiskItem {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  probability: number;
+  impact: number;
+  risk_level: string;
+  risk_score: number;
+  mitigation: string | null;
+  contingency: string | null;
+  owner: string | null;
+  status: string;
+}
+
 export interface ApiDashboardRisks {
   total: number;
-  top_risks: Array<{ id: string; title: string; risk_level: string; probability: number; impact: string }>;
+  low: number;
+  medium: number;
+  high: number;
+  critical: number;
+  top_risks: ApiDashboardRiskItem[];
 }
 
 export interface ApiDashboardDecisions {
@@ -99,6 +158,18 @@ export interface ApiDashboardSystemHealth {
   decision_quality: number | null;
   business_readiness_score: number | null;
   success_probability_score: number | null;
+}
+
+export interface ApiDecisionExplanation {
+  recommendation: string | null;
+  reasoning: string | null;
+  evidence: string[] | null;
+  assumptions: string[] | null;
+  confidence: number | null;
+  risk_level: string | null;
+  affected_departments: string[] | null;
+  model_used: string | null;
+  created_at: string | null;
 }
 
 export interface ApiDecision {
@@ -123,6 +194,8 @@ export interface ApiDecision {
     confidence: number;
     is_recommended: boolean;
   }>;
+  review_notes?: string | null;
+  explanation?: ApiDecisionExplanation | null;
   created_at: string | null;
 }
 
@@ -467,7 +540,12 @@ export interface ApiTelemetrySummary {
 export function useEventsQuery(objectiveId: string | null | undefined) {
   return useQuery({
     queryKey: ["events", objectiveId],
-    queryFn: () => apiClient.get<ApiStoredEvent[]>(`/artifacts/${objectiveId}/events`),
+    queryFn: async () => {
+      const result = await apiClient.get<{ events: ApiStoredEvent[]; total: number }>(
+        `/artifacts/${objectiveId}/events`,
+      );
+      return result.events;
+    },
     enabled: !!objectiveId,
     staleTime: 10_000,
     refetchInterval: 10_000,
@@ -477,7 +555,12 @@ export function useEventsQuery(objectiveId: string | null | undefined) {
 export function useTelemetryQuery(objectiveId: string | null | undefined) {
   return useQuery({
     queryKey: ["telemetry", objectiveId],
-    queryFn: () => apiClient.get<ApiAgentTelemetry[]>(`/artifacts/${objectiveId}/telemetry`),
+    queryFn: async () => {
+      const result = await apiClient.get<{ telemetry: ApiAgentTelemetry[]; total: number }>(
+        `/artifacts/${objectiveId}/telemetry`,
+      );
+      return result.telemetry;
+    },
     enabled: !!objectiveId,
     staleTime: 15_000,
     refetchInterval: 15_000,

@@ -101,15 +101,30 @@ export default function OperationsPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {isLoading ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground" />
-              Loading operations data...
+          <div className="space-y-8 p-6">
+            <div className="h-20 animate-pulse rounded-xl border border-border/30 bg-card/30" />
+            <div className="flex flex-wrap gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-10 w-44 animate-pulse rounded-lg border border-border/30 bg-muted/20" />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="h-20 animate-pulse rounded-xl border border-border/40 bg-card/30" />
+              ))}
             </div>
           </div>
         ) : !summary ? (
-          <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-            No operations data available
+          <div className="flex h-full flex-col items-center justify-center gap-3 py-14 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted/30 text-muted-foreground/60">
+              <Orbit className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground/80">No operations data available</p>
+              <p className="text-xs text-muted-foreground">
+                Data will appear here once an objective starts executing.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-8 p-6">

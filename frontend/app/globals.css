@@ -41,6 +41,8 @@
     --glow-amber: 38 92% 50%;
     --glow-pink: 330 91% 60%;
     --glow-emerald: 160 84% 39%;
+
+    --panel-overlay: radial-gradient(ellipse at 0% 0%, hsl(var(--primary) / 0.06) 0%, transparent 60%);
   }
 
   .light {
@@ -206,16 +208,77 @@
     opacity: 0;
   }
 
+  .panel {
+    @apply relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-card/90 to-card/60 transition-all duration-300;
+  }
+  .panel:hover {
+    @apply border-border/60;
+  }
+  .panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--panel-overlay);
+    pointer-events: none;
+  }
+
+  .panel-header {
+    @apply relative z-[1] flex items-center justify-between border-b border-border/20 px-6 py-4;
+  }
+  .panel-header-title {
+    @apply text-xs font-semibold tracking-wide text-foreground/80;
+  }
+  .panel-body {
+    @apply relative z-[1] p-6;
+  }
+
   .enterprise-panel {
-    @apply overflow-hidden rounded-xl border border-border/40 bg-card/80 backdrop-blur-sm transition-all duration-300;
+    @apply panel;
+  }
+  .enterprise-panel > * {
+    @apply relative z-[1];
   }
 
-  .enterprise-panel:hover {
-    @apply border-border/70;
-    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.03);
+  .bento-tile {
+    @apply relative overflow-hidden rounded-xl border border-border/30 bg-gradient-to-br from-card to-card/80 transition-all duration-200;
+  }
+  .bento-tile:hover {
+    @apply border-border/50;
+  }
+  .bento-tile::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--panel-overlay);
+    pointer-events: none;
   }
 
-  .enterprise-glow-bar {
-    @apply h-px w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent;
+  .bento-tile-accent {
+    @apply bento-tile;
+  }
+  .bento-tile-accent::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, hsl(var(--primary) / 0.6), hsl(var(--primary) / 0.1));
+  }
+
+  .metric-value {
+    @apply font-mono text-2xl font-semibold tracking-tight;
+  }
+
+  .metric-label {
+    @apply text-[11px] font-medium text-muted-foreground/60;
+  }
+
+  .section-kicker {
+    @apply text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/40;
+  }
+
+  .data-row {
+    @apply border-b border-border/10 transition-colors last:border-0 hover:bg-muted/10;
   }
 }

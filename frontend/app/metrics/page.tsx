@@ -158,7 +158,7 @@ export default function MetricsPage() {
             </div>
           ) : (
             <div className="text-center text-sm text-muted-foreground">
-              <p>Time-series chart data will populate as more executions complete.</p>
+              <p>No data available for this execution.</p>
             </div>
           )}
         </div>

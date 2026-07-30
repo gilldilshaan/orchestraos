@@ -43,6 +43,7 @@ class LLMClient:
             "openrouter": "openai/gpt-4o-mini",
             "groq": "llama-3.3-70b-versatile",
             "openai": "gpt-4o",
+            "anthropic": "claude-haiku-4-5-20251001",
         }.get(self._provider)
 
     async def generate(
@@ -404,6 +405,22 @@ class LLMClient:
                 temperature=temperature,
             )
             return response.choices[0].message.content or ""
+
+        if self._provider == "anthropic":
+            from anthropic import AsyncAnthropic
+
+            client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+            kwargs = {}
+            if system_prompt:
+                kwargs["system"] = [{"type": "text", "text": system_prompt}]
+            response = await client.messages.create(
+                model=model or "claude-haiku-4-5-20251001",
+                max_tokens=8192,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                **kwargs,
+            )
+            return response.content[0].text if response.content else ""
 
         raise NotImplementedError(f"Provider {self._provider} not yet implemented")
 

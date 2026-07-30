@@ -2,113 +2,153 @@
 
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
-import { useHealthAiQuery, useHealthOrganizationQuery } from "@/hooks/use-api";
+import { useHealthAiQuery } from "@/hooks/use-api";
 import { useAggregateMetrics } from "@/hooks/use-dashboard";
 import { PulseRing } from "@/components/premium/page-transition";
+import { Activity, ShieldCheck, Layers, Timer, Wifi, AlertTriangle } from "lucide-react";
 
-interface GaugeProps {
+interface HealthGaugeProps {
   label: string;
   value: number;
   max?: number;
   unit?: string;
+  icon: typeof Activity;
   color?: "primary" | "success" | "warning" | "destructive";
 }
 
-function Gauge({ label, value, max = 100, unit = "", color = "primary" }: GaugeProps) {
+const iconMap = {
+  primary: { bg: "bg-primary/10", text: "text-primary" },
+  success: { bg: "bg-success/10", text: "text-success" },
+  warning: { bg: "bg-warning/10", text: "text-warning" },
+  destructive: { bg: "bg-destructive/10", text: "text-destructive" },
+};
+
+function HealthGauge({ label, value, max = 100, unit = "", icon: Icon, color = "primary" }: HealthGaugeProps) {
   const pct = Math.min((value / max) * 100, 100);
   const colorMap = {
-    primary: { bg: "bg-primary", ring: "hsl(var(--primary))", glow: "0 0 6px hsl(var(--primary)/0.3)" },
-    success: { bg: "bg-success", ring: "hsl(var(--success))", glow: "0 0 6px hsl(var(--success)/0.3)" },
-    warning: { bg: "bg-warning", ring: "hsl(var(--warning))", glow: "0 0 6px hsl(var(--warning)/0.3)" },
-    destructive: { bg: "bg-destructive", ring: "hsl(var(--destructive))", glow: "0 0 6px hsl(var(--destructive)/0.3)" },
+    primary: { bg: "bg-primary", text: "text-primary", glow: "hsla(var(--primary)/0.3)", border: "border-primary/20" },
+    success: { bg: "bg-success", text: "text-success", glow: "hsla(var(--success)/0.3)", border: "border-success/20" },
+    warning: { bg: "bg-warning", text: "text-warning", glow: "hsla(var(--warning)/0.3)", border: "border-warning/20" },
+    destructive: { bg: "bg-destructive", text: "text-destructive", glow: "hsla(var(--destructive)/0.3)", border: "border-destructive/20" },
   };
-  const colors = colorMap[color];
+  const c = colorMap[color];
+  const ic = iconMap[color];
+  const isCritical = pct < 25 && color === "destructive";
 
   return (
     <motion.div
-      className="group relative overflow-hidden rounded-lg border border-border/20 bg-background/30 p-3 transition-all duration-200 hover:border-border/40 hover:bg-background/50"
-      initial={{ opacity: 0, y: 8, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      whileHover={{ y: -1 }}
-      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      className={cn(
+        "group relative overflow-hidden rounded-lg border bg-background/30 p-3.5 transition-all duration-300 hover:shadow-[0_0_25px_-6px_hsl(var(--primary)/0.06)]",
+        isCritical ? "border-destructive/30 hover:border-destructive/50" : "border-border/20 hover:border-border/40 hover:bg-background/50"
+      )}
     >
-      <div className="relative flex items-center justify-between">
-        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/50">
-          {label}
-        </span>
+      <motion.div
+        className="pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full border border-current opacity-[0.04]"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+      />
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-2">
+          <div className={cn("flex h-5 w-5 items-center justify-center rounded-md", ic.bg)}>
+            <Icon className={cn("h-3 w-3", ic.text)} />
+          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/50">
+            {label}
+          </span>
+        </div>
         <motion.span
-          className="font-mono text-xs font-medium tabular-nums text-foreground/70"
-          key={value}
-          initial={{ opacity: 0, y: -4 }}
+          className={cn("font-mono text-xs font-bold tabular-nums", c.text)}
+          key={Math.round(value)}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.3 }}
         >
-          {value}{unit}
+          {Math.round(value)}{unit}
         </motion.span>
       </div>
-      <div className="relative mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/30">
+        {isCritical && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 rounded-full bg-destructive/10"
+            animate={{ opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+        )}
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-          className={cn("relative h-full rounded-full", colors.bg)}
-          style={{ boxShadow: colors.glow }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          className={cn("relative h-full rounded-full", c.bg)}
+          style={{ boxShadow: `0 0 10px ${c.glow}` }}
         >
-          {value > 90 && (
-            <motion.div
-              className="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full"
-              style={{ backgroundColor: colors.ring, opacity: 0.2 }}
-              animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0, 0.2] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-          )}
           <motion.div
             className="absolute inset-0 rounded-full"
             style={{
-              background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)",
+              background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)",
               backgroundSize: "200% 100%",
             }}
             animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
           />
         </motion.div>
       </div>
+      {isCritical && (
+        <motion.div
+          className="mt-1.5 flex items-center gap-1 text-[9px] text-destructive/60"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <AlertTriangle className="h-2.5 w-2.5" />
+          <span>Critical threshold</span>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
 
 export function SystemHealth() {
   const { data: ai } = useHealthAiQuery();
-  const { data: orgHealth } = useHealthOrganizationQuery();
   const { metrics } = useAggregateMetrics();
 
+  const activeAgents = (ai?.active_agents ?? 0) + (ai?.active_executives ?? 0) + (ai?.active_specialists ?? 0);
+  const uptimeHours = Math.min(Math.round((ai?.uptime_seconds ?? 0) / 3600 * 100) / 100, 100);
+  const providerHealth = ai?.status === "healthy" ? 100 : ai?.status === "degraded" ? 60 : 0;
+  const orgHealth = Math.round((metrics.healthScore ?? 0) * 100);
+
   const gauges = [
-    { label: "Provider Health", value: ai?.status === "healthy" ? 100 : ai?.status === "degraded" ? 60 : 0, color: ai?.status === "healthy" ? "success" as const : "warning" as const },
-    { label: "Organization Health", value: Math.round((metrics.healthScore ?? 0) * 100), color: (metrics.healthScore ?? 0) > 0.8 ? "success" as const : "warning" as const },
-    { label: "Active Runs", value: ai?.active_runs ?? 0, max: 10, unit: "", color: "primary" as const },
-    { label: "Queue Depth", value: ai?.queue_depth ?? 0, max: 10, unit: "", color: "warning" as const },
-    { label: "Active Agents", value: (ai?.active_agents ?? 0) + (ai?.active_executives ?? 0) + (ai?.active_specialists ?? 0), max: 20, unit: "", color: "success" as const },
-    { label: "Uptime", value: Math.min(Math.round((ai?.uptime_seconds ?? 0) / 3600 * 100) / 100, 100), unit: "h", color: "primary" as const },
+    { label: "Provider Health", value: providerHealth, icon: ShieldCheck, color: providerHealth >= 80 ? "success" as const : "warning" as const },
+    { label: "Organization Health", value: orgHealth, icon: Activity, color: orgHealth >= 80 ? "success" as const : orgHealth >= 40 ? "warning" as const : "destructive" as const },
+    { label: "Active Runs", value: ai?.active_runs ?? 0, max: 10, icon: Timer, color: "primary" as const },
+    { label: "Queue Depth", value: ai?.queue_depth ?? 0, max: 10, icon: Layers, color: "warning" as const },
+    { label: "Active Agents", value: activeAgents, max: 20, icon: Wifi, color: "success" as const },
+    { label: "Uptime", value: uptimeHours, unit: "h", icon: Timer, color: "primary" as const },
   ];
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.25, ease: [0.32, 0.72, 0, 1] }}
-      className="enterprise-panel p-5"
-    >
-      <div className="relative">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground/80">System Health</h2>
-          <PulseRing active color="hsl(var(--success))" size={8} />
+    <div className="panel">
+      <div className="panel-header">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+            <Activity className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <span className="panel-header-title">System Health</span>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {gauges.map((g, i) => (
-            <Gauge key={g.label} {...g} />
-          ))}
+        <div className="flex items-center gap-2">
+          {providerHealth >= 80 ? (
+            <PulseRing active color="hsl(var(--success))" size={6} />
+          ) : (
+            <PulseRing active color="hsl(var(--warning))" size={6} />
+          )}
         </div>
       </div>
-    </motion.section>
+      <div className="panel-body space-y-2.5 p-4">
+        {gauges.map((g) => (
+          <HealthGauge key={g.label} {...g} />
+        ))}
+      </div>
+    </div>
   );
 }

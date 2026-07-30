@@ -116,10 +116,10 @@ export function useExecutionRun() {
   return {
     run: {
       id: objective?.id ?? "pending",
-      objective: objective?.raw_input ?? "Awaiting objective...",
+      objective: objective?.raw_input ?? "—",
       status,
       progress: dashboard?.plan?.progress_percent ?? 0,
-      currentPhase: objective?.current_stage ?? "Initializing",
+      currentPhase: objective?.current_stage ?? (objective?.status === "completed" ? "Completed" : "—"),
       currentExecutive: dashboard?.organization?.departments?.[0]?.name ?? "—",
       activeSpecialists: dashboard?.organization?.total_head_count ?? 0,
       eta: "—",

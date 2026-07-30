@@ -72,13 +72,11 @@ class ConnectorRegistry:
 
     @classmethod
     def list_providers(cls) -> list[dict[str, Any]]:
-        return [
-            {
-                "provider": name,
-                "actions": cls._connectors[name]("_dummy_").get_actions(),  # type: ignore[arg-type]
-            }
-            for name in sorted(cls._connectors)
-        ]
+        result: list[dict[str, Any]] = []
+        for name in sorted(cls._connectors):
+            instance = cls._connectors[name].__new__(cls._connectors[name])
+            result.append({"provider": name, "actions": instance.get_actions()})
+        return result
 
     @classmethod
     def get_action_definitions(cls) -> list[dict[str, Any]]:

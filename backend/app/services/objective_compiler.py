@@ -161,7 +161,13 @@ class ObjectiveCompilerService:
             return await svc.scan(objective_id)
 
         async def _dashboard_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+            from app.agents.tasks import DashboardAgent
             from app.services.engine import DashboardAggregator
+            agent = DashboardAgent(self._session, kernel=ai_kernel)
+            try:
+                await agent.run(objective_id)
+            except Exception:
+                logger.exception("DashboardAgent report generation failed, continuing with aggregator only")
             aggregator = DashboardAggregator(self._session)
             return await aggregator.get_dashboard(objective_id)
 

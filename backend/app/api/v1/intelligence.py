@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_session
+from app.database.session import get_session
 from app.schemas import ApiResponse
 from app.services.execution_intelligence import (
     AgentCommunicationService,
@@ -262,6 +262,15 @@ async def create_alert(
     return ApiResponse(data=result)
 
 
+@router.get("/alerts/counts")
+async def get_alert_counts(
+    session: AsyncSession = Depends(get_session),
+) -> ApiResponse:
+    svc = WatchdogService(session)
+    result = await svc.get_alert_counts()
+    return ApiResponse(data=result)
+
+
 @router.get("/alerts/{objective_id}")
 async def list_alerts(
     objective_id: str,
@@ -305,15 +314,6 @@ async def resolve_alert(
     result = await svc.resolve_alert(alert_id)
     if result is None:
         return ApiResponse(data={"error": "Alert not found"})
-    return ApiResponse(data=result)
-
-
-@router.get("/alerts/counts")
-async def get_alert_counts(
-    session: AsyncSession = Depends(get_session),
-) -> ApiResponse:
-    svc = WatchdogService(session)
-    result = await svc.get_alert_counts()
     return ApiResponse(data=result)
 
 

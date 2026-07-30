@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { useSSE } from "@/hooks/use-sse-events";
-import { useLatestObjectiveIdQuery, useObjectiveQuery } from "@/hooks/use-api";
+import { useLatestObjectiveIdQuery, useObjectiveQuery, useEventsQuery } from "@/hooks/use-api";
+import { useObjectiveContextStore } from "@/store";
 import { ExecutionDAG } from "@/app/execution/components/execution-dag";
 
 export default function GraphPage() {
@@ -17,10 +18,19 @@ export default function GraphPage() {
 
 function GraphContent() {
   const searchParams = useSearchParams();
+  const { setActiveObjectiveId } = useObjectiveContextStore();
   const urlObjectiveId = searchParams.get("id");
   const { data: latestObjectiveId } = useLatestObjectiveIdQuery(!urlObjectiveId);
   const objectiveId = urlObjectiveId ?? latestObjectiveId;
+
+  // Sync URL param to global execution context
+  useEffect(() => {
+    if (urlObjectiveId) {
+      setActiveObjectiveId(urlObjectiveId);
+    }
+  }, [urlObjectiveId, setActiveObjectiveId]);
   const { data: objective } = useObjectiveQuery(objectiveId);
+  const { data: persistedEvents } = useEventsQuery(objectiveId);
 
   useSSE(objectiveId ?? null);
 
@@ -56,11 +66,11 @@ function GraphContent() {
         style={{ height: 600 }}
       >
         {objectiveId ? (
-          <ExecutionDAG />
+          <ExecutionDAG persistedEvents={persistedEvents} />
         ) : (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground">
-              No execution data available. Run a pipeline to see the execution graph.
+              No data available for this execution.
             </p>
           </div>
         )}

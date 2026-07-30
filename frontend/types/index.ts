@@ -42,6 +42,14 @@ export type ExecutionStatus = "idle" | "running" | "completed" | "failed" | "pau
 
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 
+export interface ExecutiveReport {
+  summary: string;
+  reasoning: string;
+  confidence: number | null;
+  risk_level: "low" | "medium" | "high" | "critical";
+  created_at: string | null;
+}
+
 export interface DashboardSummary {
   average_confidence: number;
   total_runtime: number;

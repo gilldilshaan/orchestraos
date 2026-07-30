@@ -2,11 +2,14 @@
 
 import { motion } from "motion/react";
 import { useLatestObjectiveIdQuery, useDashboardQuery, usePlanQuery } from "@/hooks/use-api";
+import { useObjectiveContextStore } from "@/store";
 import { HealthBadge } from "@/components/health-badge";
 import { CheckCircle2, Circle } from "lucide-react";
 
 export default function PlanPage() {
-  const { data: objectiveId, isLoading: idLoading } = useLatestObjectiveIdQuery();
+  const activeObjectiveId = useObjectiveContextStore((s) => s.activeObjectiveId);
+  const { data: latestObjectiveId, isLoading: idLoading } = useLatestObjectiveIdQuery(!activeObjectiveId);
+  const objectiveId = activeObjectiveId ?? latestObjectiveId;
   const { data: dashboard, isLoading: dashLoading } = useDashboardQuery(objectiveId);
   const planId = dashboard?.plan?.id ?? null;
   const { data: plan, isLoading: planLoading, error } = usePlanQuery(planId);
@@ -16,7 +19,7 @@ export default function PlanPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center p-8">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <p className="text-sm text-muted-foreground">Loading plan...</p>
       </div>
     );
@@ -24,7 +27,7 @@ export default function PlanPage() {
 
   if (error) {
     return (
-      <div className="space-y-6 p-8">
+      <div className="space-y-6">
         <h1 className="text-lg font-semibold tracking-tight">Plan</h1>
         <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">Failed to load plan data.</p>
@@ -35,7 +38,7 @@ export default function PlanPage() {
 
   if (noPlan || !plan) {
     return (
-      <div className="space-y-6 p-8">
+      <div className="space-y-6">
         <h1 className="text-lg font-semibold tracking-tight">Plan</h1>
         <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">
@@ -49,7 +52,7 @@ export default function PlanPage() {
   const milestones = plan.milestones ?? [];
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6">
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}

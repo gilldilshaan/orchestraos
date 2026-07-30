@@ -2,10 +2,12 @@
 
 import type {
   DashboardSummary,
+  ExecutiveReport,
   RunSummary,
   SystemHealth,
   DecisionData,
 } from "@/types";
+import { useObjectiveContextStore } from "@/store";
 import {
   useLatestObjectiveIdQuery,
   useSystemHealthQuery,
@@ -23,6 +25,8 @@ import {
 
 function runtimeSeconds(createdAt: string | null, updatedAt: string | null, isTerminal: boolean): number {
   if (!createdAt) return 0;
+  // Only compute meaningful runtime for terminal states (completed/failed/cancelled) or explicitly running
+  if (!isTerminal && !updatedAt) return 0;
   const start = new Date(createdAt).getTime();
   const end = isTerminal && updatedAt ? new Date(updatedAt).getTime() : Date.now();
   return Math.max(0, (end - start) / 1000);
@@ -68,20 +72,22 @@ function adaptDashboard(api: ApiDashboardData | undefined): DashboardSummary | n
 function adaptRuns(dashboards: ApiDashboardData[] | undefined): RunSummary[] {
   if (!dashboards?.length) return [];
   return dashboards.map((d, i) => {
+    const status =
+      d.objective?.status === "completed"
+        ? "completed"
+        : d.objective?.status === "failed"
+          ? "failed"
+          : d.objective?.status === "draft"
+            ? "idle"
+            : ("running" as const);
+    const isIdle = status === "idle";
     const isTerminal = isTerminalStatus(d.objective?.status);
     return {
       id: d.objective?.id ?? `obj_${i}`,
       objective: d.objective?.summary ?? "Unknown Objective",
-      status:
-        d.objective?.status === "completed"
-          ? "completed"
-          : d.objective?.status === "failed"
-            ? "failed"
-            : d.objective?.status === "draft"
-              ? "idle"
-              : ("running" as const),
-      confidence: d.objective?.confidence ?? 0,
-      duration: runtimeSeconds(d.objective?.created_at ?? null, d.objective?.updated_at ?? null, isTerminal),
+      status,
+      confidence: d.objective?.confidence ?? d.plan?.confidence ?? 0,
+      duration: isIdle ? 0 : runtimeSeconds(d.objective?.created_at ?? null, d.objective?.updated_at ?? null, isTerminal),
       started_at: d.objective?.created_at ?? new Date().toISOString(),
       node_count: d.organization?.total_head_count ?? 0,
     };
@@ -112,10 +118,22 @@ function adaptDecisions(decisions: ApiDecision[] | undefined): DecisionData[] {
 }
 
 export function useDashboard() {
-  const { data: objectiveId } = useLatestObjectiveIdQuery();
+  const activeObjectiveId = useObjectiveContextStore((s) => s.activeObjectiveId);
+  const { data: latestObjectiveId } = useLatestObjectiveIdQuery(!activeObjectiveId);
+  const objectiveId = activeObjectiveId ?? latestObjectiveId;
   const { data, isLoading, error } = useDashboardQuery(objectiveId);
+  const report: ExecutiveReport | null = data?.executive_report
+    ? {
+        summary: data.executive_report.summary ?? "",
+        reasoning: data.executive_report.reasoning ?? "",
+        confidence: data.executive_report.confidence ?? null,
+        risk_level: (data.executive_report.risk_level ?? "medium") as ExecutiveReport["risk_level"],
+        created_at: data.executive_report.created_at ?? null,
+      }
+    : null;
   return {
     data: data ? adaptDashboard(data) : null,
+    report,
     loading: isLoading,
     error: error ? (error as Error).message : null,
   };
@@ -133,7 +151,9 @@ export function useSystemHealth() {
 }
 
 export function useDecisions() {
-  const { data: objectiveId } = useLatestObjectiveIdQuery();
+  const activeObjectiveId = useObjectiveContextStore((s) => s.activeObjectiveId);
+  const { data: latestObjectiveId } = useLatestObjectiveIdQuery(!activeObjectiveId);
+  const objectiveId = activeObjectiveId ?? latestObjectiveId;
   const { data } = useDecisionsQuery(objectiveId);
   return { decisions: data ? adaptDecisions(data) : [] };
 }
@@ -192,9 +212,9 @@ export function useAggregateMetrics() {
         executivesSpawned: agg.average_executives_spawned ?? null,
         specialistsSpawned: agg.average_specialists_spawned ?? null,
         avgConfidence: agg.average_confidence ?? agg.average_plan_confidence ?? null,
-        healthScore: null,  // not persisted per-objective
-        parallelism: null,
-        avgRetries: null,
+        healthScore: agg.average_organization_health ?? agg.average_plan_confidence ?? null,
+        parallelism: agg.peak_parallelism ?? agg.average_parallelism ?? null,
+        avgRetries: agg.average_retries ?? null,
       },
     };
   }
@@ -229,7 +249,7 @@ export function useAggregateMetrics() {
       executivesSpawned: null,
       specialistsSpawned: null,
       avgConfidence: avg(withConfidence.map((d) => d.objective?.confidence ?? 0)),
-      healthScore: null,
+      healthScore: avg(list.map((d) => d.organization?.health_score ?? 0)),
       parallelism: null,
       avgRetries: null,
     },

@@ -1,15 +1,37 @@
 "use client";
 
+import { Suspense, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { useLatestObjectiveIdQuery, useTelemetryQuery, useTelemetrySummaryQuery, useEventsQuery } from "@/hooks/use-api";
+import { useObjectiveContextStore } from "@/store";
 import { MetricCard } from "@/components/metric-card";
 import { Activity, CheckCircle2, XCircle, Clock, DollarSign, BarChart3, Cpu, Terminal } from "lucide-react";
 
 export default function TelemetryPage() {
-  const { data: objectiveId } = useLatestObjectiveIdQuery();
+  return (
+    <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading...</div>}>
+      <TelemetryContent />
+    </Suspense>
+  );
+}
+
+function TelemetryContent() {
+  const searchParams = useSearchParams();
+  const { setActiveObjectiveId } = useObjectiveContextStore();
+  const urlId = searchParams.get("id");
+  const { data: latestObjectiveId } = useLatestObjectiveIdQuery(!urlId);
+  const objectiveId = urlId ?? latestObjectiveId;
   const { data: telemetry, isLoading: telemetryLoading } = useTelemetryQuery(objectiveId);
   const { data: summary } = useTelemetrySummaryQuery(objectiveId);
   const { data: events } = useEventsQuery(objectiveId);
+
+  // Sync URL param to global execution context
+  useEffect(() => {
+    if (urlId) {
+      setActiveObjectiveId(urlId);
+    }
+  }, [urlId, setActiveObjectiveId]);
 
   const hasTelemetry = telemetry && telemetry.length > 0;
 
@@ -32,7 +54,7 @@ export default function TelemetryPage() {
           animate={{ opacity: 1, y: 0 }}
           className="rounded-xl border border-border/50 bg-card p-8 text-center"
         >
-          <p className="text-sm text-muted-foreground">Create an objective first to see telemetry data.</p>
+          <p className="text-sm text-muted-foreground">No data available for this execution.</p>
         </motion.div>
       )}
 
@@ -53,7 +75,7 @@ export default function TelemetryPage() {
           className="rounded-xl border border-border/50 bg-card p-8 text-center"
         >
           <p className="text-sm text-muted-foreground">
-            No telemetry records captured yet. Run an objective to populate agent telemetry.
+            No data available for this execution.
           </p>
         </motion.div>
       )}

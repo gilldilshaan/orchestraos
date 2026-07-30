@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { Github, Layers, MessageSquare, FileText, Mail, Link2, type LucideIcon } from "lucide-react";
 
 export interface ConnectorConfig {
   id: string;
@@ -55,13 +56,18 @@ export interface MarketplaceEntry {
   actions: Array<{ name: string; description: string; params: Record<string, string> }>;
 }
 
-export const PROVIDER_META: Record<string, { color: string; icon: string }> = {
-  github: { color: "text-white bg-gray-800", icon: "🐙" },
-  jira: { color: "text-white bg-blue-600", icon: "🔷" },
-  slack: { color: "text-white bg-emerald-600", icon: "💬" },
-  notion: { color: "text-white bg-black", icon: "📝" },
-  google_workspace: { color: "text-white bg-blue-500", icon: "🔴" },
-  webhook: { color: "text-white bg-violet-600", icon: "🔗" },
+export const PROVIDER_META: Record<string, { color: string; icon: LucideIcon }> = {
+  github: { color: "text-white bg-gray-800", icon: Github },
+  jira: { color: "text-white bg-blue-600", icon: Layers },
+  slack: { color: "text-white bg-emerald-600", icon: MessageSquare },
+  notion: { color: "text-white bg-black", icon: FileText },
+  google_workspace: { color: "text-white bg-blue-500", icon: Mail },
+  webhook: { color: "text-white bg-violet-600", icon: Link2 },
+};
+
+export const DEFAULT_PROVIDER_META: { color: string; icon: LucideIcon } = {
+  color: "text-white bg-muted",
+  icon: Link2,
 };
 
 // ─── Connectors CRUD ───────────────────────────────────

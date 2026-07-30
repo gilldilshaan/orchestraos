@@ -2,10 +2,13 @@
 
 import { motion } from "motion/react";
 import { useLatestObjectiveIdQuery, useObjectiveQuery } from "@/hooks/use-api";
+import { useObjectiveContextStore } from "@/store";
 import { HealthBadge } from "@/components/health-badge";
 
 export default function ObjectivePage() {
-  const { data: objectiveId, isLoading: idLoading } = useLatestObjectiveIdQuery();
+  const activeObjectiveId = useObjectiveContextStore((s) => s.activeObjectiveId);
+  const { data: latestObjectiveId, isLoading: idLoading } = useLatestObjectiveIdQuery(!activeObjectiveId);
+  const objectiveId = activeObjectiveId ?? latestObjectiveId;
   const { data: objective, isLoading: objLoading, error } = useObjectiveQuery(objectiveId);
 
   const isLoading = idLoading || objLoading;
@@ -13,7 +16,7 @@ export default function ObjectivePage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center p-8">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <p className="text-sm text-muted-foreground">Loading objective...</p>
       </div>
     );
@@ -21,7 +24,7 @@ export default function ObjectivePage() {
 
   if (error) {
     return (
-      <div className="space-y-6 p-8">
+      <div className="space-y-6">
         <h1 className="text-lg font-semibold tracking-tight">Objective</h1>
         <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">Failed to load objective data.</p>
@@ -32,7 +35,7 @@ export default function ObjectivePage() {
 
   if (!objective) {
     return (
-      <div className="space-y-6 p-8">
+      <div className="space-y-6">
         <h1 className="text-lg font-semibold tracking-tight">Objective</h1>
         <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">
@@ -50,7 +53,7 @@ export default function ObjectivePage() {
     : "running" as const;
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6">
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}

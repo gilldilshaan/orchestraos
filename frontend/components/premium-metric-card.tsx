@@ -22,6 +22,12 @@ interface PremiumMetricCardProps {
   delay?: number;
 }
 
+const TREND_COLORS = {
+  up: { text: "text-success", bg: "bg-success/10", ring: "border-success/20" },
+  down: { text: "text-destructive", bg: "bg-destructive/10", ring: "border-destructive/20" },
+  neutral: { text: "text-muted-foreground", bg: "bg-muted/20", ring: "border-border/20" },
+};
+
 export function PremiumMetricCard({
   icon,
   label,
@@ -32,65 +38,46 @@ export function PremiumMetricCard({
   className,
   delay = 0,
 }: PremiumMetricCardProps) {
-  const trendColor =
-    trend?.direction === "up"
-      ? "text-success"
-      : trend?.direction === "down"
-        ? "text-destructive"
-        : "text-muted-foreground";
-
-  const trendIcon =
-    trend?.direction === "up" ? "↑" : trend?.direction === "down" ? "↓" : "→";
+  const trendStyle = trend ? TREND_COLORS[trend.direction] : null;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.45, delay, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        "group relative overflow-hidden rounded-xl border border-border/50 bg-card p-5 transition-all duration-300 hover:border-border/80 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.03)]",
+        "bento-tile-accent p-5",
         className
       )}
     >
-      {/* Icon */}
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+      <div className="relative z-[1] flex items-start justify-between">
+        <div>
+          <div className="metric-label">{label}</div>
+          <div className="metric-value mt-1 text-foreground/90">
+            {value != null ? (
+              <AnimatedCounter value={value} format={format} />
+            ) : (
+              <span className="text-sm font-normal tracking-normal text-muted-foreground/30">
+                No data
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
           {icon}
         </div>
-        {trend && (
-          <span
-            className={cn(
-              "flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-              trend.direction === "up"
-                ? "bg-success/10 text-success"
-                : trend.direction === "down"
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-muted text-muted-foreground"
-            )}
-          >
-            {trendIcon} {trend.value}
+      </div>
+
+      <div className="relative z-[1] mt-4 flex items-center gap-3">
+        {trend && trendStyle && (
+          <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium", trendStyle.bg, trendStyle.text, trendStyle.ring)}>
+            {trend.direction === "up" ? "\u2191" : trend.direction === "down" ? "\u2193" : "\u2192"} {trend.value}
           </span>
         )}
-      </div>
-
-      {/* Value */}
-      <div className="text-2xl font-semibold tracking-tight">
-        {value != null ? (
-          <AnimatedCounter value={value} format={format} />
-        ) : (
-          <span className="font-mono text-xl tabular-nums">—</span>
+        {subtitle && (
+          <span className="text-[10px] text-muted-foreground/50">{subtitle}</span>
         )}
       </div>
-
-      {/* Label */}
-      <div className="mt-1 text-xs text-muted-foreground">{label}</div>
-
-      {/* Subtitle */}
-      {subtitle && (
-        <div className="mt-2 border-t border-border/30 pt-2 text-[10px] text-muted-foreground/60">
-          {subtitle}
-        </div>
-      )}
     </motion.div>
   );
 }

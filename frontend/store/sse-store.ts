@@ -25,7 +25,7 @@ interface SSEState {
 export const useSSEStore = create<SSEState>((set) => ({
   events: [],
   currentStage: "initializing",
-  currentMessage: "Awaiting objective...",
+      currentMessage: "",
   progress: 0,
   connected: false,
   pipelineStatus: "idle",
@@ -46,7 +46,7 @@ export const useSSEStore = create<SSEState>((set) => ({
     set({
       events: [],
       currentStage: "initializing",
-      currentMessage: "Awaiting objective...",
+  currentMessage: "",
       progress: 0,
       connected: false,
       pipelineStatus: "idle",

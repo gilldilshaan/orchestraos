@@ -23,12 +23,12 @@ export function InspectorPanel() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
-        <h3 className="text-xs font-semibold tracking-tight">
+      <div className="flex items-center justify-between border-b border-border/40 px-3 py-2.5">
+        <h3 className="text-[11px] font-semibold tracking-tight text-foreground/80">
           {node ? "Inspector" : "Organization Summary"}
         </h3>
         {node && (
-          <button onClick={close} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+          <button onClick={close} className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
             <X className="h-3.5 w-3.5" />
           </button>
         )}

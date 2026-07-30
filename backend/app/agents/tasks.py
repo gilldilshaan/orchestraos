@@ -128,6 +128,12 @@ class RiskAgent(BaseAgent):
         created_risks = []
 
         for r_data in risks_data:
+            mitigation = r_data.get("mitigation")
+            contingency = r_data.get("contingency")
+            if isinstance(mitigation, list):
+                mitigation = " | ".join(str(m) for m in mitigation)
+            if isinstance(contingency, list):
+                contingency = " | ".join(str(c) for c in contingency)
             risk = Risk(
                 objective_id=objective_id,
                 title=r_data.get("title", "Unknown Risk"),
@@ -139,8 +145,8 @@ class RiskAgent(BaseAgent):
                 risk_score=r_data.get(
                     "risk_score", r_data.get("probability", 0.5) * r_data.get("impact", 0.5)
                 ),
-                mitigation=r_data.get("mitigation"),
-                contingency=r_data.get("contingency"),
+                mitigation=mitigation,
+                contingency=contingency,
                 owner=r_data.get("owner"),
                 status="identified",
             )
@@ -161,10 +167,13 @@ class RiskAgent(BaseAgent):
 
 class OrganizationAgent(BaseAgent):
     async def run(self, objective_id: str) -> dict[str, Any]:
+        obj_repo = ObjectiveRepository(self._session)
         comp_repo = ObjectiveCompilationRepository(self._session)
 
+        objective = await obj_repo.get(objective_id)
         compilation = await comp_repo.get_by_objective(objective_id)
         context = {
+            "objective": {"raw": objective.raw_input if objective else ""},
             "compilation": {
                 "business_type": compilation.business_type if compilation else None,
                 "industry": compilation.industry if compilation else None,
@@ -177,10 +186,18 @@ class OrganizationAgent(BaseAgent):
             prompt_template="organization_v1.md",
             context=context,
             schema=OrganizationOutputSchema,
+            use_cache=False,
         )
 
         departments_data = result.get("departments", [])
         created_depts = []
+
+        if not departments_data:
+            from app.llm.fallback import build_organization
+            import json
+            prompt = self._llm.prompt_manager.render("organization_v1.md", context or {})
+            fallback_result = build_organization(prompt)
+            departments_data = fallback_result.get("departments", [])
 
         for dept_data in departments_data:
             dept = Department(
@@ -244,7 +261,20 @@ class DecisionAgent(BaseAgent):
             prompt_template="decision_v1.md",
             context=context,
             schema=DecisionOutputSchema,
+            use_cache=False,
         )
+
+        options_data = result.get("options", [])
+        if not options_data:
+            from app.llm.fallback import build_decision
+            import json
+            prompt = self._llm.prompt_manager.render("decision_v1.md", context or {})
+            fallback_result = build_decision(prompt)
+            options_data = fallback_result.get("options", [])
+            result["options"] = options_data
+            for key in ("recommendation", "reasoning", "evidence", "confidence", "risk_level", "affected_departments"):
+                if not result.get(key):
+                    result[key] = fallback_result.get(key)
 
         decision = Decision(
             objective_id=objective_id,
@@ -261,7 +291,6 @@ class DecisionAgent(BaseAgent):
         )
         decision = await decision_repo.create(decision)
 
-        options_data = result.get("options", [])
         for opt_data in options_data:
             option = DecisionOption(
                 decision_id=decision.id,
@@ -330,6 +359,15 @@ class DashboardAgent(BaseAgent):
             prompt_template="dashboard_v1.md",
             context=context,
             schema=DashboardOutputSchema,
+        )
+
+        await self._save_explanation(
+            entity_type="Dashboard",
+            entity_id=objective_id,
+            recommendation=summary.recommendation or summary.summary or "",
+            reasoning=summary.reasoning or "",
+            confidence=summary.confidence,
+            risk_level=summary.risk_level or "medium",
         )
 
         return {

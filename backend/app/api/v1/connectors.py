@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_session
+from app.database.session import get_session
 from app.schemas import ApiResponse
 from app.services.connector_orchestrator import ConnectorOrchestrator
 

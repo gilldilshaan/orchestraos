@@ -1,12 +1,13 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useEventsQuery, useTelemetryQuery, useTelemetrySummaryQuery, useObjectivesQuery } from "@/hooks/use-api";
 import { StatusBadge } from "@/components/status-badge";
-import { ArrowRightLeft, Clock, Cpu, DollarSign, Activity, AlertTriangle } from "lucide-react";
+import { ArrowRightLeft, Clock, Cpu, DollarSign, Activity, AlertTriangle, Search } from "lucide-react";
+import { PipelineReport } from "@/app/execution/components/pipeline-report";
 
 export default function DiffPage() {
   return (
@@ -17,6 +18,7 @@ export default function DiffPage() {
 }
 
 function DiffContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const id1 = searchParams.get("id1");
   const id2 = searchParams.get("id2");
@@ -31,21 +33,36 @@ function DiffContent() {
   const { data: summary2 } = useTelemetrySummaryQuery(id2);
 
   const [selectedSection, setSelectedSection] = useState<string>("overview");
+  const [selectedA, setSelectedA] = useState(id1 ?? "");
+  const [selectedB, setSelectedB] = useState(id2 ?? "");
 
   const obj1 = useMemo(
-    () => objectives?.find((o) => o.id === id1),
-    [objectives, id1],
+    () => objectives?.find((o) => o.id === selectedA),
+    [objectives, selectedA],
   );
   const obj2 = useMemo(
-    () => objectives?.find((o) => o.id === id2),
-    [objectives, id2],
+    () => objectives?.find((o) => o.id === selectedB),
+    [objectives, selectedB],
   );
+
+  const handleCompare = () => {
+    if (selectedA && selectedB) {
+      router.push(`/diff?id1=${selectedA}&id2=${selectedB}`);
+    }
+  };
 
   const sections = [
     { id: "overview", label: "Overview" },
     { id: "events", label: "Events" },
     { id: "telemetry", label: "Telemetry" },
   ];
+
+  const runs = useMemo(() => {
+    return (objectives ?? []).map((o) => ({
+      id: o.id,
+      label: `${o.raw_input?.slice(0, 50) ?? "Unknown"} (${o.id.slice(0, 8)}...)`,
+    }));
+  }, [objectives]);
 
   return (
     <div className="space-y-5">
@@ -60,28 +77,75 @@ function DiffContent() {
         </p>
       </motion.div>
 
-      {(!id1 || !id2) && (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        className="flex items-end gap-3 rounded-lg border border-border/50 bg-card p-4"
+      >
+        <div className="flex-1">
+          <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            Execution A
+          </label>
+          <select
+            value={selectedA}
+            onChange={(e) => setSelectedA(e.target.value)}
+            className="w-full rounded-md border border-border/30 bg-muted/20 px-3 py-2 text-[11px] text-foreground focus:border-primary/40 focus:outline-none"
+          >
+            <option value="">Select execution...</option>
+            {runs.map((r) => (
+              <option key={r.id} value={r.id}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center pb-2">
+          <ArrowRightLeft className="h-4 w-4 text-muted-foreground/60" />
+        </div>
+        <div className="flex-1">
+          <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            Execution B
+          </label>
+          <select
+            value={selectedB}
+            onChange={(e) => setSelectedB(e.target.value)}
+            className="w-full rounded-md border border-border/30 bg-muted/20 px-3 py-2 text-[11px] text-foreground focus:border-primary/40 focus:outline-none"
+          >
+            <option value="">Select execution...</option>
+            {runs.map((r) => (
+              <option key={r.id} value={r.id}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          onClick={handleCompare}
+          disabled={!selectedA || !selectedB}
+          className="flex items-center gap-1.5 rounded-md bg-primary/10 px-4 py-2 text-[11px] font-medium text-primary transition-all hover:bg-primary/20 disabled:pointer-events-none disabled:opacity-40"
+        >
+          <Search className="h-3.5 w-3.5" />
+          Compare
+        </button>
+      </motion.div>
+
+      {!id1 || !id2 ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-xl border border-border/50 bg-card p-8 text-center"
         >
           <p className="text-sm text-muted-foreground">
-            Provide two objective IDs via <code className="text-xs font-mono bg-muted/30 px-1.5 py-0.5 rounded">?id1=...&amp;id2=...</code> to compare runs.
+            Select two executions from the dropdowns above and click Compare.
           </p>
         </motion.div>
-      )}
+      ) : null}
 
       {id1 && id2 && (
         <>
-          {/* Run selector tabs */}
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             <span className="font-mono truncate max-w-[120px]">{obj1?.raw_input?.slice(0, 40) ?? id1.slice(0, 8)}</span>
             <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" />
             <span className="font-mono truncate max-w-[120px]">{obj2?.raw_input?.slice(0, 40) ?? id2.slice(0, 8)}</span>
           </div>
 
-          {/* Section tabs */}
           <div className="flex items-center gap-1 rounded-lg border border-border/50 bg-card p-1 w-fit">
             {sections.map((s) => (
               <button
@@ -193,6 +257,7 @@ function RunSidebar({
         ) : (
           <p className="text-xs text-muted-foreground/60">No telemetry data</p>
         )}
+        <PipelineReport objectiveId={objectiveId} />
       </div>
     </motion.div>
   );

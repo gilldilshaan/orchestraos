@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml ./
 COPY app/ ./app/
+COPY prompts/ ./prompts/
+COPY migrations/ ./migrations/
+COPY migrations/alembic.ini ./
 RUN pip install --no-cache-dir -e ".[dev]"
 
 EXPOSE 8000

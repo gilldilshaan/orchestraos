@@ -9,7 +9,8 @@ import type { ApiRole, ApiDepartment } from "@/hooks/use-api";
 import { OrganizationUniverse } from "@/components/3d/scene-wrapper";
 import { PremiumCard } from "@/components/premium/premium-card";
 import { PulseRing } from "@/components/premium/page-transition";
-import { X, Target, Users, ListChecks, Wrench, Activity, Cpu, GitBranch, MessageSquare, Building2, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { X, Target, Users, ListChecks, Wrench, Activity, Cpu, GitBranch, MessageSquare, Building2, ChevronRight, Crown } from "lucide-react";
 
 interface RoleDetail {
   role: ApiRole;
@@ -116,7 +117,7 @@ function OrganizationContent() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="enterprise-panel p-12 text-center"
+          className="panel p-12 text-center"
         >
           <Building2 className="mx-auto h-8 w-8 text-muted-foreground/20" />
           <p className="mt-3 text-sm text-muted-foreground/50">
@@ -147,7 +148,7 @@ function OrganizationContent() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 + gi * 0.08 }}
-                className="enterprise-panel"
+                className="panel"
               >
                 {/* Department header */}
                 <div className="flex items-center justify-between border-b border-border/20 px-5 py-3.5">
@@ -165,17 +166,40 @@ function OrganizationContent() {
                   <ChevronRight className="h-4 w-4 text-muted-foreground/20" />
                 </div>
 
-                {/* Roles grid */}
-                <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {(dept.roles ?? []).map((role) => (
-                    <MemberCard
-                      key={role.id ?? role.title}
-                      role={role}
-                      department={dept}
-                      onClick={() => setSelectedRole({ role, department: dept })}
-                    />
-                  ))}
-                </div>
+                {/* Roles: department lead stands out, staff arranged below */}
+                {(() => {
+                  const roles = dept.roles ?? [];
+                  const sorted = [...roles].sort(
+                    (a, b) => (a.hiring_order ?? 0) - (b.hiring_order ?? 0)
+                  );
+                  const lead = sorted[0];
+                  const staff = sorted.slice(1);
+                  return (
+                    <div className="space-y-3 p-4">
+                      {lead && (
+                        <MemberCard
+                          key={lead.id ?? lead.title}
+                          role={lead}
+                          department={dept}
+                          isLead={staff.length > 0}
+                          onClick={() => setSelectedRole({ role: lead, department: dept })}
+                        />
+                      )}
+                      {staff.length > 0 && (
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                          {staff.map((role) => (
+                            <MemberCard
+                              key={role.id ?? role.title}
+                              role={role}
+                              department={dept}
+                              onClick={() => setSelectedRole({ role, department: dept })}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </motion.div>
             ))}
           </div>
@@ -194,7 +218,7 @@ function OrganizationContent() {
   );
 }
 
-function MemberCard({ role, department, onClick }: { role: ApiRole; department: ApiDepartment; onClick: () => void }) {
+function MemberCard({ role, department, isLead, onClick }: { role: ApiRole; department: ApiDepartment; isLead?: boolean; onClick: () => void }) {
   const isActive = role.status === "active";
   const isRunning = role.status === "running";
   const statusColor = isActive
@@ -205,14 +229,23 @@ function MemberCard({ role, department, onClick }: { role: ApiRole; department: 
 
   return (
     <PremiumCard
-      variant="glass"
+      variant={isLead ? "bordered" : "glass"}
       hoverEffect="lift"
-      className="p-4 text-left"
+      className={cn("text-left", isLead ? "border-primary/25 bg-primary/[0.03] p-5" : "p-4")}
       onClick={onClick}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground/80">{role.title}</span>
-        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusColor}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {isLead && (
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Crown className="h-3.5 w-3.5" />
+            </span>
+          )}
+          <span className={cn("font-medium text-foreground/80 truncate", isLead ? "text-base" : "text-sm")}>
+            {role.title}
+          </span>
+        </div>
+        <span className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium", statusColor)}>
           <PulseRing
             active={isRunning}
             color={isRunning ? "hsl(var(--primary))" : isActive ? "hsl(var(--success))" : "hsl(var(--muted-foreground))"}
@@ -221,8 +254,15 @@ function MemberCard({ role, department, onClick }: { role: ApiRole; department: 
           {role.status.charAt(0).toUpperCase() + role.status.slice(1)}
         </span>
       </div>
+      {isLead && (
+        <span className="mt-1.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-primary/70">
+          Department Lead
+        </span>
+      )}
       {role.description && (
-        <p className="mt-1.5 text-xs text-muted-foreground/50 line-clamp-1">{role.description}</p>
+        <p className={cn("mt-1.5 text-muted-foreground/50", isLead ? "text-xs line-clamp-2" : "text-xs line-clamp-1")}>
+          {role.description}
+        </p>
       )}
       <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground/30">
         <span className="flex items-center gap-1">

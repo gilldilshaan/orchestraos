@@ -12,17 +12,27 @@ import {
   ArrowRight,
   Send,
   CheckCircle2,
+  Crown,
+  ClipboardList,
+  AlertTriangle,
+  Building2,
+  Scale,
+  Flame,
+  LayoutDashboard,
 } from "lucide-react";
+import type { FC, SVGProps } from "react";
 
-const AGENT_ICONS: Record<string, string> = {
-  ceo: "👑",
-  planner: "📋",
-  risk: "⚠️",
-  organization: "🏛️",
-  decision: "⚖️",
-  devils_advocate: "😈",
-  dashboard: "📊",
-  default: "🤖",
+type IconType = FC<SVGProps<SVGSVGElement>>;
+
+const AGENT_ICONS: Record<string, IconType> = {
+  ceo: Crown,
+  planner: ClipboardList,
+  risk: AlertTriangle,
+  organization: Building2,
+  decision: Scale,
+  devils_advocate: Flame,
+  dashboard: LayoutDashboard,
+  default: Bot,
 };
 
 const AGENT_LABELS: Record<string, string> = {
@@ -102,25 +112,28 @@ export function CollaborationFeed({ objectiveId }: { objectiveId: string | null 
                     <ArrowRight className="h-3 w-3" />
                     <span className={getAgentColor(conv.agents[1])}>{getAgentLabel(conv.agents[1])}</span>
                   </div>
-                  {conv.messages.slice(-3).map((msg) => (
-                    <div key={msg.id} className="flex items-start gap-2 py-1">
-                      <span className="mt-0.5 shrink-0 text-xs">{AGENT_ICONS[msg.from_agent] ?? AGENT_ICONS.default}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className={cn("text-[11px] font-medium", getAgentColor(msg.from_agent))}>
-                            {getAgentLabel(msg.from_agent)}
-                          </span>
-                          {msg.status === "read" && <CheckCircle2 className="h-3 w-3 text-emerald-400/60" />}
+                  {conv.messages.slice(-3).map((msg) => {
+                    const AgentIcon = AGENT_ICONS[msg.from_agent] ?? AGENT_ICONS.default;
+                    return (
+                      <div key={msg.id} className="flex items-start gap-2 py-1">
+                        <AgentIcon className={cn("mt-0.5 h-3 w-3 shrink-0", getAgentColor(msg.from_agent))} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn("text-[11px] font-medium", getAgentColor(msg.from_agent))}>
+                              {getAgentLabel(msg.from_agent)}
+                            </span>
+                            {msg.status === "read" && <CheckCircle2 className="h-3 w-3 text-emerald-400/60" />}
+                          </div>
+                          <p className="text-[10px] leading-relaxed text-foreground/70">{msg.subject}</p>
+                          {msg.body && (
+                            <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground line-clamp-2">
+                              {msg.body}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-[10px] leading-relaxed text-foreground/70">{msg.subject}</p>
-                        {msg.body && (
-                          <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground line-clamp-2">
-                            {msg.body}
-                          </p>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
             </div>
