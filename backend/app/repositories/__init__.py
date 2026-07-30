@@ -1,6 +1,8 @@
 from app.repositories.extensions_repository import (
+    AgentTelemetryRepository,
     DecisionOptionRepository,
     DecisionRepository,
+    ExecutionSnapshotRepository,
     ExplanationRepository,
     KPIRepository,
     KnowledgeGraphRepository,
@@ -10,6 +12,15 @@ from app.repositories.extensions_repository import (
     PlanVersionRepository,
     RiskRepository,
     ScenarioRepository,
+    StoredExecutionEventRepository,
+)
+from app.repositories.intelligence_repository import (
+    AgentConflictRepository,
+    AgentMessageRepository,
+    ApprovalGateRepository,
+    ExecutionCheckpointRepository,
+    SelfHealingActionRepository,
+    WatchdogAlertRepository,
 )
 from app.repositories.features_repository import (
     BottleneckRepository,
@@ -26,6 +37,10 @@ from app.repositories.objective_repository import ObjectiveRepository
 from app.repositories.user_repository import UserRepository
 
 __all__ = [
+    "AgentConflictRepository",
+    "AgentMessageRepository",
+    "AgentTelemetryRepository",
+    "ApprovalGateRepository",
     "BottleneckRepository",
     "BusinessReadinessRepository",
     "DecisionMemoryRepository",
@@ -33,6 +48,8 @@ __all__ = [
     "DecisionRepository",
     "DependencyGraphRepository",
     "DevilsAdvocateRepository",
+    "ExecutionCheckpointRepository",
+    "ExecutionSnapshotRepository",
     "ExplanationRepository",
     "JobRepository",
     "KPIRepository",
@@ -44,8 +61,11 @@ __all__ = [
     "PlanRepository",
     "PlanVersionRepository",
     "ResourceGapRepository",
+    "SelfHealingActionRepository",
     "RiskRepository",
     "ScenarioRepository",
+    "StoredExecutionEventRepository",
     "SuccessProbabilityRepository",
     "UserRepository",
+    "WatchdogAlertRepository",
 ]

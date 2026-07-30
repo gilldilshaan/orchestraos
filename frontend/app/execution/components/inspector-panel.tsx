@@ -9,6 +9,10 @@ import { useSearchParams } from "next/navigation";
 import { HealthBadge } from "@/components/health-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
 import { cn } from "@/lib/utils";
+import { CollaborationFeed } from "./collaboration-feed";
+import { ConflictPanel } from "./conflict-panel";
+import { ApprovalPanel } from "./approval-panel";
+import { WatchdogAlerts } from "./watchdog-alerts";
 import { X, Crown, Briefcase, UserCircle, Activity, Clock, RotateCcw, Cpu } from "lucide-react";
 
 export function InspectorPanel() {
@@ -103,9 +107,13 @@ function NodeInspector({ node }: { node: NonNullable<ReturnType<typeof useExecut
   );
 }
 
-function OrgSummary() {
+function useObjectiveIdFromParams() {
   const searchParams = useSearchParams();
-  const objectiveId = searchParams.get("id");
+  return searchParams.get("id");
+}
+
+function OrgSummary() {
+  const objectiveId = useObjectiveIdFromParams();
   const { data: dashboard } = useDashboardQuery(objectiveId);
   const sseEvents = useSSEStore((s) => s.events);
   const { nodes } = useExecutionNodes();
@@ -187,6 +195,14 @@ function OrgSummary() {
             </span>
           </div>
         ))}
+      </div>
+
+      {/* Sprint 8: Intelligence Panels */}
+      <div className="mt-4 space-y-3 px-1">
+        <CollaborationFeed objectiveId={objectiveId} />
+        <ConflictPanel objectiveId={objectiveId} />
+        <ApprovalPanel objectiveId={objectiveId} />
+        <WatchdogAlerts objectiveId={objectiveId} />
       </div>
     </div>
   );

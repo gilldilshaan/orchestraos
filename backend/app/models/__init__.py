@@ -1,8 +1,14 @@
 from app.models.base import BaseEntity
 from app.models.extensions import (
+    AgentConflict,
+    AgentMessage,
+    AgentTelemetry,
+    ApprovalGate,
     Decision,
     DecisionOption,
     Department,
+    ExecutionCheckpoint,
+    ExecutionSnapshot,
     Explanation,
     KPI,
     KPIHistory,
@@ -14,6 +20,9 @@ from app.models.extensions import (
     Risk,
     Role,
     Scenario,
+    SelfHealingAction,
+    StoredExecutionEvent,
+    WatchdogAlert,
 )
 from app.models.features import (
     Bottleneck,
@@ -30,6 +39,10 @@ from app.models.objective import Objective
 from app.models.user import User
 
 __all__ = [
+    "AgentConflict",
+    "AgentMessage",
+    "AgentTelemetry",
+    "ApprovalGate",
     "BaseEntity",
     "Bottleneck",
     "BusinessReadiness",
@@ -39,6 +52,8 @@ __all__ = [
     "DependencyGraph",
     "Department",
     "DevilsAdvocateCritique",
+    "ExecutionCheckpoint",
+    "ExecutionSnapshot",
     "Explanation",
     "Job",
     "KPI",
@@ -54,6 +69,9 @@ __all__ = [
     "Risk",
     "Role",
     "Scenario",
+    "SelfHealingAction",
+    "StoredExecutionEvent",
     "SuccessProbability",
     "User",
+    "WatchdogAlert",
 ]

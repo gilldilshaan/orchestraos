@@ -1,6 +1,6 @@
 # OrchestraOS
 
-**Organizational Intelligence Platform** — transforms natural-language business objectives into executable strategies through a multi-agent AI system. Describe a business goal, and the platform compiles it, plans it, builds an organization, assesses risks, generates strategic recommendations, provides an executive dashboard, and surfaces 12 competitive-differentiation features — all with human oversight.
+**Organizational Intelligence Platform** — transforms natural-language business objectives into executable strategies through a multi-agent AI system. Describe a business goal, and the platform compiles it, plans it, builds an organization, assesses risks, generates strategic recommendations, provides an executive dashboard, and surfaces 12 competitive-differentiation features plus 8 execution intelligence capabilities — all with human oversight.
 
 ## Architecture
 
@@ -88,14 +88,14 @@ orchestraos/
 ├── backend/
 │   ├── app/
 │   │   ├── agents/           # 5 AI agents + Devil's Advocate
-│   │   ├── api/v1/           # Route handlers (18+ endpoints)
+│   │   ├── api/v1/           # Route handlers (55+ endpoints)
 │   │   ├── database/         # SQLAlchemy, Alembic, UUIDv7
 │   │   ├── kernel/           # AI Kernel (8 subsystems)
 │   │   ├── llm/              # LLM abstraction (provider auto-detect)
-│   │   ├── models/           # SQLAlchemy models (25+ tables)
-│   │   ├── repositories/     # Data access layer (21 repos)
+│   │   ├── models/           # SQLAlchemy models (31+ tables)
+│   │   ├── repositories/     # Data access layer (27 repos)
 │   │   ├── schemas/          # Pydantic v2 schemas
-│   │   ├── services/         # Business logic (12+ services)
+│   │   ├── services/         # Business logic (18+ services)
 │   │   ├── main.py           # App entrypoint
 │   │   ├── config.py         # Pydantic Settings
 │   │   ├── dependencies.py   # FastAPI Depends()
@@ -222,6 +222,54 @@ orchestraos/
 | ------ | --------------- | ----------------- |
 | GET    | `/jobs/{id}`    | Poll job status   |
 
+### Execution Intelligence (Sprint 8)
+
+#### Agent Communication
+| Method | Endpoint                                              | Description                            |
+| ------ | ----------------------------------------------------- | -------------------------------------- |
+| POST   | `/intelligence/messages`                              | Send agent-to-agent message            |
+| GET    | `/intelligence/messages/{objective_id}`               | List messages for objective            |
+| GET    | `/intelligence/messages/{objective_id}/conversation`  | Get conversation between two agents    |
+| POST   | `/intelligence/messages/{message_id}/read`            | Mark message as read                   |
+| GET    | `/intelligence/messages/{objective_id}/unread/{agent}`| Count unread messages for agent        |
+| POST   | `/intelligence/conflicts`                             | Report agent conflict                  |
+| GET    | `/intelligence/conflicts/{objective_id}`              | List conflicts                         |
+| POST   | `/intelligence/conflicts/{conflict_id}/resolve`       | Resolve conflict                       |
+
+#### Approval Gates
+| Method | Endpoint                                   | Description                    |
+| ------ | ------------------------------------------ | ------------------------------ |
+| POST   | `/intelligence/gates`                      | Create approval gate           |
+| GET    | `/intelligence/gates/{objective_id}`       | List gates                     |
+| GET    | `/intelligence/gates/{objective_id}/pending`| List pending gates             |
+| POST   | `/intelligence/gates/{gate_id}/review`     | Approve/reject/request-changes |
+
+#### Checkpoints & Resilience
+| Method | Endpoint                                             | Description                       |
+| ------ | ---------------------------------------------------- | --------------------------------- |
+| POST   | `/intelligence/checkpoints`                          | Save execution checkpoint         |
+| GET    | `/intelligence/checkpoints/{objective_id}`           | Get checkpoint                    |
+| POST   | `/intelligence/checkpoints/{objective_id}/resume`    | Resume from checkpoint            |
+| POST   | `/intelligence/alerts`                               | Create watchdog alert             |
+| GET    | `/intelligence/alerts/{objective_id}`                | List alerts                       |
+| GET    | `/intelligence/alerts/{objective_id}/unresolved`     | List unresolved alerts            |
+| POST   | `/intelligence/alerts/{alert_id}/acknowledge`        | Acknowledge alert                 |
+| POST   | `/intelligence/alerts/{alert_id}/resolve`            | Resolve alert                     |
+| GET    | `/intelligence/alerts/counts`                        | Global alert counts               |
+
+#### Self-Healing
+| Method | Endpoint                                        | Description                     |
+| ------ | ----------------------------------------------- | ------------------------------- |
+| POST   | `/intelligence/healing/actions`                 | Record healing action           |
+| GET    | `/intelligence/healing/actions/{objective_id}`  | List healing actions            |
+| GET    | `/intelligence/healing/stats/{objective_id}`    | Healing success stats           |
+| POST   | `/intelligence/healing/auto`                    | Auto-heal from error            |
+
+#### Operations Center
+| Method | Endpoint                              | Description               |
+| ------ | ------------------------------------- | ------------------------- |
+| GET    | `/intelligence/operations/summary`    | Global operations summary |
+
 ## Features
 
 ### 12 Competitive-Differentiation Features
@@ -266,6 +314,27 @@ orchestraos/
 - **DevilsAdvocateAgent** — challenges strategy with critique
 
 All agents use `AIKernel.run()` for consistency, observability, caching, and retry.
+
+## Sprint 8 — Execution Intelligence System
+
+### 8 Capabilities
+
+| # | Capability                  | Description                                              |
+| -- | --------------------------- | -------------------------------------------------------- |
+| 1  | Agent Communication         | Structured agent-to-agent messaging with conversations   |
+| 2  | Collaboration Timeline      | Chronological feed of inter-agent exchanges in Mission Control |
+| 3  | Conflict Resolution         | Detect, highlight, and resolve agent disagreements inline |
+| 4  | Human Approval Workflows    | Approval gates that pause execution until human reviews   |
+| 5  | Long-Running Executions     | Checkpoint/resume — persist state mid-pipeline           |
+| 6  | Execution Watchdog          | Stall/infinite-retry/dependency-failure detection         |
+| 7  | Self-Healing Executions     | Auto-retry, fallback model, alternate agent, repair       |
+| 8  | Executive Operations Center | Global dashboard — health score, agents, alerts, costs    |
+
+### Frontend
+
+- **Operations Center** (`/operations`) — live summary of all objectives, agents, health score, pending approvals, alerts, success rate
+- **Mission Control** (`/execution`) — 4 integrated panels: CollaborationFeed, ConflictPanel, ApprovalPanel, WatchdogAlerts — all collapsible in the right inspector
+- All panels poll in real-time with React Query refetch intervals
 
 ## Code Quality
 

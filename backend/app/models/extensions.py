@@ -309,8 +309,206 @@ class KPIHistory(Base, BaseEntity):
     )
 
 
+# ─── Execution Artifact Models ─────────────────────────────────────────────
+
+class StoredExecutionEvent(Base, BaseEntity):
+    """Persisted execution event for replay and timeline."""
+
+    __tablename__ = "execution_events"
+
+    objective_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True
+    )
+    stage: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
+    message: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
+    progress: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    event_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class AgentTelemetry(Base, BaseEntity):
+    """Per-agent execution telemetry record."""
+
+    __tablename__ = "agent_telemetry"
+
+    # ── Required fields (no defaults) ─────────────────────────────────────
+    objective_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True
+    )
+    agent_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    stage: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # ── Optional fields ───────────────────────────────────────────────────
+    agent_name: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
+    role: Mapped[str | None] = mapped_column(String(100), default=None, nullable=True)
+    department: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
+
+    # Runtime
+    start_time: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None, nullable=True)
+    finish_time: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None, nullable=True)
+    runtime_ms: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
+
+    # Model
+    provider: Mapped[str | None] = mapped_column(String(100), default=None, nullable=True)
+    model: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
+    temperature: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
+    max_tokens: Mapped[int | None] = mapped_column(Integer, default=None, nullable=True)
+
+    # LLM Usage
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer, default=None, nullable=True)
+    completion_tokens: Mapped[int | None] = mapped_column(Integer, default=None, nullable=True)
+    total_tokens: Mapped[int | None] = mapped_column(Integer, default=None, nullable=True)
+
+    # Cost
+    input_cost: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
+    output_cost: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
+    total_cost: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
+
+    # Execution
+    retries: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    timeout_seconds: Mapped[int | None] = mapped_column(Integer, default=None, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
+
+    # Dependencies
+    parent_agents: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    child_agents: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    upstream: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    downstream: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+
+    # Tool Calls
+    tool_calls: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+
+    # Outputs
+    reasoning_summary: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
+    decision_summary: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
+    artifacts_produced: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
+    output_metadata: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+
+
+class ExecutionSnapshot(Base, BaseEntity):
+    """Immutable snapshot of a completed execution for artifact store."""
+
+    __tablename__ = "execution_snapshots"
+
+    objective_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True, unique=True
+    )
+    snapshot_data: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    snapshot_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
 # Forward reference for relationships
 from app.models.objective import Objective
+
+# ─── Sprint 8: Agent Communication ────────────────────────────────────────────
+
+
+class AgentMessage(Base, BaseEntity):
+    __tablename__ = "agent_messages"
+
+    objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
+    from_agent: Mapped[str] = mapped_column(String(100), nullable=False)
+    to_agent: Mapped[str] = mapped_column(String(100), nullable=False)
+    message_type: Mapped[str] = mapped_column(String(50), nullable=False, default="reply")
+    subject: Mapped[str] = mapped_column(String(500), nullable=False)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parent_message_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("agent_messages.id"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="sent", index=True)
+    read_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+# ─── Sprint 8: Agent Conflicts ────────────────────────────────────────────────
+
+
+class AgentConflict(Base, BaseEntity):
+    __tablename__ = "agent_conflicts"
+
+    objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
+    agent_a: Mapped[str] = mapped_column(String(100), nullable=False)
+    agent_b: Mapped[str] = mapped_column(String(100), nullable=False)
+    subject: Mapped[str] = mapped_column(String(500), nullable=False)
+    disagreement: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_a: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    evidence_b: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    alternatives: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
+    resolution: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolved_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="open", index=True)
+
+
+# ─── Sprint 8: Approval Gates ─────────────────────────────────────────────────
+
+
+class ApprovalGate(Base, BaseEntity):
+    __tablename__ = "approval_gates"
+
+    objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
+    gate_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    proposed_by: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending", index=True)
+    review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    execution_paused: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+# ─── Sprint 8: Execution Checkpoints ──────────────────────────────────────────
+
+
+class ExecutionCheckpoint(Base, BaseEntity):
+    __tablename__ = "execution_checkpoints"
+
+    objective_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, unique=True, index=True
+    )
+    checkpoint_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    completed_steps: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    current_step: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="in_progress", index=True)
+    cursor: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resume_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_resumed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    failure_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+# ─── Sprint 8: Watchdog Alerts ────────────────────────────────────────────────
+
+
+class WatchdogAlert(Base, BaseEntity):
+    __tablename__ = "watchdog_alerts"
+
+    objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
+    alert_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    severity: Mapped[str] = mapped_column(String(50), nullable=False, default="warning")
+    source: Mapped[str] = mapped_column(String(200), nullable=False)
+    message: Mapped[str] = mapped_column(String(2000), nullable=False)
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    acknowledged: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+# ─── Sprint 8: Self-Healing Actions ───────────────────────────────────────────
+
+
+class SelfHealingAction(Base, BaseEntity):
+    __tablename__ = "self_healing_actions"
+
+    objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
+    trigger_event: Mapped[str] = mapped_column(String(500), nullable=False)
+    action_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target: Mapped[str] = mapped_column(String(200), nullable=False)
+    result: Mapped[str] = mapped_column(String(50), nullable=False)
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    duration_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 # ─── Indexes ─────────────────────────────────────────────────────────────────
@@ -337,3 +535,11 @@ Index("ix_graph_edges_target", KnowledgeGraphEdge.target_type, KnowledgeGraphEdg
 Index("ix_graph_edges_relationship", KnowledgeGraphEdge.relationship_type)
 Index("ix_kpis_entity", KPI.entity_type, KPI.entity_id)
 Index("ix_kpi_history_kpi_id", KPIHistory.kpi_id)
+Index(
+    "ix_execution_events_objective",
+    StoredExecutionEvent.objective_id,
+    StoredExecutionEvent.event_order,
+)
+Index("ix_agent_telemetry_objective", AgentTelemetry.objective_id, AgentTelemetry.agent_id)
+Index("ix_agent_telemetry_stage", AgentTelemetry.objective_id, AgentTelemetry.stage)
+Index("ix_execution_snapshots_objective", ExecutionSnapshot.objective_id, unique=True)

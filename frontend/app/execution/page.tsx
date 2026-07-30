@@ -16,9 +16,13 @@ import { useViewStore } from "@/store/execution-stores";
 import { useSSEStore } from "@/store/sse-store";
 import { useSSE } from "@/hooks/use-sse-events";
 import { useExecutionRun, useExecutionNodes } from "@/hooks/use-execution";
+import { useEventsQuery, useTelemetryQuery } from "@/hooks/use-api";
 import { StatusBadge } from "@/components/status-badge";
 import { OrganizationUniverse } from "@/components/3d/scene-wrapper";
 import { useToastStore } from "@/lib/use-toast";
+import {
+  AlertTriangle, XCircle, RotateCcw, ChevronDown,
+} from "lucide-react";
 
 export default function ExecutionPage() {
   return (
@@ -46,6 +50,9 @@ function ExecutionContent() {
 
   const { run } = useExecutionRun();
   const { nodes: orgNodes } = useExecutionNodes();
+  const { data: persistedEvents } = useEventsQuery(objectiveId);
+  const { data: persistedTelemetry } = useTelemetryQuery(objectiveId);
+  const [showFailureAnalysis, setShowFailureAnalysis] = useState(false);
 
   // Detect terminal status from SSE pipeline events
   useEffect(() => {
@@ -66,12 +73,19 @@ function ExecutionContent() {
       queryClient.invalidateQueries({ queryKey: ["decisions"] });
       queryClient.invalidateQueries({ queryKey: ["plans"] });
 
-      if (ssePipelineStatus === "completed" || ssePipelineStatus === "completed_with_errors") {
+      if (ssePipelineStatus === "completed") {
         addToast({
           title: "Pipeline Completed",
           description: "All stages finished successfully",
           variant: "success",
           duration: 5000,
+        });
+      } else if (ssePipelineStatus === "completed_with_errors") {
+        addToast({
+          title: "Completed with Errors",
+          description: "Some stages failed but pipeline completed",
+          variant: "success",
+          duration: 6000,
         });
       } else {
         addToast({
@@ -84,12 +98,20 @@ function ExecutionContent() {
     }
   }, [ssePipelineStatus, sseConnected, addToast, queryClient]);
 
+  // Source of truth: REST API for terminal, SSE for live
+  const restTerminal = run.status === "completed" || run.status === "failed";
+  const sseTerminal =
+    ssePipelineStatus === "completed" ||
+    ssePipelineStatus === "completed_with_errors" ||
+    ssePipelineStatus === "error";
+  const hasLiveEvents = sseEvents.some((e) => e.stage !== "pipeline" || e.status !== "connected");
+
   const healthStatus =
-    ssePipelineStatus === "completed" || ssePipelineStatus === "completed_with_errors"
-      ? "completed"
-      : ssePipelineStatus === "error"
-        ? "failed"
-        : sseConnected
+    restTerminal
+      ? run.status
+      : sseTerminal
+        ? ssePipelineStatus === "error" ? "failed" : "completed"
+        : sseConnected && hasLiveEvents
           ? "running"
           : run.status;
 
@@ -108,13 +130,28 @@ function ExecutionContent() {
   const [totalSteps, setTotalSteps] = useState(0);
   const [completedStepNames, setCompletedStepNames] = useState<string[]>([]);
 
+  // Stage count from SSE events (live) or persisted events (after refresh)
   useEffect(() => {
-    if (!sseEvents.length) return;
-    const stages = new Set(sseEvents.filter(e => e.stage !== "pipeline").map(e => e.stage));
+    const source = sseEvents.length > 0 ? sseEvents : (persistedEvents ?? []);
+    if (!source.length) return;
+    const stages = new Set(source.filter((e: { stage: string }) => e.stage !== "pipeline").map((e: { stage: string }) => e.stage));
     setTotalSteps(stages.size);
-    const completed = new Set(sseEvents.filter(e => e.status === "completed" && e.stage !== "pipeline").map(e => e.stage));
+    const completed = new Set(source.filter((e: { stage: string; status: string }) => e.status === "completed" && e.stage !== "pipeline").map((e: { stage: string }) => e.stage));
     setCompletedStepNames(Array.from(completed));
-  }, [sseEvents]);
+  }, [sseEvents, persistedEvents]);
+
+  // Failure analysis data
+  const failedEvents = useMemo(() => {
+    const source = sseEvents.length > 0 ? sseEvents : (Array.isArray(persistedEvents) ? persistedEvents : []);
+    return source.filter((e: { stage: string; status: string }) => e.status === "error" && e.stage !== "pipeline");
+  }, [sseEvents, persistedEvents]);
+
+  const failedTelemetry = useMemo(() => {
+    if (!Array.isArray(persistedTelemetry)) return [];
+    return persistedTelemetry.filter((t) => t.status === "failed" || t.error != null);
+  }, [persistedTelemetry]);
+
+  const isFailed = healthStatus === "failed" || ssePipelineStatus === "error";
 
   const runtime = useMemo(() => {
     if (!sseEvents.length) return run.eta ?? "—";
@@ -191,6 +228,81 @@ function ExecutionContent() {
           right={<InspectorPanel />}
         />
       </div>
+
+      {/* Failure Analysis Panel */}
+      {isFailed && (failedEvents.length > 0 || failedTelemetry.length > 0) && (
+        <div className="border-t border-red-500/20 bg-red-500/5">
+          <button
+            onClick={() => setShowFailureAnalysis(!showFailureAnalysis)}
+            className="flex w-full items-center justify-between px-4 py-2 text-left"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+              <span className="text-xs font-semibold text-red-400">Failure Analysis</span>
+              <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400">
+                {failedEvents.length} errors
+              </span>
+            </div>
+            <ChevronDown className={cn("h-4 w-4 text-red-400/60 transition-transform", showFailureAnalysis && "rotate-180")} />
+          </button>
+          {showFailureAnalysis && (
+            <div className="border-t border-red-500/10 px-4 py-3 space-y-4 max-h-[300px] overflow-y-auto scrollbar-thin">
+              {/* Failed events */}
+              {failedEvents.length > 0 && (
+                <div>
+                  <h4 className="flex items-center gap-1.5 text-[11px] font-medium text-red-400 mb-2">
+                    <XCircle className="h-3.5 w-3.5" />
+                    Failed Stages
+                  </h4>
+                  <div className="space-y-1.5">
+                    {failedEvents.map((ev: any, i: number) => (
+                      <div key={ev.id ?? i} className="rounded-md bg-red-500/10 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-medium text-red-400">{ev.stage}</span>
+                          {ev.created_at && (
+                            <span className="font-mono text-[9px] tabular-nums text-red-400/50">
+                              {new Date(ev.created_at).toLocaleTimeString()}
+                            </span>
+                          )}
+                        </div>
+                        {ev.message && (
+                          <p className="mt-0.5 font-mono text-[10px] text-red-300/80">{ev.message}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Failed telemetry */}
+              {failedTelemetry.length > 0 && (
+                <div>
+                  <h4 className="flex items-center gap-1.5 text-[11px] font-medium text-red-400 mb-2">
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Failed Agents
+                  </h4>
+                  <div className="space-y-1.5">
+                    {failedTelemetry.map((t, i) => (
+                      <div key={t.id ?? i} className="rounded-md bg-red-500/10 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-medium text-red-400">{t.agent_name ?? t.agent_id}</span>
+                          <span className="text-[10px] text-red-400/70">{t.stage}</span>
+                          {t.retries > 0 && (
+                            <span className="text-[10px] text-amber-400/70">Retries: {t.retries}</span>
+                          )}
+                        </div>
+                        {t.error && (
+                          <p className="mt-0.5 font-mono text-[10px] text-red-300/80">{t.error}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <MetricsRibbon />
     </div>

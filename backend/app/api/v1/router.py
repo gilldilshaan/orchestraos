@@ -3,11 +3,14 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    artifacts,
     dashboard,
     decisions,
     features,
     health,
+    intelligence,
     jobs,
+    metrics_agg,
     objectives,
     organizations,
     plans,
@@ -23,3 +26,6 @@ router.include_router(dashboard.router)
 router.include_router(decisions.router)
 router.include_router(features.router)
 router.include_router(jobs.router)
+router.include_router(artifacts.router)
+router.include_router(metrics_agg.router)
+router.include_router(intelligence.router)
