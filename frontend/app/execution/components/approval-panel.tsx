@@ -120,7 +120,7 @@ export function ApprovalPanel({ objectiveId }: { objectiveId: string | null }) {
 
                   {gate.review_notes && (
                     <p className="mt-1 text-[10px] italic text-muted-foreground/60">
-                      "{gate.review_notes}"
+                      &ldquo;{gate.review_notes}&rdquo;
                     </p>
                   )}
                 </div>

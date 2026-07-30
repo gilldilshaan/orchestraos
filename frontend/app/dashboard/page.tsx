@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { HeroSection } from "./components/hero-section";
 import { MetricGrid } from "./components/metric-grid";
 import { ActiveExecution } from "./components/active-execution";
@@ -11,46 +12,77 @@ import { BenchmarkPreview } from "./components/benchmark-preview";
 import { DecisionPreview } from "./components/decision-preview";
 import { FooterStatus } from "./components/footer-status";
 
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.06,
+    },
+  },
+};
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const },
+  },
+};
+
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
-      {/* Section 1 — Hero */}
-      <HeroSection />
+    <motion.div
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Hero / Command Center */}
+      <motion.div variants={sectionVariants}>
+        <HeroSection />
+      </motion.div>
 
-      {/* Section 2 — Primary Metrics */}
-      <MetricGrid />
+      {/* Runtime Metrics */}
+      <motion.div variants={sectionVariants}>
+        <MetricGrid />
+      </motion.div>
 
-      {/* Section 3+4 — Active Execution + System Health (side by side) */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Active Execution + System Health */}
+      <motion.div variants={sectionVariants} className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <ActiveExecution />
         </div>
         <div>
           <SystemHealth />
         </div>
-      </div>
+      </motion.div>
 
-      {/* Section 7+6 — Organization + Live Activity (side by side) */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Organization Preview + Live Activity */}
+      <motion.div variants={sectionVariants} className="grid gap-6 lg:grid-cols-3">
         <div>
           <OrganizationPreview />
         </div>
         <div className="lg:col-span-2">
           <LiveActivity />
         </div>
-      </div>
+      </motion.div>
 
-      {/* Section 5 — Recent Runs */}
-      <RecentRuns />
+      {/* Recent Runs */}
+      <motion.div variants={sectionVariants}>
+        <RecentRuns />
+      </motion.div>
 
-      {/* Section 8+9 — Benchmarks + Decision (side by side) */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Benchmarks + Decisions */}
+      <motion.div variants={sectionVariants} className="grid gap-6 lg:grid-cols-2">
         <BenchmarkPreview />
         <DecisionPreview />
-      </div>
+      </motion.div>
 
-      {/* Section 10 — Footer Status */}
-      <FooterStatus />
-    </div>
+      {/* Footer */}
+      <motion.div variants={sectionVariants}>
+        <FooterStatus />
+      </motion.div>
+    </motion.div>
   );
 }

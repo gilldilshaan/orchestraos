@@ -1,6 +1,7 @@
 "use client";
 
 import { useHealthAiQuery, useSystemHealthQuery } from "@/hooks/use-api";
+import { PulseRing } from "@/components/premium/page-transition";
 
 export function FooterStatus() {
   const { data: ai } = useHealthAiQuery();
@@ -12,19 +13,19 @@ export function FooterStatus() {
   const backendHealthy = system?.status === "healthy";
 
   return (
-    <footer className="border-t border-border/30 pt-4 pb-2">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[10px] text-muted-foreground">
+    <footer className="border-t border-border/20 pt-4 pb-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[10px] text-muted-foreground/40">
         <span className="font-mono">v{version}</span>
-        <span className="flex items-center gap-1">
-          <span className={`h-1.5 w-1.5 rounded-full ${backendHealthy ? "bg-success" : "bg-destructive"}`} />
+        <span className="flex items-center gap-1.5">
+          <PulseRing active={backendHealthy} color={backendHealthy ? "hsl(var(--success))" : "hsl(var(--destructive))"} size={5} />
           Backend {backendHealthy ? "connected" : "disconnected"}
         </span>
-        <span className="font-mono">Provider: {provider}</span>
-        <span className="font-mono">Model: {model}</span>
+        <span className="font-mono text-muted-foreground/30">Provider: {provider}</span>
+        <span className="font-mono text-muted-foreground/30">Model: {model}</span>
         {ai?.kernel && (
           <>
-            <span className="font-mono">Calls: {ai.kernel.total_calls}</span>
-            <span className="font-mono">Tokens: {ai.kernel.tokens_used}</span>
+            <span className="font-mono text-muted-foreground/30">Calls: {ai.kernel.total_calls}</span>
+            <span className="hidden font-mono text-muted-foreground/30 md:inline">Tokens: {ai.kernel.tokens_used}</span>
           </>
         )}
       </div>

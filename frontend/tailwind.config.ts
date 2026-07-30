@@ -133,6 +133,22 @@ const config: Config = {
           from: { transform: "rotate(0deg) translateX(var(--orbit-radius)) rotate(0deg)" },
           to: { transform: "rotate(360deg) translateX(var(--orbit-radius)) rotate(-360deg)" },
         },
+        "data-flow": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
+        },
+        "scan": {
+          "0%": { transform: "translateY(-100%)" },
+          "100%": { transform: "translateY(100%)" },
+        },
+        "pulse-ring": {
+          "0%": { transform: "scale(0.8)", opacity: "1" },
+          "100%": { transform: "scale(2)", opacity: "0" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { opacity: "0.4" },
+          "50%": { opacity: "0.8" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -148,6 +164,10 @@ const config: Config = {
         "float": "float 3s ease-in-out infinite",
         "float-slow": "float-slow 5s ease-in-out infinite",
         "shimmer": "shimmer 3s linear infinite",
+        "data-flow": "data-flow 2s linear infinite",
+        "scan": "scan 3s linear infinite",
+        "pulse-ring": "pulse-ring 1.5s ease-out infinite",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
       },
     },
   },

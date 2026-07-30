@@ -17,14 +17,17 @@ export function AppShell({ children }: AppShellProps) {
   const isCollapsed = useSidebarStore((s) => s.isCollapsed);
 
   return (
-    <div className="relative min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background selection:bg-primary/20">
       {/* Mission Control Background */}
       <div className="pointer-events-none fixed inset-0 z-0">
-        <MissionControlBackground className="h-full w-full" intensity={0.4} />
+        <MissionControlBackground className="h-full w-full" intensity={0.3} />
       </div>
 
-      {/* Subtle grid overlay */}
-      <div className="pointer-events-none fixed inset-0 z-[1] bg-grid-subtle opacity-[0.15]" />
+      {/* Grid overlay */}
+      <div className="pointer-events-none fixed inset-0 z-[1] bg-grid-subtle opacity-[0.12]" />
+
+      {/* Noise texture */}
+      <div className="pointer-events-none fixed inset-0 z-[1] bg-noise" />
 
       <Sidebar />
       <TopBar />

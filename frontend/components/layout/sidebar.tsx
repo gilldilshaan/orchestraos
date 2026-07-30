@@ -12,7 +12,6 @@ import {
   GitBranch,
   BarChart3,
   Radio,
-  FileText,
   Scale,
   Gauge,
   Clock,
@@ -24,43 +23,67 @@ import {
   DiffIcon,
   LineChart,
   Plug,
+  Zap,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/execution", label: "Live Execution", icon: PlayCircle },
-  { href: "/operations", label: "Operations Center", icon: Gauge },
-  { href: "/connectors", label: "Connectors", icon: Plug },
-  { href: "/replay", label: "Execution Replay", icon: History },
-  { href: "/organization", label: "Organization", icon: Building2 },
-  { href: "/graph", label: "Execution Graph", icon: GitBranch },
-  { href: "/artifacts", label: "Artifact Explorer", icon: FolderOpen },
-  { href: "/analytics", label: "Runtime Analytics", icon: LineChart },
-  { href: "/metrics", label: "Aggregate Metrics", icon: BarChart3 },
-  { href: "/diff", label: "Execution Diff", icon: DiffIcon },
-  { href: "/telemetry", label: "Telemetry", icon: Radio },
-  { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/decisions", label: "Decision Center", icon: Scale },
-  { href: "/benchmarks", label: "Benchmarks", icon: Gauge },
-  { href: "/runs", label: "Historical Runs", icon: Clock },
-  { href: "/settings", label: "Settings", icon: Settings },
+const navGroups = [
+  {
+    label: "Monitor",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/execution", label: "Live Execution", icon: PlayCircle },
+      { href: "/operations", label: "Operations Center", icon: Gauge },
+    ],
+  },
+  {
+    label: "Explore",
+    items: [
+      { href: "/organization", label: "Organization", icon: Building2 },
+      { href: "/graph", label: "Execution Graph", icon: GitBranch },
+      { href: "/replay", label: "Execution Replay", icon: History },
+      { href: "/connectors", label: "Connectors", icon: Plug },
+      { href: "/artifacts", label: "Artifact Explorer", icon: FolderOpen },
+    ],
+  },
+  {
+    label: "Analyze",
+    items: [
+      { href: "/analytics", label: "Runtime Analytics", icon: LineChart },
+      { href: "/metrics", label: "Aggregate Metrics", icon: BarChart3 },
+      { href: "/diff", label: "Execution Diff", icon: DiffIcon },
+      { href: "/telemetry", label: "Telemetry", icon: Radio },
+    ],
+  },
+  {
+    label: "Data",
+    items: [
+      { href: "/decisions", label: "Decision Center", icon: Scale },
+      { href: "/runs", label: "Historical Runs", icon: Clock },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { isOpen, isCollapsed, toggle, collapse } = useSidebarStore();
+  const { isCollapsed, collapse } = useSidebarStore();
 
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-30 flex h-full flex-col border-r border-border/50 bg-background/95 backdrop-blur-xl transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+        "fixed left-0 top-0 z-30 flex h-full flex-col border-r border-border/30 bg-background/90 backdrop-blur-2xl transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
         isCollapsed ? "w-sidebar-collapsed" : "w-sidebar"
       )}
     >
       {/* Logo area */}
       <div
         className={cn(
-          "flex h-12 items-center border-b border-border/50 px-4",
+          "flex h-12 items-center border-b border-border/30 px-4",
           isCollapsed && "justify-center px-0"
         )}
       >
@@ -88,69 +111,86 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-2 scrollbar-thin">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
-                isActive
-                  ? "text-primary"
-                  : "text-muted-foreground hover:bg-muted/30 hover:text-foreground",
-                isCollapsed && "justify-center px-0"
-              )}
-            >
-              {isActive && (
-                <motion.div
-                  layoutId="active-nav"
-                  className="absolute inset-0 rounded-lg"
-                  style={{ backgroundColor: "hsl(var(--primary) / 0.1)" }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-              {isActive && (
-                <motion.div
-                  layoutId="active-nav-indicator"
-                  className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-              <motion.div
-                className="relative"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-              </motion.div>
-              {!isCollapsed && (
-                <motion.span
-                  className="relative"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  {item.label}
-                </motion.span>
-              )}
-              {!isActive && !isCollapsed && (
-                <span
-                  className="absolute bottom-1 left-3 right-3 h-px scale-x-0 rounded-full bg-primary/20 transition-transform duration-200 group-hover:scale-x-100"
-                />
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-4 overflow-y-auto p-2 scrollbar-thin">
+        {navGroups.map((group) => (
+          <div key={group.label}>
+            {!isCollapsed && (
+              <div className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/30">
+                {group.label}
+              </div>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const isActive = pathname === item.href;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+                      isActive
+                        ? "text-primary"
+                        : "text-muted-foreground/60 hover:bg-muted/20 hover:text-foreground/80",
+                      isCollapsed && "justify-center px-0"
+                    )}
+                  >
+                    {isActive && (
+                      <>
+                        <motion.div
+                          layoutId="nav-active-bg"
+                          className="absolute inset-0 rounded-lg"
+                          style={{ backgroundColor: "hsl(var(--primary) / 0.08)" }}
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                        <motion.div
+                          layoutId="nav-active-indicator"
+                          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      </>
+                    )}
+                    <motion.div
+                      className="relative flex items-center"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Icon className={cn(
+                        "h-4 w-4 shrink-0",
+                        isActive ? "text-primary" : "text-muted-foreground/50"
+                      )} />
+                    </motion.div>
+                    {!isCollapsed && (
+                      <span className="relative text-xs">{item.label}</span>
+                    )}
+                    {!isActive && !isCollapsed && (
+                      <span className="absolute bottom-1 left-3 right-3 h-px scale-x-0 rounded-full bg-primary/10 transition-transform duration-200 group-hover:scale-x-100" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Collapse toggle */}
-      <div className="border-t border-border/50 p-2">
+      {/* Bottom section */}
+      <div className="border-t border-border/30 p-2">
+        {/* Quick action button */}
+        {!isCollapsed && (
+          <motion.button
+            className="mb-2 flex w-full items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Zap className="h-3.5 w-3.5" />
+            <span>New Objective</span>
+          </motion.button>
+        )}
+        {/* Collapse toggle */}
         <motion.button
           onClick={collapse}
-          className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
+          className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground/50 transition-colors hover:bg-muted/20 hover:text-muted-foreground"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >

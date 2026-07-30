@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useHealthAiQuery, useHealthOrganizationQuery } from "@/hooks/use-api";
 import { useAggregateMetrics } from "@/hooks/use-dashboard";
-import { PulseRing } from "@/components/premium/telemetry-viz";
+import { PulseRing } from "@/components/premium/page-transition";
 
 interface GaugeProps {
   label: string;
@@ -17,42 +17,60 @@ interface GaugeProps {
 function Gauge({ label, value, max = 100, unit = "", color = "primary" }: GaugeProps) {
   const pct = Math.min((value / max) * 100, 100);
   const colorMap = {
-    primary: { bg: "bg-primary", ring: "hsl(var(--primary))" },
-    success: { bg: "bg-success", ring: "hsl(var(--success))" },
-    warning: { bg: "bg-warning", ring: "hsl(var(--warning))" },
-    destructive: { bg: "bg-destructive", ring: "hsl(var(--destructive))" },
+    primary: { bg: "bg-primary", ring: "hsl(var(--primary))", glow: "0 0 6px hsl(var(--primary)/0.3)" },
+    success: { bg: "bg-success", ring: "hsl(var(--success))", glow: "0 0 6px hsl(var(--success)/0.3)" },
+    warning: { bg: "bg-warning", ring: "hsl(var(--warning))", glow: "0 0 6px hsl(var(--warning)/0.3)" },
+    destructive: { bg: "bg-destructive", ring: "hsl(var(--destructive))", glow: "0 0 6px hsl(var(--destructive)/0.3)" },
   };
   const colors = colorMap[color];
 
   return (
     <motion.div
-      className="group relative overflow-hidden rounded-lg border border-border/30 bg-background/50 p-3 transition-all duration-200 hover:border-border/60"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+      className="group relative overflow-hidden rounded-lg border border-border/20 bg-background/30 p-3 transition-all duration-200 hover:border-border/40 hover:bg-background/50"
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={{ y: -1 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+      <div className="relative flex items-center justify-between">
+        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/50">
           {label}
         </span>
-        <span className="font-mono text-xs font-medium tabular-nums">
+        <motion.span
+          className="font-mono text-xs font-medium tabular-nums text-foreground/70"
+          key={value}
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+        >
           {value}{unit}
-        </span>
+        </motion.span>
       </div>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+      <div className="relative mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
           className={cn("relative h-full rounded-full", colors.bg)}
+          style={{ boxShadow: colors.glow }}
         >
           {value > 90 && (
             <motion.div
               className="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full"
-              style={{ backgroundColor: colors.ring, opacity: 0.3 }}
-              animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }}
+              style={{ backgroundColor: colors.ring, opacity: 0.2 }}
+              animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0, 0.2] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
           )}
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{
+              background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)",
+              backgroundSize: "200% 100%",
+            }}
+            animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          />
         </motion.div>
       </div>
     </motion.div>
@@ -78,12 +96,12 @@ export function SystemHealth() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.25, ease: [0.32, 0.72, 0, 1] }}
-      className="group relative overflow-hidden rounded-xl border border-border/50 bg-card p-5 transition-all duration-300 hover:border-border/80"
+      className="enterprise-panel p-5"
     >
       <div className="relative">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">System Health</h2>
-          <PulseRing active color="hsl(var(--success))" size={10} />
+          <h2 className="text-sm font-semibold text-foreground/80">System Health</h2>
+          <PulseRing active color="hsl(var(--success))" size={8} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           {gauges.map((g, i) => (

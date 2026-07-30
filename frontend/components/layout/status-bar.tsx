@@ -5,6 +5,7 @@ import { useSystemHealthQuery } from "@/hooks/use-api";
 import { useSSEStore } from "@/store/sse-store";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { PulseRing } from "@/components/premium/page-transition";
 
 export function StatusBar() {
   const isCollapsed = useSidebarStore((s) => s.isCollapsed);
@@ -17,63 +18,43 @@ export function StatusBar() {
   const dbOk = deps.database?.status === "ok";
   const redisOk = deps.redis?.status === "ok";
 
-  const status = sseConnected ? "running" : system?.status === "healthy" ? "completed" : "idle";
-
-  const statusIndicator = () => {
-    switch (status) {
-      case "running":
-        return (
-          <motion.span
-            className="flex items-center gap-1.5"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <motion.span
-              className="h-1.5 w-1.5 rounded-full bg-primary"
-              animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            />
-            Running
-          </motion.span>
-        );
-      default:
-        return (
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
-            Ready
-          </span>
-        );
-    }
-  };
+  const services = [
+    { label: "API", ok: dbOk },
+    { label: "Redis", ok: redisOk },
+    { label: "PG", ok: dbOk },
+  ];
 
   return (
     <footer
       className={cn(
-        "fixed bottom-0 right-0 z-20 flex h-statusbar items-center border-t border-border/50 bg-background/90 backdrop-blur-md px-4 text-[11px] text-muted-foreground transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+        "fixed bottom-0 right-0 z-20 flex h-statusbar items-center border-t border-border/30 bg-background/70 backdrop-blur-2xl px-4 text-[11px] text-muted-foreground/50 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
         isCollapsed ? "left-sidebar-collapsed" : "left-sidebar"
       )}
     >
       <div className="flex flex-1 items-center gap-4">
-        {statusIndicator()}
-        <span className="hidden sm:inline text-muted-foreground/60">{system?.version ?? "0.1.0"}</span>
-        <span className="hidden md:inline text-muted-foreground/40">·</span>
-        <span className="hidden md:inline text-muted-foreground/60">
+        <span className="flex items-center gap-1.5">
+          <PulseRing
+            active={sseConnected}
+            color={sseConnected ? "hsl(var(--success))" : "hsl(var(--muted-foreground))"}
+            size={8}
+          />
+          <span className={sseConnected ? "text-muted-foreground/70" : ""}>
+            {sseConnected ? "Connected" : "Disconnected"}
+          </span>
+        </span>
+        <span className="text-muted-foreground/30 hidden sm:inline">{system?.version ?? "0.1.0"}</span>
+        <span className="text-muted-foreground/20 hidden md:inline">·</span>
+        <span className="text-muted-foreground/40 hidden md:inline">
           {sseEvents.length} events
         </span>
       </div>
-      <div className="flex items-center gap-4">
-        <span className="flex items-center gap-1.5">
-          <span className={cn("h-1 w-1 rounded-full", dbOk ? "bg-success" : "bg-destructive")} />
-          <span className="hidden sm:inline">API</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className={cn("h-1 w-1 rounded-full", redisOk ? "bg-success" : "bg-destructive")} />
-          <span className="hidden md:inline">Redis</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className={cn("h-1 w-1 rounded-full", dbOk ? "bg-success" : "bg-destructive")} />
-          <span className="hidden lg:inline">PostgreSQL</span>
-        </span>
+      <div className="flex items-center gap-3">
+        {services.map((svc) => (
+          <span key={svc.label} className="flex items-center gap-1.5">
+            <span className={cn("h-1 w-1 rounded-full", svc.ok ? "bg-success/60" : "bg-destructive/60")} />
+            <span className="hidden sm:inline text-muted-foreground/40">{svc.label}</span>
+          </span>
+        ))}
       </div>
     </footer>
   );

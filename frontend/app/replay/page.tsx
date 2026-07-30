@@ -3,9 +3,11 @@
 import { Suspense, useMemo, useEffect, useRef, useCallback, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
+import * as anime from "animejs";
 import { cn } from "@/lib/utils";
 import { useReplayStore } from "@/store/execution-stores";
-import { useEventsQuery, useTelemetryQuery, useTelemetrySummaryQuery, type ApiAgentTelemetry } from "@/hooks/use-api";
+import { useObjectiveContextStore } from "@/store";
+import { useEventsQuery, useLatestObjectiveIdQuery, useTelemetryQuery, useTelemetrySummaryQuery, type ApiAgentTelemetry } from "@/hooks/use-api";
 import { StatusBadge } from "@/components/status-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
 import {
@@ -52,7 +54,17 @@ export default function ReplayPage() {
 
 function ReplayContent() {
   const searchParams = useSearchParams();
-  const objectiveId = searchParams.get("id");
+  const { setActiveObjectiveId } = useObjectiveContextStore();
+  const urlId = searchParams.get("id");
+  const { data: latestId } = useLatestObjectiveIdQuery(!urlId);
+  const objectiveId = urlId ?? latestId ?? null;
+
+  // Sync URL param to global execution context
+  useEffect(() => {
+    if (urlId) {
+      setActiveObjectiveId(urlId);
+    }
+  }, [urlId, setActiveObjectiveId]);
 
   const { data: rawEvents } = useEventsQuery(objectiveId);
   const { data: rawTelemetry } = useTelemetryQuery(objectiveId);
@@ -91,6 +103,28 @@ function ReplayContent() {
   }, [isPlaying, speed, totalEvents, position, setPosition]);
 
   const currentEvent = events[position] ?? null;
+  const prevPositionRef = useRef(position);
+  const timelineRef = useRef<HTMLDivElement>(null);
+
+  // Anime.js timeline scrub animation
+  useEffect(() => {
+    if (position !== prevPositionRef.current && timelineRef.current) {
+      const dots = timelineRef.current.querySelectorAll(".timeline-dot");
+      anime.animate(dots[position] as HTMLElement, {
+        scale: [1, 1.4, 1],
+        duration: 300,
+        easing: "easeOutQuad",
+      });
+      if (prevPositionRef.current >= 0 && prevPositionRef.current < dots.length) {
+        anime.animate(dots[prevPositionRef.current] as HTMLElement, {
+          scale: [1.4, 1],
+          duration: 200,
+          easing: "easeOutQuad",
+        });
+      }
+      prevPositionRef.current = position;
+    }
+  }, [position]);
 
   const telemetryForStage = useMemo(() => {
     if (!inspectedStage) return [];
@@ -218,7 +252,7 @@ function ReplayContent() {
             transition={{ delay: 0.1 }}
             className="rounded-lg border border-border/50 bg-card p-4"
           >
-            <div className="relative mb-2 flex items-center gap-1">
+            <div className="relative mb-2 flex items-center gap-1" ref={timelineRef}>
               {events.map((ev, i) => {
                 const isActive = i === position;
                 const isPast = i < position;
@@ -235,7 +269,7 @@ function ReplayContent() {
                     key={i}
                     onClick={() => setPosition(i)}
                     className={cn(
-                      "h-2 flex-1 rounded-full transition-all cursor-pointer",
+                      "timeline-dot h-2 flex-1 rounded-full transition-all cursor-pointer",
                       color,
                       isActive && "h-3 scale-y-110",
                       isPast && "opacity-80",
@@ -306,6 +340,19 @@ function ReplayContent() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
+            ref={(el) => {
+              if (el && uniqueStages.length > 0) {
+                const tiles = el.querySelectorAll(".stage-tile");
+                anime.animate(tiles as unknown as HTMLElement, {
+                  opacity: [0, 1],
+                  translateY: [12, 0],
+                  scale: [0.96, 1],
+                  delay: anime.stagger(40, { from: "center" }),
+                  duration: 400,
+                  easing: "easeOutCubic",
+                });
+              }
+            }}
           >
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium">Agent Telemetry by Stage</h3>
@@ -345,7 +392,7 @@ function ReplayContent() {
                       )
                     }
                     className={cn(
-                      "rounded-lg border border-border/50 bg-card p-4 text-left transition-all hover:border-border",
+                      "stage-tile rounded-lg border border-border/50 bg-card p-4 text-left transition-all hover:border-border",
                       isInspected && "ring-1 ring-primary/40",
                     )}
                   >

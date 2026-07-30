@@ -2,6 +2,8 @@
 
 import { useAggregateMetrics } from "@/hooks/use-dashboard";
 import { PremiumMetricCard } from "@/components/premium-metric-card";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { motion } from "motion/react";
 import {
   PlayCircle,
   CheckCircle2,
@@ -62,7 +64,7 @@ const metricsConfig = [
     label: "Parallelism",
     key: "parallelism" as const,
     format: "number" as const,
-    subtitle: "Peak concurrent nodes (not yet tracked)",
+    subtitle: "Peak concurrent nodes",
   },
   {
     icon: <Heart className="h-4 w-4" />,
@@ -76,23 +78,29 @@ const metricsConfig = [
     label: "Average Retries",
     key: "avgRetries" as const,
     format: "decimal" as const,
-    subtitle: "Per node attempt (not yet tracked)",
+    subtitle: "Per node attempt",
   },
 ];
 
 export function MetricGrid() {
   const { metrics } = useAggregateMetrics();
+  const reduce = useReducedMotion();
 
   return (
     <section>
-      <div className="mb-4">
-        <h2 className="text-sm font-semibold tracking-tight">
+      <motion.div
+        className="mb-4"
+        initial={reduce ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <h2 className="text-sm font-semibold tracking-tight text-foreground/80">
           Runtime Metrics
         </h2>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground/50 mt-0.5">
           Aggregate performance across all executions
         </p>
-      </div>
+      </motion.div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {metricsConfig.map((cfg, i) => (
           <PremiumMetricCard
@@ -105,7 +113,6 @@ export function MetricGrid() {
             delay={0.05 + i * 0.03}
           />
         ))}
-        {/* Empty cell for uneven grid */}
         <div className="hidden xl:block" />
       </div>
     </section>

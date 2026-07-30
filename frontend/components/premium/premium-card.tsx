@@ -1,15 +1,16 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, useMotionValue, useTransform } from "motion/react";
 import { cn } from "@/lib/utils";
-import { useState, useRef } from "react";
+import { useState, useRef, type ReactNode } from "react";
 
 interface PremiumCardProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   hoverEffect?: "lift" | "glow" | "both" | "none";
   glowColor?: string;
   onClick?: () => void;
+  variant?: "default" | "glass" | "bordered" | "elevated";
 }
 
 export function PremiumCard({
@@ -18,18 +19,25 @@ export function PremiumCard({
   hoverEffect = "both",
   glowColor = "hsl(var(--primary))",
   onClick,
+  variant = "default",
 }: PremiumCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
   const cardRef = useRef<HTMLDivElement>(null);
+  const mouseX = useMotionValue(0.5);
+  const mouseY = useMotionValue(0.5);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
-    setMousePos({
-      x: (e.clientX - rect.left) / rect.width,
-      y: (e.clientY - rect.top) / rect.height,
-    });
+    mouseX.set((e.clientX - rect.left) / rect.width);
+    mouseY.set((e.clientY - rect.top) / rect.height);
+  };
+
+  const variantStyles = {
+    default: "border border-border/50 bg-card",
+    glass: "border border-border/30 bg-card/50 backdrop-blur-xl",
+    bordered: "border-2 border-border/40 bg-card",
+    elevated: "border border-border/40 bg-card shadow-[0_4px_24px_rgba(0,0,0,0.15)]",
   };
 
   const glow = hoverEffect === "glow" || hoverEffect === "both";
@@ -39,7 +47,8 @@ export function PremiumCard({
     <motion.div
       ref={cardRef}
       className={cn(
-        "group relative overflow-hidden rounded-xl border border-border/50 bg-card transition-colors",
+        "group relative overflow-hidden transition-colors duration-300",
+        variantStyles[variant],
         onClick && "cursor-pointer",
         className
       )}
@@ -47,29 +56,38 @@ export function PremiumCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);
-        setMousePos({ x: 0.5, y: 0.5 });
+        mouseX.set(0.5);
+        mouseY.set(0.5);
       }}
       onClick={onClick}
       animate={{
         y: lift && isHovered ? -2 : 0,
-        boxShadow: isHovered && glow
-          ? `0 0 20px ${glowColor}15, 0 0 40px ${glowColor}08`
-          : "0 0 0px transparent",
       }}
-      transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
     >
-      {glow && isHovered && (
+      {glow && (
         <motion.div
           className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300"
-          style={{ opacity: isHovered ? 1 : 0 }}
+          animate={{ opacity: isHovered ? 1 : 0 }}
         >
           <div
             className="absolute inset-0"
             style={{
-              background: `radial-gradient(600px circle at ${mousePos.x * 100}% ${mousePos.y * 100}%, ${glowColor}08, transparent 40%)`,
+              background: `radial-gradient(600px circle at ${mouseX.get() * 100}% ${mouseY.get() * 100}%, ${glowColor}10, transparent 40%)`,
             }}
           />
         </motion.div>
+      )}
+      {/* Top edge glow line */}
+      {isHovered && (
+        <motion.div
+          className="pointer-events-none absolute left-0 top-0 h-px w-full"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            background: `linear-gradient(90deg, transparent 0%, ${glowColor}40 50%, transparent 100%)`,
+          }}
+        />
       )}
       {children}
     </motion.div>
@@ -80,7 +98,7 @@ interface PremiumMetricCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   trend?: "up" | "down" | "neutral";
   trendValue?: string;
   color?: string;
@@ -100,58 +118,43 @@ export function PremiumMetricCard({
   delay = 0,
 }: PremiumMetricCardProps) {
   return (
-    <motion.div
-      className={cn(
-        "group relative overflow-hidden rounded-xl border border-border/50 bg-card p-5",
-        className
-      )}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.32, 0.72, 0, 1] }}
-      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+    <PremiumCard
+      variant="glass"
+      className={cn("p-5", className)}
+      glowColor={color}
     >
-      <div
-        className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-        style={{
-          background: `radial-gradient(400px circle at 50% 0%, ${color}08, transparent 60%)`,
-        }}
-      />
-
       <div className="relative flex items-start justify-between">
         <div className="space-y-1.5">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground/70">
             {title}
           </p>
           <div className="flex items-baseline gap-2">
-            <span
-              className="text-2xl font-semibold tracking-tight"
-              style={{ color }}
-            >
+            <span className="text-2xl font-semibold tracking-tight" style={{ color }}>
               {value}
             </span>
             {trend && (
               <span
                 className={cn(
-                  "text-xs font-medium",
+                  "text-[11px] font-medium",
                   trend === "up" && "text-success",
                   trend === "down" && "text-destructive",
                   trend === "neutral" && "text-muted-foreground"
                 )}
               >
-                {trend === "up" && "↑ "}
-                {trend === "down" && "↓ "}
+                {trend === "up" && "↑"}
+                {trend === "down" && "↓"}
                 {trendValue}
               </span>
             )}
           </div>
           {subtitle && (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
+            <p className="text-[11px] text-muted-foreground/60">{subtitle}</p>
           )}
         </div>
         {icon && (
           <div
             className="flex h-9 w-9 items-center justify-center rounded-lg"
-            style={{ backgroundColor: `${color}15` }}
+            style={{ backgroundColor: `${color}12` }}
           >
             <div className="text-sm" style={{ color }}>
               {icon}
@@ -161,20 +164,20 @@ export function PremiumMetricCard({
       </div>
 
       <div
-        className="mt-3 h-0.5 w-full rounded-full opacity-30"
+        className="mt-3 h-px w-full rounded-full"
         style={{
-          background: `linear-gradient(90deg, ${color}, transparent)`,
+          background: `linear-gradient(90deg, ${color}30, transparent)`,
         }}
       />
-    </motion.div>
+    </PremiumCard>
   );
 }
 
 interface GlowButtonProps {
-  children: React.ReactNode;
+  children: ReactNode;
   onClick?: () => void;
   className?: string;
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "premium";
   size?: "sm" | "md" | "lg";
 }
 
@@ -198,6 +201,8 @@ export function GlowButton({
       "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border/50",
     ghost:
       "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+    premium:
+      "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15",
   };
 
   return (
@@ -220,7 +225,7 @@ export function GlowButton({
         whileHover={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
       />
-      <span className="relative">{children}</span>
+      <span className="relative flex items-center gap-1.5">{children}</span>
     </motion.button>
   );
 }
