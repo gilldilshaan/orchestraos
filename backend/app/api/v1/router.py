@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     artifacts,
+    connectors,
     dashboard,
     decisions,
     features,
@@ -29,3 +30,4 @@ router.include_router(jobs.router)
 router.include_router(artifacts.router)
 router.include_router(metrics_agg.router)
 router.include_router(intelligence.router)
+router.include_router(connectors.router)

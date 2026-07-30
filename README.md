@@ -270,6 +270,37 @@ orchestraos/
 | ------ | ------------------------------------- | ------------------------- |
 | GET    | `/intelligence/operations/summary`    | Global operations summary |
 
+### Connector Platform (Sprint 9)
+
+#### Connector CRUD
+| Method | Endpoint                               | Description                          |
+| ------ | -------------------------------------- | ------------------------------------ |
+| POST   | `/connectors`                          | Create connector (OAuth/API Key)     |
+| GET    | `/connectors`                          | List installed connectors            |
+| GET    | `/connectors/{id}`                     | Get connector details                |
+| DELETE | `/connectors/{id}`                     | Remove connector                     |
+| POST   | `/connectors/{id}/connect`             | Authenticate and connect             |
+| POST   | `/connectors/{id}/disconnect`          | Disconnect                           |
+| GET    | `/connectors/{id}/health`              | Health check against provider        |
+
+#### Actions & Audit
+| Method | Endpoint                               | Description                          |
+| ------ | -------------------------------------- | ------------------------------------ |
+| POST   | `/connectors/{id}/execute`             | Execute action on connected service  |
+| GET    | `/connectors/{id}/actions`             | List action history                  |
+| GET    | `/connectors/{id}/audit`               | List audit logs                      |
+
+#### Webhooks
+| Method | Endpoint                               | Description                          |
+| ------ | -------------------------------------- | ------------------------------------ |
+| POST   | `/connectors/webhooks`                 | Register outgoing webhook            |
+| GET    | `/connectors/webhooks`                 | List registered webhooks             |
+
+#### Marketplace
+| Method | Endpoint                               | Description                          |
+| ------ | -------------------------------------- | ------------------------------------ |
+| GET    | `/connectors/marketplace/available`    | Available providers + action defs    |
+
 ## Features
 
 ### 12 Competitive-Differentiation Features
@@ -335,6 +366,53 @@ All agents use `AIKernel.run()` for consistency, observability, caching, and ret
 - **Operations Center** (`/operations`) — live summary of all objectives, agents, health score, pending approvals, alerts, success rate
 - **Mission Control** (`/execution`) — 4 integrated panels: CollaborationFeed, ConflictPanel, ApprovalPanel, WatchdogAlerts — all collapsible in the right inspector
 - All panels poll in real-time with React Query refetch intervals
+
+## Sprint 9 — Integrations Platform
+
+### 6 Connectors + Webhook Engine
+
+| # | Connector           | Actions                                                         |
+| -- | ------------------- | --------------------------------------------------------------- |
+| 1 | GitHub              | Repos, Issues, PRs, Branches, Commits, Actions                  |
+| 2 | Jira                | Projects, Epics, Stories, Tasks, Transitions, Comments           |
+| 3 | Slack               | Channels, Messages, Threads, Notifications, Approvals            |
+| 4 | Notion              | Create/Update docs, Search workspace, Store reports/playbooks    |
+| 5 | Google Workspace    | Docs, Sheets, Drive, Calendar, Gmail                             |
+| 6 | Webhook Engine      | POST/PUT/PATCH/DELETE, Callbacks, Retry with HMAC signing        |
+
+### Architecture
+
+```
+ConnectorOrchestrator
+├── ConnectorRegistry (auto-discovers all connectors)
+├── BaseConnector (connect/disconnect/health/execute/validate)
+│   ├── GitHubConnector
+│   ├── JiraConnector
+│   ├── SlackConnector
+│   ├── NotionConnector
+│   ├── GoogleWorkspaceConnector
+│   └── WebhookEngine
+├── Encryption (Fernet — SHA-256 derived from app secret)
+├── Audit Logging (every action logged with actor/target/result)
+├── Execution Events + Telemetry (generated per action)
+├── Webhook Delivery (HMAC-signed callbacks with retry)
+└── Connector Marketplace API (auto-discovers available actions)
+```
+
+### Security
+
+- Credentials encrypted at rest with Fernet (key derived from `secret_key`)
+- No hardcoded credentials anywhere
+- Webhooks signed with HMAC-SHA256
+- Audit trail for every connector action (actor, target, result, timestamp)
+- Auth types: API Key, OAuth (Bearer token), None (webhooks)
+
+### Frontend
+
+- **Connector Marketplace** (`/connectors`) — install, manage, and use all connectors
+- Per-connector detail panel with action execution, history, and audit logs
+- Type-safe credentials fields per provider
+- Real-time status badges (connected/disconnected/error)
 
 ## Code Quality
 

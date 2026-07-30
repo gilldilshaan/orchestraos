@@ -34,6 +34,7 @@ from app.models.features import (
     ResourceGap,
     SuccessProbability,
 )
+from app.models.connectors import ConnectorAction, ConnectorAuditLog, ConnectorConfig, ConnectorWebhook
 from app.models.job import Job
 from app.models.objective import Objective
 from app.models.user import User
@@ -44,6 +45,10 @@ __all__ = [
     "AgentTelemetry",
     "ApprovalGate",
     "BaseEntity",
+    "ConnectorAction",
+    "ConnectorAuditLog",
+    "ConnectorConfig",
+    "ConnectorWebhook",
     "Bottleneck",
     "BusinessReadiness",
     "Decision",

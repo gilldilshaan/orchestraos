@@ -23,12 +23,14 @@ import {
   FolderOpen,
   DiffIcon,
   LineChart,
+  Plug,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/execution", label: "Live Execution", icon: PlayCircle },
   { href: "/operations", label: "Operations Center", icon: Gauge },
+  { href: "/connectors", label: "Connectors", icon: Plug },
   { href: "/replay", label: "Execution Replay", icon: History },
   { href: "/organization", label: "Organization", icon: Building2 },
   { href: "/graph", label: "Execution Graph", icon: GitBranch },

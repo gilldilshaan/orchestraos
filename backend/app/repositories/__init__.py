@@ -14,6 +14,12 @@ from app.repositories.extensions_repository import (
     ScenarioRepository,
     StoredExecutionEventRepository,
 )
+from app.repositories.connector_repository import (
+    ConnectorActionRepository,
+    ConnectorAuditLogRepository,
+    ConnectorConfigRepository,
+    ConnectorWebhookRepository,
+)
 from app.repositories.intelligence_repository import (
     AgentConflictRepository,
     AgentMessageRepository,
@@ -43,6 +49,10 @@ __all__ = [
     "ApprovalGateRepository",
     "BottleneckRepository",
     "BusinessReadinessRepository",
+    "ConnectorActionRepository",
+    "ConnectorAuditLogRepository",
+    "ConnectorConfigRepository",
+    "ConnectorWebhookRepository",
     "DecisionMemoryRepository",
     "DecisionOptionRepository",
     "DecisionRepository",
