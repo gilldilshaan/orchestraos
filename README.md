@@ -88,20 +88,22 @@ orchestraos/
 ├── backend/
 │   ├── app/
 │   │   ├── agents/           # 5 AI agents + Devil's Advocate
-│   │   ├── api/v1/           # Route handlers (55+ endpoints)
+    │   │   ├── api/v1/           # Route handlers (70+ endpoints)
 │   │   ├── database/         # SQLAlchemy, Alembic, UUIDv7
 │   │   ├── kernel/           # AI Kernel (8 subsystems)
 │   │   ├── llm/              # LLM abstraction (provider auto-detect)
-│   │   ├── models/           # SQLAlchemy models (31+ tables)
-│   │   ├── repositories/     # Data access layer (27 repos)
-│   │   ├── schemas/          # Pydantic v2 schemas
-│   │   ├── services/         # Business logic (18+ services)
-│   │   ├── main.py           # App entrypoint
-│   │   ├── config.py         # Pydantic Settings
-│   │   ├── dependencies.py   # FastAPI Depends()
-│   │   ├── exceptions.py     # OrchestraOSError hierarchy
-│   │   ├── logging_.py       # structlog config
-│   │   └── middleware.py     # CORS, security, request ID
+    │   │   ├── connectors/       # 6 external system connectors + Webhook Engine
+    │   │   ├── models/           # SQLAlchemy models (35+ tables)
+    │   │   ├── repositories/     # Data access layer (31 repos)
+    │   │   ├── schemas/          # Pydantic v2 schemas
+    │   │   ├── services/         # Business logic (19+ services)
+    │   │   ├── utils/            # Encryption helpers (Fernet)
+    │   │   ├── main.py           # App entrypoint
+    │   │   ├── config.py         # Pydantic Settings
+    │   │   ├── dependencies.py   # FastAPI Depends()
+    │   │   ├── exceptions.py     # OrchestraOSError hierarchy
+    │   │   ├── logging_.py       # structlog config
+    │   │   └── middleware.py     # CORS, security, request ID
 │   ├── migrations/           # Alembic migrations
 │   ├── prompts/              # 14 versioned prompt templates
 │   ├── tests/                # 16+ unit + integration tests
@@ -426,9 +428,9 @@ mypy app                        # type checking
 
 ## Git Workflow
 
-- **Branch**: `ai-lead` (active development)
+- **Branch**: `main` (active development)
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.)
-- **No direct commits to `main`** — feature branches only
+- Feature branches → squash-merge to `main`
 
 ## License
 
