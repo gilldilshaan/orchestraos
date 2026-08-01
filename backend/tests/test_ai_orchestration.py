@@ -145,6 +145,76 @@ class TestOutputValidator:
         assert result["name"] == "test"
         assert result["count"] == 5
 
+    def test_repair_truncated_mid_string_value(self):
+        raw = '{"risks": [{"title": "Technical Execution Risk", "description": "Budget of 20'
+        parsed = json.loads(OutputValidator.repair_json(raw))
+        assert parsed["risks"][0]["title"] == "Technical Execution Risk"
+
+    def test_repair_truncated_dangling_key(self):
+        raw = '{"risks": [{"title": "Budget overrun"}]'
+        parsed = json.loads(OutputValidator.repair_json(raw))
+        assert parsed["risks"][0]["title"] == "Budget overrun"
+
+    def test_repair_truncated_within_key_string(self):
+        raw = '{"risks": [{"title": "Budget overrun", "descri'
+        parsed = json.loads(OutputValidator.repair_json(raw))
+        assert parsed["risks"][0]["title"] == "Budget overrun"
+
+    def test_repair_truncated_mid_number(self):
+        raw = '{"probability": 0.6, "impact": 0.8, "total": 12'
+        parsed = json.loads(OutputValidator.repair_json(raw))
+        assert parsed["probability"] == 0.6
+        assert parsed["impact"] == 0.8
+        assert parsed["total"] == 12
+
+    def test_repair_truncated_top_level_array(self):
+        raw = '[{"title": "Risk one"}, {"title": "Risk t'
+        parsed = json.loads(OutputValidator.repair_json(raw))
+        assert parsed[0]["title"] == "Risk one"
+
+    def test_repair_truncated_nested_dangling_key(self):
+        raw = '{"risks": [{"title": "Budget overrun", "description": "x"}], "summary": "F'
+        parsed = json.loads(OutputValidator.repair_json(raw))
+        assert parsed["risks"][0]["title"] == "Budget overrun"
+
+    def test_repair_truncated_numeric_value_int(self):
+        raw = '{"count": 12'
+        parsed = json.loads(OutputValidator.repair_json(raw))
+        assert parsed == {"count": 12}
+
+    def test_repair_truncated_boolean_value(self):
+        raw = '{"overlooked": tru'
+        parsed = json.loads(OutputValidator.repair_json(raw))
+        assert parsed == {"overlooked": True}
+
+    def test_repair_truncated_multiple_steps(self):
+        raw = '{"a": {"b": {"c": [1, 2, 3]}}, "d": {"e": "value"'
+        parsed = json.loads(OutputValidator.repair_json(raw))
+        assert parsed["a"]["b"]["c"] == [1, 2, 3]
+        assert parsed["d"]["e"] == "value"
+
+    def test_repair_truncated_every_5_chars_parses(self):
+        payload = json.dumps(
+            {
+                "risks": [
+                    {
+                        "title": "Budget overrun during development phase",
+                        "description": "20000 INR monthly budget is severely constrained",
+                        "probability": 0.6,
+                        "impact": 0.8,
+                        "level": "high",
+                        "mitigation": "Allocate contingency funds and use low-code tools",
+                    }
+                ],
+                "summary": "Budget is the critical constraint for this initiative",
+            },
+            indent=2,
+        )
+        for cut in range(10, len(payload), 5):
+            repaired = OutputValidator.repair_json(payload[:cut])
+            parsed = json.loads(repaired, strict=False)
+            assert isinstance(parsed, (dict, list))
+
 
 # ─── CacheManager Tests ────────────────────────────────────────────────
 
@@ -273,8 +343,8 @@ class TestModelRouter:
     def test_get_route_exists(self):
         router = ModelRouter()
         route = router.get_route("plan")
-        assert route["model"] == "llama-3.3-70b-versatile"
-        assert route["provider"] == "groq"
+        assert route["model"] == "claude-sonnet-4-5"
+        assert route["provider"] == "anthropic"
         assert route["temperature"] == 0.4
 
     def test_get_route_fallback(self):
@@ -285,13 +355,13 @@ class TestModelRouter:
     def test_get_preferred_provider_default(self):
         router = ModelRouter()
         provider = router.get_preferred_provider("plan")
-        assert provider == "groq"
+        assert provider == "anthropic"
 
     def test_mark_unavailable_fallback(self):
         router = ModelRouter()
-        router.mark_unavailable("groq")
+        router.mark_unavailable("anthropic")
         provider = router.get_preferred_provider("plan")
-        assert provider == "openai"
+        assert provider == "groq"
 
     def test_get_task_temperature(self):
         router = ModelRouter()

@@ -38,6 +38,21 @@ jobs:
       run:
         working-directory: backend
 
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: orchestraos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -48,11 +63,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pytest pytest-asyncio httpx
+          pip install pytest pytest-asyncio pytest-cov httpx
           pip install -e .
 
-      - name: Run tests
-        run: pytest tests/ -v --cov=app
+      - name: Run unit tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/orchestraos
+        run: pytest tests/ -m "not integration" -v --cov=app --cov-report=term-missing
+
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/orchestraos
+        run: pytest tests/ -m integration -v
 
   frontend-lint:
     runs-on: ubuntu-latest

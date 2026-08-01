@@ -1,14 +1,19 @@
-"""End-to-end pipeline test: plan for opening a coffee shop.
-Shows every step with real Groq-powered AI output."""
+"""End-to-end pipeline demo: plan for opening a coffee shop.
+Shows every step with real LLM-powered AI output.
+
+Run: python scripts/coffee_shop_demo.py   (from repo root)
+"""
 
 from __future__ import annotations
 
 import asyncio
 import io
 import json
+import os
 import sys
 import time
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 import logging

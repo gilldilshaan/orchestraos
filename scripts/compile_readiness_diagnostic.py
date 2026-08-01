@@ -1,13 +1,18 @@
 """Diagnostic: trace every pipeline stage for compile + readiness.
-Logs rendered prompt, raw AI response, parsed JSON, and validated output."""
+Logs rendered prompt, raw AI response, parsed JSON, and validated output.
+
+Run: python scripts/compile_readiness_diagnostic.py   (from repo root)
+"""
 
 from __future__ import annotations
 
 import asyncio
 import io
 import json
+import os
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 from app.config import settings
