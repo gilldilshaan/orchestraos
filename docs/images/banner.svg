@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0.15"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" class="gridline"/>
+    </pattern>
+  </defs>
+
+  <style>
+    .bg { fill: #F8FAFC; }
+    .gridline { stroke: #E2E8F0; stroke-width: 1; }
+    .title { fill: #0F172A; font-weight: 800; font-size: 72px; letter-spacing: 1px; }
+    .tag { fill: #475569; font-weight: 600; font-size: 26px; letter-spacing: 10px; }
+    .sub { fill: #64748B; font-size: 26px; font-weight: 500; }
+    .pill { fill: none; stroke: #CBD5E1; }
+    .pilltext { fill: #475569; font-size: 20px; font-weight: 600; }
+    .arrow { stroke: #CBD5E1; stroke-width: 3; }
+    .badge { fill: #FFFFFF; }
+    .badgetext { fill: #0F172A; font-weight: 700; font-size: 20px; }
+    .accentfill { fill: url(#accent); }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0B0F1A; }
+      .gridline { stroke: #1E293B; }
+      .title { fill: #F1F5F9; }
+      .tag { fill: #94A3B8; }
+      .sub { fill: #94A3B8; }
+      .pill { stroke: #334155; }
+      .pilltext { fill: #94A3B8; }
+      .arrow { stroke: #334155; }
+      .badge { fill: #111827; }
+      .badgetext { fill: #E2E8F0; }
+    }
+  </style>
+
+  <rect class="bg" width="1280" height="640" rx="24"/>
+  <rect width="1280" height="640" rx="24" fill="url(#glow)"/>
+  <rect width="1280" height="640" rx="24" fill="url(#grid)"/>
+
+  <circle cx="1060" cy="120" r="180" fill="url(#accent)" opacity="0.10"/>
+  <circle cx="120" cy="520" r="140" fill="url(#accent)" opacity="0.08"/>
+
+  <text x="640" y="120" text-anchor="middle" class="tag">ORCHESTRAOS</text>
+
+  <defs>
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+  <text x="640" y="220" text-anchor="middle" fill="url(#titleGrad)" font-weight="800" font-size="64px" letter-spacing="-1px">Enterprise AI Operating System</text>
+
+  <text x="640" y="290" text-anchor="middle" class="sub">Transform business objectives into autonomous AI organizations</text>
+  <text x="640" y="328" text-anchor="middle" class="sub">that plan, debate, evaluate risk, and generate executive decisions.</text>
+
+  <g font-family="ui-sans-serif, system-ui, sans-serif">
+    <rect x="320" y="386" width="180" height="52" rx="26" class="badge" stroke="#CBD5E1" stroke-width="1.5"/>
+    <text x="410" y="421" text-anchor="middle" class="badgetext">Live Demo</text>
+    <rect x="524" y="386" width="238" height="52" rx="26" class="badge" stroke="#CBD5E1" stroke-width="1.5"/>
+    <text x="643" y="421" text-anchor="middle" class="badgetext">Documentation</text>
+    <rect x="786" y="386" width="180" height="52" rx="26" class="badge" stroke="#CBD5E1" stroke-width="1.5"/>
+    <text x="876" y="421" text-anchor="middle" class="badgetext">Architecture</text>
+  </g>
+
+  <line x1="400" y1="470" x2="880" y2="470" class="arrow"/>
+
+  <text x="360" y="520" text-anchor="middle" class="pilltext">12-stage pipeline</text>
+  <circle cx="412" cy="506" r="5" fill="url(#accent)"/>
+  <text x="540" y="520" text-anchor="middle" class="pilltext">7 AI agents</text>
+  <circle cx="566" cy="506" r="5" fill="url(#accent)"/>
+  <text x="700" y="520" text-anchor="middle" class="pilltext">103 APIs</text>
+  <circle cx="726" cy="506" r="5" fill="url(#accent)"/>
+  <text x="860" y="520" text-anchor="middle" class="pilltext">Real-time execution</text>
+
+  <text x="640" y="576" text-anchor="middle" class="tag" font-size="16px" letter-spacing="4px">NEXT.JS 15 · FASTAPI · POSTGRESQL 16 · REDIS 7</text>
+  <text x="640" y="606" text-anchor="middle" class="pilltext" font-size="15px" font-weight="500">OpenAI · Anthropic · Gemini · Groq</text>
+</svg>

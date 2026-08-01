@@ -795,8 +795,8 @@ Step 10: GET /dashboard/{id}/executive-dashboard
 
 ## 12. References
 
-- [02_ARCHITECTURE.md](./02_ARCHITECTURE.md) — Detailed architecture documentation
-- [03_API_SPECIFICATION.md](./03_API_SPECIFICATION.md) — Full API specification
+- [architecture.md](./architecture.md) — Detailed architecture documentation
+- [api.md](./api.md) — Full API specification
 - [CLAUDE.md](./CLAUDE.md) — AI development guidelines
 - `backend/app/` — Python backend source
 - `frontend/` — TypeScript/Next.js frontend source

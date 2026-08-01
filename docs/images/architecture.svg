@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="1040" viewBox="0 0 880 1040" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" class="marker"/>
+    </marker>
+  </defs>
+
+  <style>
+    .bg { fill: #FFFFFF; }
+    .marker { fill: #CBD5E1; }
+    .box { fill: #F8FAFC; stroke: #CBD5E1; stroke-width: 1.5; rx: 12; }
+    .boxtitle { fill: #0F172A; font-weight: 700; font-size: 20px; }
+    .boxtext { fill: #64748B; font-size: 15px; font-weight: 500; }
+    .accentbox { fill: #EEF2FF; stroke: #A5B4FC; }
+    .accenttext { fill: #4338CA; }
+    .arrow { stroke: #CBD5E1; stroke-width: 2.5; }
+    .layer { fill: #94A3B8; font-size: 13px; font-weight: 700; letter-spacing: 3px; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0B0F1A; }
+      .marker { fill: #334155; }
+      .box { fill: #0F172A; stroke: #334155; }
+      .boxtitle { fill: #F1F5F9; }
+      .boxtext { fill: #94A3B8; }
+      .accentbox { fill: #1E1B4B; stroke: #4F46E5; }
+      .accenttext { fill: #C7D2FE; }
+      .arrow { stroke: #334155; }
+      .layer { fill: #475569; }
+    }
+  </style>
+
+  <rect class="bg" width="880" height="1040" rx="16"/>
+
+  <text x="440" y="56" text-anchor="middle" class="boxtitle" font-size="26px" letter-spacing="-0.5px">OrchestraOS Architecture</text>
+
+  <text x="60" y="110" class="layer">PRESENTATION</text>
+  <rect x="60" y="126" width="760" height="66" class="box"/>
+  <text x="88" y="160" class="boxtitle">Next.js 15 Dashboard</text>
+  <text x="88" y="182" class="boxtext">19 pages · live execution feed (WebSocket) · reports &amp; decision timeline</text>
+
+  <line x1="440" y1="192" x2="440" y2="222" class="arrow" marker-end="url(#arrow)"/>
+
+  <text x="60" y="252" class="layer">API LAYER</text>
+  <rect x="60" y="268" width="760" height="66" class="box"/>
+  <text x="88" y="302" class="boxtitle">FastAPI Gateway · 103 REST endpoints + WebSocket</text>
+  <text x="88" y="324" class="boxtext">JWT auth · rate limiting · versioned routes (/api/v1) · OpenAPI 3</text>
+
+  <line x1="440" y1="334" x2="440" y2="364" class="arrow" marker-end="url(#arrow)"/>
+
+  <text x="60" y="394" class="layer">AI KERNEL</text>
+  <rect x="60" y="410" width="760" height="110" class="accentbox"/>
+  <text x="88" y="444" class="boxtitle accenttext">AI Kernel</text>
+  <text x="88" y="472" class="boxtext accenttext">Objective Compiler → 12-stage pipeline → Explainable AI → Output Validator</text>
+  <text x="88" y="500" class="boxtext accenttext">Model Router (Claude · GPT · Gemini · Groq) · Prompt Manager · Retry Engine · Fallback</text>
+
+  <line x1="440" y1="520" x2="440" y2="550" class="arrow" marker-end="url(#arrow)"/>
+
+  <text x="60" y="580" class="layer">EXECUTION</text>
+  <rect x="60" y="596" width="240" height="86" class="box"/>
+  <text x="88" y="626" class="boxtitle" font-size="17px">7 Specialized Agents</text>
+  <text x="88" y="650" class="boxtext">CEO · Planner · Researcher ·</text>
+  <text x="88" y="670" class="boxtext">Analyst · Risk Officer · Executor</text>
+
+  <rect x="320" y="596" width="240" height="86" class="box"/>
+  <text x="348" y="626" class="boxtitle" font-size="17px">Execution Engine</text>
+  <text x="348" y="650" class="boxtext">Step planner · retries ·</text>
+  <text x="348" y="670" class="boxtext">state machine · event bus</text>
+
+  <rect x="580" y="596" width="240" height="86" class="box"/>
+  <text x="608" y="626" class="boxtitle" font-size="17px">Connectors</text>
+  <text x="608" y="650" class="boxtext">Slack · GitHub · Jira · Notion</text>
+  <text x="608" y="670" class="boxtext">Google Workspace · Webhook</text>
+
+  <line x1="440" y1="682" x2="440" y2="712" class="arrow" marker-end="url(#arrow)"/>
+
+  <text x="60" y="742" class="layer">DATA</text>
+  <rect x="60" y="758" width="240" height="66" class="box"/>
+  <text x="88" y="790" class="boxtitle" font-size="17px">PostgreSQL 16</text>
+  <text x="88" y="812" class="boxtext">Alembic migrations · pgvector</text>
+
+  <rect x="320" y="758" width="240" height="66" class="box"/>
+  <text x="348" y="790" class="boxtitle" font-size="17px">Redis 7</text>
+  <text x="348" y="812" class="boxtext">Cache · jobs · pub/sub</text>
+
+  <rect x="580" y="758" width="240" height="66" class="box"/>
+  <text x="608" y="790" class="boxtitle" font-size="17px">LLM Providers</text>
+  <text x="608" y="812" class="boxtext">Anthropic · OpenAI · Google · Groq</text>
+
+  <line x1="440" y1="824" x2="440" y2="854" class="arrow" marker-end="url(#arrow)"/>
+
+  <text x="60" y="884" class="layer">OPERATIONS</text>
+  <rect x="60" y="900" width="760" height="80" class="box"/>
+  <text x="88" y="934" class="boxtitle">CI/CD &amp; Observability</text>
+  <text x="88" y="958" class="boxtext">GitHub Actions (lint · 191 unit + 30 integration tests) · structured logging · 20+ analytics counters</text>
+  <text x="88" y="976" class="boxtext" font-size="13px">MIT License</text>
+</svg>
