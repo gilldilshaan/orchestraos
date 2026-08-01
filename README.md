@@ -4,7 +4,7 @@
 
 # OrchestraOS
 
-### Enterprise AI Operating System for Autonomous Strategic Decision-Making
+### Enterprise AI Operating System that transforms business objectives into explainable executive decisions through autonomous multi-agent orchestration.
 
 Transform natural-language business objectives into explainable, executable strategies.
 OrchestraOS compiles your goal, plans it, generates a specialized AI organization, runs a
