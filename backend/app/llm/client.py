@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from app.config import settings
 from app.llm import fallback as fallback_generator
@@ -15,14 +15,14 @@ class LLMClient:
         self._provider = self._detect_provider()
 
     def _detect_provider(self) -> str:
+        if settings.anthropic_api_key:
+            return "anthropic"
         if settings.openrouter_api_key:
             return "openrouter"
         if settings.groq_api_key:
             return "groq"
         if settings.openai_api_key:
             return "openai"
-        if settings.anthropic_api_key:
-            return "anthropic"
         if settings.google_api_key:
             return "google"
         if settings.litellm_master_key:
@@ -40,6 +40,7 @@ class LLMClient:
     @property
     def default_model(self) -> str | None:
         return {
+            "anthropic": "claude-sonnet-4-5",
             "openrouter": "openai/gpt-4o-mini",
             "groq": "llama-3.3-70b-versatile",
             "openai": "gpt-4o",
@@ -50,7 +51,7 @@ class LLMClient:
         self,
         prompt: str,
         system_prompt: str | None = None,
-        response_format: type | None = None,
+        _response_format: type | None = None,
         temperature: float = 0.7,
         task_type: str | None = None,
         model: str | None = None,
@@ -63,7 +64,7 @@ class LLMClient:
         self,
         prompt: str,
         system_prompt: str | None = None,
-        response_format: type = dict,
+        _response_format: type = dict,
         temperature: float = 0.3,
         task_type: str | None = None,
     ) -> dict[str, Any]:
@@ -74,12 +75,12 @@ class LLMClient:
             task_type=task_type,
         )
         try:
-            return json.loads(raw)
+            return cast(dict[str, Any], json.loads(raw))
         except (json.JSONDecodeError, TypeError):
             return {"raw": raw}
 
     def _fallback_generate(
-        self, prompt: str, system_prompt: str | None = None, task_type: str | None = None
+        self, prompt: str, _system_prompt: str | None = None, task_type: str | None = None
     ) -> str:
         """Rule-based fallback for development without API keys.
         Returns structured data that mirrors what an LLM would produce,
@@ -163,7 +164,9 @@ class LLMClient:
                 missing.append("budget")
                 critical.append("budget")
                 questions.append("What is the total budget available for this initiative?")
-            if not any(w in prompt_lower for w in ["timeline", "month", "quarter", "q1", "q2", "q3", "q4", "year", "week", "day"]):
+            if not any(w in prompt_lower for w in [
+                "timeline", "month", "quarter", "q1", "q2", "q3", "q4", "year", "week", "day",
+            ]):
                 missing.append("timeline")
                 critical.append("timeline")
                 questions.append("What is the expected timeline for completion?")
@@ -173,17 +176,23 @@ class LLMClient:
             if not any(w in prompt_lower for w in ["team", "engineer", "developer", "staff", "people", "headcount"]):
                 missing.append("team_size")
                 questions.append("What is the team size and composition?")
-            if not any(w in prompt_lower for w in ["business model", "subscription", "saas", "revenue", "freemium", "license"]):
+            if not any(w in prompt_lower for w in [
+                "business model", "subscription", "saas", "revenue", "freemium", "license",
+            ]):
                 missing.append("business_model")
                 critical.append("business_model")
                 questions.append("What is the business model for this platform?")
-            if not any(w in prompt_lower for w in ["revenue", "subscription", "pricing", "price", "paid", "monthly", "annual"]):
+            if not any(w in prompt_lower for w in [
+                "revenue", "subscription", "pricing", "price", "paid", "monthly", "annual",
+            ]):
                 missing.append("revenue_model")
                 questions.append("How will the platform generate revenue?")
             if not any(w in prompt_lower for w in ["market", "competitor", "industry", "sector", "b2b", "b2c"]):
                 missing.append("market")
                 questions.append("What is the target market and competitive landscape?")
-            if not any(w in prompt_lower for w in ["constraint", "integration", "compliance", "requirement", "soc2", "gdpr", "limit"]):
+            if not any(w in prompt_lower for w in [
+                "constraint", "integration", "compliance", "requirement", "soc2", "gdpr", "limit",
+            ]):
                 missing.append("constraints")
                 questions.append("What are the key constraints and requirements?")
             if not any(w in prompt_lower for w in ["metric", "kpi", "success", "users", "uptime", "revenue"]):
@@ -210,7 +219,12 @@ class LLMClient:
                     "budget_overrun_risk": 0.35,
                     "team_risk": 0.30,
                     "confidence_score": 0.75,
-                    "reasoning": "The objective has moderate success probability. Market demand is strong but budget constraints and timeline pressures introduce significant risk. The team has relevant experience but may need additional hires to cover skill gaps.",
+                    "reasoning": (
+                        "The objective has moderate success probability. Market demand is strong "
+                        "but budget constraints and timeline pressures introduce significant risk. "
+                        "The team has relevant experience but may need additional hires to cover "
+                        "skill gaps."
+                    ),
                     "risk_factors": [
                         {
                             "factor": "Limited budget",
@@ -321,7 +335,10 @@ class LLMClient:
                             "title": "Engineering team understaffed",
                             "description": "Current engineering headcount insufficient to meet milestone deadlines",
                             "root_cause": "Hiring pipeline not started early enough",
-                            "recommended_resolution": "Immediately begin recruitment for 2 senior engineers, consider contracting",
+                            "recommended_resolution": (
+                                "Immediately begin recruitment for 2 senior engineers, "
+                                "consider contracting"
+                            ),
                             "affected_entity_type": "milestone",
                             "affected_entity_id": None,
                         },
@@ -359,52 +376,80 @@ class LLMClient:
     async def _call_provider(
         self, prompt: str, system_prompt: str | None, temperature: float, model: str | None = None
     ) -> str:
+        if self._provider == "anthropic":
+            import httpx
+
+            anthropic_messages: list[Any] = [{"role": "user", "content": prompt}]
+            body: dict[str, Any] = {
+                "model": model or "claude-sonnet-4-5",
+                "max_tokens": 16384,
+                "messages": anthropic_messages,
+                "temperature": temperature,
+            }
+            if system_prompt:
+                body["system"] = system_prompt
+            async with httpx.AsyncClient(timeout=300) as client:
+                response = await client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": settings.anthropic_api_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
+                    },
+                    json=body,
+                )
+                response.raise_for_status()
+                data = response.json()
+            return "".join(
+                block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
+            )
+
         from openai import AsyncOpenAI
 
         if self._provider == "openrouter":
-            client = AsyncOpenAI(
+            openai_client = AsyncOpenAI(
                 api_key=settings.openrouter_api_key,
                 base_url="https://openrouter.ai/api/v1",
             )
-            messages = []
+            or_messages: list[Any] = []
             if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": prompt})
-            response = await client.chat.completions.create(
+                or_messages.append({"role": "system", "content": system_prompt})
+            or_messages.append({"role": "user", "content": prompt})
+            completion = await openai_client.chat.completions.create(
                 model=model or "openai/gpt-4o-mini",
-                messages=messages,
+                messages=or_messages,
                 temperature=temperature,
             )
-            return response.choices[0].message.content or ""
+            return completion.choices[0].message.content or ""
 
         if self._provider == "groq":
-            client = AsyncOpenAI(
+            groq_client = AsyncOpenAI(
                 api_key=settings.groq_api_key,
                 base_url="https://api.groq.com/openai/v1",
             )
-            messages = []
+            groq_messages: list[Any] = []
             if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": prompt})
-            response = await client.chat.completions.create(
+                groq_messages.append({"role": "system", "content": system_prompt})
+            groq_messages.append({"role": "user", "content": prompt})
+            completion = await groq_client.chat.completions.create(
                 model=model or "llama-3.3-70b-versatile",
-                messages=messages,
+                messages=groq_messages,
                 temperature=temperature,
             )
-            return response.choices[0].message.content or ""
+            return completion.choices[0].message.content or ""
 
         if self._provider == "openai":
-            client = AsyncOpenAI(api_key=settings.openai_api_key)
-            messages = []
+            oa_client = AsyncOpenAI(api_key=settings.openai_api_key)
+            oa_messages: list[Any] = []
             if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": prompt})
-            response = await client.chat.completions.create(
+                oa_messages.append({"role": "system", "content": system_prompt})
+            oa_messages.append({"role": "user", "content": prompt})
+            completion = await oa_client.chat.completions.create(
                 model=model or "gpt-4o",
-                messages=messages,
+                messages=oa_messages,
                 temperature=temperature,
             )
-            return response.choices[0].message.content or ""
+            return completion.choices[0].message.content or ""
 
         if self._provider == "anthropic":
             from anthropic import AsyncAnthropic

@@ -27,10 +27,10 @@ class BusinessReadiness(Base, BaseEntity):
     budget_readiness: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     team_readiness: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     timeline_feasibility: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
-    strengths: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    weaknesses: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    recommendations: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    category_scores: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    strengths: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    weaknesses: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    recommendations: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    category_scores: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
 
 class MissingInfoCheck(Base, BaseEntity):
@@ -39,12 +39,12 @@ class MissingInfoCheck(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False
     )
-    missing_fields: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    critical_missing: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    clarification_questions: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    missing_fields: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    critical_missing: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    clarification_questions: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
     is_complete: Mapped[bool] = mapped_column(default=False, nullable=False)
     refinement_round: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    previous_responses: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    previous_responses: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
 
 class DevilsAdvocateCritique(Base, BaseEntity):
@@ -57,11 +57,11 @@ class DevilsAdvocateCritique(Base, BaseEntity):
         UUID(as_uuid=False), ForeignKey("plans.id"), default=None, nullable=True
     )
     critique_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    counter_arguments: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    risks: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    assumptions: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    better_alternatives: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    recommendations: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    counter_arguments: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    risks: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    assumptions: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    better_alternatives: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    recommendations: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     model_used: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
 
 
@@ -81,8 +81,8 @@ class SuccessProbability(Base, BaseEntity):
     team_risk: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     confidence_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     reasoning: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    risk_factors: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    mitigating_factors: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    risk_factors: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    mitigating_factors: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
 
 class ResourceGap(Base, BaseEntity):
@@ -94,16 +94,16 @@ class ResourceGap(Base, BaseEntity):
     plan_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("plans.id"), default=None, nullable=True
     )
-    missing_roles: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    missing_skills: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    hiring_needs: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
+    missing_roles: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    missing_skills: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    hiring_needs: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
     estimated_cost: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     estimated_hiring_timeline: Mapped[str | None] = mapped_column(
         String(255), default=None, nullable=True
     )
-    hiring_priority: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    available_resources: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
-    required_resources: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    hiring_priority: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    available_resources: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    required_resources: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
 
 class DependencyGraph(Base, BaseEntity):
@@ -112,12 +112,12 @@ class DependencyGraph(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False
     )
-    nodes: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    edges: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    critical_path: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    circular_dependencies: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    blocked_tasks: Mapped[list] = mapped_column(JSONB, default_factory=list, nullable=False)
-    cascade_effects: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    nodes: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    edges: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    critical_path: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    circular_dependencies: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    blocked_tasks: Mapped[list[Any]] = mapped_column(JSONB, default_factory=list, nullable=False)
+    cascade_effects: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
 
 class Bottleneck(Base, BaseEntity):
@@ -157,14 +157,14 @@ class DecisionMemoryEntry(Base, BaseEntity):
     )
     decision_text: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     reason: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    evidence: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    alternatives: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    evidence: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    alternatives: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     approver: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
     decision_date: Mapped[datetime | None] = mapped_column(
         UTCDateTime, default=None, nullable=True
     )
     impact: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    tags: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    tags: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
 
 Index("ix_business_readiness_objective_id", BusinessReadiness.objective_id, unique=True)

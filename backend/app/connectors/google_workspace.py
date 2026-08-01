@@ -13,12 +13,36 @@ class GoogleWorkspaceConnector(BaseConnector):
 
     def get_actions(self) -> list[dict[str, Any]]:
         return [
-            {"name": "create_doc", "description": "Create a Google Doc", "params": {"title": "str", "content": "str (optional)"}},
-            {"name": "create_sheet", "description": "Create a Google Sheet", "params": {"title": "str", "headers": "list (optional)"}},
-            {"name": "append_to_sheet", "description": "Append rows to sheet", "params": {"spreadsheet_id": "str", "range": "str", "values": "list"}},
-            {"name": "list_drive_files", "description": "List Drive files", "params": {"query": "str (optional)", "page_size": "int (optional)"}},
-            {"name": "create_calendar_event", "description": "Create calendar event", "params": {"summary": "str", "start": "str", "end": "str", "description": "str (optional)"}},
-            {"name": "send_email", "description": "Send email via Gmail", "params": {"to": "str", "subject": "str", "body": "str"}},
+            {
+                "name": "create_doc",
+                "description": "Create a Google Doc",
+                "params": {"title": "str", "content": "str (optional)"},
+            },
+            {
+                "name": "create_sheet",
+                "description": "Create a Google Sheet",
+                "params": {"title": "str", "headers": "list (optional)"},
+            },
+            {
+                "name": "append_to_sheet",
+                "description": "Append rows to sheet",
+                "params": {"spreadsheet_id": "str", "range": "str", "values": "list"},
+            },
+            {
+                "name": "list_drive_files",
+                "description": "List Drive files",
+                "params": {"query": "str (optional)", "page_size": "int (optional)"},
+            },
+            {
+                "name": "create_calendar_event",
+                "description": "Create calendar event",
+                "params": {"summary": "str", "start": "str", "end": "str", "description": "str (optional)"},
+            },
+            {
+                "name": "send_email",
+                "description": "Send email via Gmail",
+                "params": {"to": "str", "subject": "str", "body": "str"},
+            },
         ]
 
     def _token(self) -> str:
@@ -67,9 +91,16 @@ class GoogleWorkspaceConnector(BaseConnector):
                     data = resp.json()
                     sid = data.get("spreadsheetId", "")
                     values = [params["headers"]]
-                    await sess.put(f"https://sheets.googleapis.com/v4/spreadsheets/{sid}/values/A1?valueInputOption=RAW", headers=hdrs, json={"values": values})
+                    await sess.put(
+                        f"https://sheets.googleapis.com/v4/spreadsheets/{sid}/values/A1?valueInputOption=RAW",
+                        headers=hdrs, json={"values": values},
+                    )
             elif action == "append_to_sheet":
-                resp = await sess.post(f"https://sheets.googleapis.com/v4/spreadsheets/{params['spreadsheet_id']}/values/{params.get('range', 'A1')}:append?valueInputOption=RAW", headers=hdrs, json={"values": params["values"]})
+                url = (
+                    f"https://sheets.googleapis.com/v4/spreadsheets/{params['spreadsheet_id']}"
+                    f"/values/{params.get('range', 'A1')}:append?valueInputOption=RAW"
+                )
+                resp = await sess.post(url, headers=hdrs, json={"values": params["values"]})
             elif action == "list_drive_files":
                 q = params.get("query", "")
                 page = params.get("page_size", 20)
@@ -78,16 +109,26 @@ class GoogleWorkspaceConnector(BaseConnector):
                     url += f"&q={q}"
                 resp = await sess.get(url, headers=hdrs)
             elif action == "create_calendar_event":
-                body = {"summary": params["summary"], "start": {"dateTime": params["start"]}, "end": {"dateTime": params["end"]}}
+                body = {
+                    "summary": params["summary"],
+                    "start": {"dateTime": params["start"]},
+                    "end": {"dateTime": params["end"]},
+                }
                 if params.get("description"):
                     body["description"] = params["description"]
-                resp = await sess.post("https://www.googleapis.com/calendar/v3/calendars/primary/events", headers=hdrs, json=body)
+                resp = await sess.post(
+                    "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+                    headers=hdrs, json=body,
+                )
             elif action == "send_email":
                 import base64 as b64
 
                 message = f"From: me\r\nTo: {params['to']}\r\nSubject: {params['subject']}\r\n\r\n{params['body']}"
                 encoded = b64.urlsafe_b64encode(message.encode()).decode()
-                resp = await sess.post("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", headers=hdrs, json={"raw": encoded})
+                resp = await sess.post(
+                    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                    headers=hdrs, json={"raw": encoded},
+                )
             else:
                 return {"status": "error", "message": f"Unknown action: {action}"}
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,8 +33,8 @@ async def list_decisions(
         decisions = await repo.list(skip=skip, limit=limit, order_by="created_at", descending=True)
 
     decision_ids = [d.id for d in decisions]
-    options_by_decision: dict[str, list[dict]] = {}
-    explanations_by_entity: dict[str, dict] = {}
+    options_by_decision: dict[str, list[dict[str, Any]]] = {}
+    explanations_by_entity: dict[str, dict[str, Any]] = {}
     if decision_ids:
         opt_repo = DecisionOptionRepository(session)
         all_options = []

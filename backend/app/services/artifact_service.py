@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,7 +33,7 @@ class ArtifactService:
         message: str | None = None,
         progress: float = 0.0,
         event_order: int = 0,
-    ) -> dict:
+    ) -> dict[str, Any]:
         event = StoredExecutionEvent(
             objective_id=objective_id,
             stage=stage,
@@ -56,7 +57,7 @@ class ArtifactService:
 
     async def get_events(
         self, objective_id: str, *, skip: int = 0, limit: int = 500
-    ) -> dict:
+    ) -> dict[str, Any]:
         events = await self._event_repo.list_by_objective(
             objective_id, skip=skip, limit=limit
         )
@@ -77,7 +78,7 @@ class ArtifactService:
             "total": len(events),
         }
 
-    async def clear_events(self, objective_id: str) -> dict:
+    async def clear_events(self, objective_id: str) -> dict[str, Any]:
         await self._event_repo.delete_by_objective(objective_id)
         await self._session.commit()
         return {"cleared": True}
@@ -110,17 +111,17 @@ class ArtifactService:
         retries: int = 0,
         timeout_seconds: int | None = None,
         error: str | None = None,
-        parent_agents: dict | None = None,
-        child_agents: dict | None = None,
-        upstream: list | None = None,
-        downstream: list | None = None,
-        tool_calls: list | None = None,
+        parent_agents: dict[str, Any] | None = None,
+        child_agents: dict[str, Any] | None = None,
+        upstream: list[Any] | None = None,
+        downstream: list[Any] | None = None,
+        tool_calls: list[Any] | None = None,
         reasoning_summary: str | None = None,
         decision_summary: str | None = None,
-        artifacts_produced: list | None = None,
+        artifacts_produced: list[Any] | None = None,
         confidence: float | None = None,
-        output_metadata: dict | None = None,
-    ) -> dict:
+        output_metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         telemetry = AgentTelemetry(
             objective_id=objective_id,
             agent_id=agent_id,
@@ -162,7 +163,7 @@ class ArtifactService:
 
     async def get_telemetry(
         self, objective_id: str, *, skip: int = 0, limit: int = 200
-    ) -> dict:
+    ) -> dict[str, Any]:
         records = await self._telemetry_repo.list_by_objective(
             objective_id, skip=skip, limit=limit
         )
@@ -205,7 +206,7 @@ class ArtifactService:
             "total": len(records),
         }
 
-    async def get_telemetry_summary(self, objective_id: str) -> dict:
+    async def get_telemetry_summary(self, objective_id: str) -> dict[str, Any]:
         records = await self._telemetry_repo.list_by_objective(objective_id)
         total_agents = len(records)
         completed = sum(1 for r in records if r.status == "completed")
@@ -233,10 +234,10 @@ class ArtifactService:
     async def save_snapshot(
         self,
         objective_id: str,
-        snapshot_data: dict,
+        snapshot_data: dict[str, Any],
         *,
         snapshot_version: int = 1,
-    ) -> dict:
+    ) -> dict[str, Any]:
         existing = await self._snapshot_repo.get_by_objective(objective_id)
         if existing:
             updated = await self._snapshot_repo.update(
@@ -260,7 +261,7 @@ class ArtifactService:
         await self._session.commit()
         return {"id": created.id, "version": created.snapshot_version}
 
-    async def get_snapshot(self, objective_id: str) -> dict | None:
+    async def get_snapshot(self, objective_id: str) -> dict[str, Any] | None:
         snapshot = await self._snapshot_repo.get_by_objective(objective_id)
         if not snapshot:
             return None
@@ -276,3 +277,4 @@ class ArtifactService:
             if snapshot.updated_at
             else None,
         }
+

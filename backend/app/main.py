@@ -1,32 +1,28 @@
 from __future__ import annotations
 
+import contextlib
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from app import process_info  # noqa: F401  (import records process start time)
-
 from app.api.v1.router import router as api_router
 from app.api.v1.ws import router as ws_router
 from app.config import settings
-from app.kernel import ai_kernel
 from app.logging_ import configure_logging
 from app.middleware import setup_exception_handlers, setup_middleware
 from app.redis_client import redis_client
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> None:
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
-    try:
+    with contextlib.suppress(Exception):
         await redis_client.connect()
-    except Exception:
-        pass
     yield
-    try:
+    with contextlib.suppress(Exception):
         await redis_client.disconnect()
-    except Exception:
-        pass
 
 
 app = FastAPI(
@@ -51,7 +47,7 @@ async def _init_ws_listeners() -> None:
 
 
 @app.get("/")
-async def root() -> dict:
+async def root() -> dict[str, str]:
     return {
         "service": "OrchestraOS API",
         "version": settings.api_version,

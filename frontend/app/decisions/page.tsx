@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { HealthBadge } from "@/components/health-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
-import { useDecisionsQuery, useLatestObjectiveIdQuery } from "@/hooks/use-api";
-import { apiClient } from "@/lib/api-client";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+  useApproveDecision,
+  useDecisionsQuery,
+  useLatestObjectiveIdQuery,
+  useRejectDecision,
+} from "@/hooks/use-api";
+import { useObjectiveContextStore } from "@/store";
+import type { ExecutionStatus, RiskLevel } from "@/types";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import {
@@ -16,14 +22,13 @@ import {
   BrainCircuit,
   AlertTriangle,
   ListChecks,
+  Check,
+  X,
+  Loader2,
   Scale,
   Orbit,
-  CheckCircle2,
-  XCircle,
-  MessageSquare,
   ExternalLink,
 } from "lucide-react";
-import type { RiskLevel } from "@/types";
 
 const STATUS_STYLES: Record<string, { label: string; dot: string; bg: string; border: string }> = {
   PENDING: { label: "Pending", dot: "bg-amber-400", bg: "bg-amber-400/8", border: "border-amber-400/20" },
@@ -32,29 +37,66 @@ const STATUS_STYLES: Record<string, { label: string; dot: string; bg: string; bo
   UNDER_REVIEW: { label: "Under Review", dot: "bg-violet-400", bg: "bg-violet-400/8", border: "border-violet-400/20" },
 };
 
-export default function DecisionsPage() {
-  const { data: objectiveId } = useLatestObjectiveIdQuery();
-  const { data: decisions } = useDecisionsQuery(objectiveId);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const queryClient = useQueryClient();
+function mapDecisionStatus(status: string): ExecutionStatus {
+  if (status === "APPROVED") return "completed";
+  if (status === "REJECTED") return "failed";
+  if (status === "UNDER_REVIEW") return "running";
+  return "idle";
+}
 
-  const handleAction = useCallback(async (decisionId: string, action: "approve" | "reject") => {
-    setActionLoading(decisionId);
-    try {
-      await apiClient.post(`/decisions/${decisionId}/${action}`, {
-        notes: notes || null,
-        user_id: "admin",
-      });
-      setNotes("");
-      queryClient.invalidateQueries({ queryKey: ["decisions"] });
-    } catch {
-      // error handled silently
-    } finally {
-      setActionLoading(null);
+export default function DecisionsPage() {
+  return (
+    <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading...</div>}>
+      <DecisionsContent />
+    </Suspense>
+  );
+}
+
+function DecisionsContent() {
+  const searchParams = useSearchParams();
+  const { setActiveObjectiveId } = useObjectiveContextStore();
+  const urlId = searchParams.get("id");
+  const { data: latestObjectiveId } = useLatestObjectiveIdQuery(!urlId);
+  const objectiveId = urlId ?? latestObjectiveId;
+  const { data: decisions } = useDecisionsQuery(objectiveId);
+  const approveMutation = useApproveDecision();
+  const rejectMutation = useRejectDecision();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Sync URL param to global execution context
+  useEffect(() => {
+    if (urlId) {
+      setActiveObjectiveId(urlId);
     }
-  }, [notes, queryClient]);
+  }, [urlId, setActiveObjectiveId]);
+
+  const toggleExpand = (id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
+
+  const runAction = (
+    id: string,
+    action: "approve" | "reject",
+  ) => {
+    setActionError(null);
+    setPendingId(id);
+    const payload = { decisionId: id, notes: notes[id] || undefined };
+    const mutation = action === "approve" ? approveMutation : rejectMutation;
+    mutation.mutate(payload, {
+      onSuccess: () => setPendingId(null),
+      onError: (err) => {
+        setPendingId(null);
+        setActionError(err instanceof Error ? err.message : "Action failed");
+      },
+    });
+  };
+
+  const isActionPending = (id: string) => pendingId === id;
+  const canAct = (status: string) =>
+    status === "PENDING" || status === "UNDER_REVIEW";
 
   const pendingCount = decisions?.filter((d) => d.status === "PENDING").length ?? 0;
 
@@ -135,14 +177,13 @@ export default function DecisionsPage() {
             const optionsCount = d.options?.length ?? 0;
             const riskLevel = d.risk_level as RiskLevel;
             const st = STATUS_STYLES[d.status] ?? STATUS_STYLES.PENDING;
-            const isLoading = actionLoading === d.id;
 
             return (
               <motion.div
                 key={d.id}
-                initial={{ opacity: 0, y: 8, scale: 0.99 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: 0.1 + i * 0.04 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + i * 0.05 }}
                 className={cn(
                   "rounded-xl border transition-all duration-300 overflow-hidden",
                   d.status === "APPROVED" ? "border-emerald-500/20 bg-emerald-500/[0.02]" :
@@ -150,13 +191,12 @@ export default function DecisionsPage() {
                   "border-border/50 bg-card hover:border-border"
                 )}
               >
-                {/* Main Card */}
-                <button
-                  onClick={() => setExpandedId(isExpanded ? null : d.id)}
-                  className="flex w-full items-start justify-between gap-4 p-5 text-left"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex w-full items-start justify-between gap-4 p-5">
+                  <button
+                    onClick={() => toggleExpand(d.id)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-semibold">{d.title}</h3>
                       <HealthBadge status={riskLevel} type="risk" size="sm" />
                       <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium", st.bg, st.border, `text-${st.dot.replace("bg-", "")}`)}>
@@ -178,17 +218,54 @@ export default function DecisionsPage() {
                         showValue
                       />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] text-muted-foreground/50">Details</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 text-muted-foreground/40 transition-transform duration-200",
-                        isExpanded && "rotate-180",
-                      )}
+                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <HealthBadge
+                      status={mapDecisionStatus(d.status)}
+                      type="status"
+                      size="sm"
                     />
+                    {canAct(d.status) && (
+                      <>
+                        <button
+                          onClick={() => runAction(d.id, "approve")}
+                          disabled={isActionPending(d.id)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-400 transition-all hover:bg-emerald-500/20 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
+                        >
+                          {isActionPending(d.id) ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Check className="h-3 w-3" />
+                          )}
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => runAction(d.id, "reject")}
+                          disabled={isActionPending(d.id)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1 text-[11px] font-medium text-red-400 transition-all hover:bg-red-500/20 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
+                        >
+                          <X className="h-3 w-3" />
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => toggleExpand(d.id)}
+                      className="flex items-center gap-2"
+                      aria-label="Toggle details"
+                    >
+                      <span className="text-[10px] text-muted-foreground/60">
+                        Explainability
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                          isExpanded && "rotate-180",
+                        )}
+                      />
+                    </button>
                   </div>
-                </button>
+                </div>
 
                 {/* Expanded Details */}
                 <AnimatePresence>
@@ -313,61 +390,23 @@ export default function DecisionsPage() {
                           </div>
                         </Section>
 
-                        {/* Approve / Reject Actions */}
-                        {d.status === "PENDING" && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="rounded-xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.03] to-indigo-500/[0.03] p-5"
-                          >
-                            <div className="flex items-center gap-2 mb-4">
-                              <MessageSquare className="h-4 w-4 text-violet-400" />
-                              <span className="text-xs font-semibold text-violet-300">Your Review</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="text"
-                                placeholder="Add review notes (optional)..."
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                className="min-w-0 flex-1 rounded-lg border border-border/30 bg-background/60 px-3.5 py-2.5 text-xs placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-violet-400/30 focus:border-violet-400/30 transition-all"
-                              />
-                              <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => handleAction(d.id, "approve")}
-                                disabled={isLoading}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 px-4 py-2.5 text-xs font-semibold text-emerald-300 border border-emerald-500/20 hover:from-emerald-500/30 hover:to-emerald-600/20 hover:border-emerald-500/30 transition-all duration-200 disabled:opacity-50"
-                              >
-                                {isLoading ? (
-                                  <span className="h-3.5 w-3.5 rounded-full border-2 border-emerald-400/30 border-t-emerald-400 animate-spin" />
-                                ) : (
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                )}
-                                Approve
-                              </motion.button>
-                              <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => handleAction(d.id, "reject")}
-                                disabled={isLoading}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-red-500/15 to-red-600/10 px-4 py-2.5 text-xs font-semibold text-red-300 border border-red-500/15 hover:from-red-500/25 hover:to-red-600/15 hover:border-red-500/25 transition-all duration-200 disabled:opacity-50"
-                              >
-                                <XCircle className="h-3.5 w-3.5" />
-                                Reject
-                              </motion.button>
-                            </div>
-                          </motion.div>
-                        )}
-
-                        {d.status !== "PENDING" && d.review_notes && (
-                          <div className="rounded-lg bg-muted/15 px-4 py-3 border border-border/20">
-                            <div className="flex items-center gap-2 mb-1">
-                              <MessageSquare className="h-3.5 w-3.5 text-muted-foreground/50" />
-                              <span className="text-[10px] font-medium text-muted-foreground/60">Review Notes</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground/70 italic">&ldquo;{d.review_notes}&rdquo;</p>
+                        {canAct(d.status) && (
+                          <div className="border-t border-border/30 pt-4">
+                            <input
+                              value={notes[d.id] ?? ""}
+                              onChange={(e) =>
+                                setNotes((prev) => ({
+                                  ...prev,
+                                  [d.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="Optional review notes..."
+                              className="w-full rounded-lg border border-border/30 bg-muted/20 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/40 focus:border-primary/40 focus:outline-none"
+                            />
                           </div>
+                        )}
+                        {actionError && (
+                          <p className="text-xs text-red-400">{actionError}</p>
                         )}
                       </div>
                     </motion.div>

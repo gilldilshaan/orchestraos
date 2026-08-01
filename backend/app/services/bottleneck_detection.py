@@ -40,7 +40,9 @@ class BottleneckDetectionService:
             bottleneck_type = bn.get("bottleneck_type", bn.get("type", "process"))
             title = bn.get("title", description[:200])
             root_cause = bn.get("root_cause", bn.get("cause", ""))
-            recommended_resolution = bn.get("recommended_resolution", bn.get("recommendation", bn.get("resolution", "")))
+            recommended_resolution = bn.get(
+                "recommended_resolution", bn.get("recommendation", bn.get("resolution", ""))
+            )
             affected_entity_type = bn.get("affected_entity_type", "")
 
             existing = next(
@@ -80,9 +82,18 @@ class BottleneckDetectionService:
         return {"bottlenecks": bottlenecks}
 
     async def list_bottlenecks(
-        self, objective_id: str, skip: int = 0, limit: int = 50
+        self,
+        objective_id: str,
+        severity: str | None = None,
+        status: str | None = None,
+        skip: int = 0,
+        limit: int = 50,
     ) -> list[dict[str, Any]]:
         items = await self._repo.get_by_objective(objective_id)
+        if severity:
+            items = [b for b in items if b.severity == severity]
+        if status:
+            items = [b for b in items if b.status == status]
         items = items[skip : skip + limit] if limit else items
         return [
             {
@@ -95,6 +106,9 @@ class BottleneckDetectionService:
             }
             for b in items
         ]
+
+    async def resolve_bottleneck(self, bottleneck_id: str) -> dict[str, Any] | None:
+        return await self.resolve(bottleneck_id)
 
     async def resolve(self, bottleneck_id: str) -> dict[str, Any] | None:
         b = await self._repo.update(bottleneck_id, {"status": "resolved"})

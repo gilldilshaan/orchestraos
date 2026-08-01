@@ -141,7 +141,7 @@ class EventTimeline:
         last = datetime.fromisoformat(self._events[-1].timestamp)
         return (last - first).total_seconds()
 
-    def export(self, fmt: str = "dict") -> list[dict[str, Any]]:
+    def export(self, fmt: str = "dict") -> list[dict[str, Any]] | str:
         if fmt == "dict":
             return [
                 {

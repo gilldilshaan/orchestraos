@@ -1,11 +1,17 @@
+from app.repositories.connector_repository import (
+    ConnectorActionRepository,
+    ConnectorAuditLogRepository,
+    ConnectorConfigRepository,
+    ConnectorWebhookRepository,
+)
 from app.repositories.extensions_repository import (
     AgentTelemetryRepository,
     DecisionOptionRepository,
     DecisionRepository,
     ExecutionSnapshotRepository,
     ExplanationRepository,
-    KPIRepository,
     KnowledgeGraphRepository,
+    KPIRepository,
     MilestoneRepository,
     ObjectiveCompilationRepository,
     PlanRepository,
@@ -13,20 +19,6 @@ from app.repositories.extensions_repository import (
     RiskRepository,
     ScenarioRepository,
     StoredExecutionEventRepository,
-)
-from app.repositories.connector_repository import (
-    ConnectorActionRepository,
-    ConnectorAuditLogRepository,
-    ConnectorConfigRepository,
-    ConnectorWebhookRepository,
-)
-from app.repositories.intelligence_repository import (
-    AgentConflictRepository,
-    AgentMessageRepository,
-    ApprovalGateRepository,
-    ExecutionCheckpointRepository,
-    SelfHealingActionRepository,
-    WatchdogAlertRepository,
 )
 from app.repositories.features_repository import (
     BottleneckRepository,
@@ -37,6 +29,14 @@ from app.repositories.features_repository import (
     MissingInfoCheckRepository,
     ResourceGapRepository,
     SuccessProbabilityRepository,
+)
+from app.repositories.intelligence_repository import (
+    AgentConflictRepository,
+    AgentMessageRepository,
+    ApprovalGateRepository,
+    ExecutionCheckpointRepository,
+    SelfHealingActionRepository,
+    WatchdogAlertRepository,
 )
 from app.repositories.job_repository import JobRepository
 from app.repositories.objective_repository import ObjectiveRepository
@@ -71,9 +71,9 @@ __all__ = [
     "PlanRepository",
     "PlanVersionRepository",
     "ResourceGapRepository",
-    "SelfHealingActionRepository",
     "RiskRepository",
     "ScenarioRepository",
+    "SelfHealingActionRepository",
     "StoredExecutionEventRepository",
     "SuccessProbabilityRepository",
     "UserRepository",

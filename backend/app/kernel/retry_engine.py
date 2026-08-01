@@ -4,14 +4,14 @@ import asyncio
 import random
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ClassVar
 
 
 class RetryEngine:
     """Handles retry logic for LLM calls with exponential backoff,
     jitter, and configurable strategies per task type."""
 
-    DEFAULT_CONFIG: dict[str, Any] = {
+    DEFAULT_CONFIG: ClassVar[dict[str, Any]] = {
         "max_retries": 3,
         "base_delay": 1.0,
         "max_delay": 30.0,
@@ -19,7 +19,7 @@ class RetryEngine:
         "exponential_base": 2.0,
     }
 
-    TASK_RETRY_CONFIGS: dict[str, dict[str, Any]] = {
+    TASK_RETRY_CONFIGS: ClassVar[dict[str, dict[str, Any]]] = {
         "compile": {"max_retries": 2, "base_delay": 1.0},
         "plan": {"max_retries": 3, "base_delay": 1.0},
         "organization": {"max_retries": 2, "base_delay": 1.0},
@@ -50,8 +50,8 @@ class RetryEngine:
         return config
 
     def _compute_delay(self, attempt: int, config: dict[str, Any]) -> float:
-        delay = config["base_delay"] * (config["exponential_base"] ** attempt)
-        delay = min(delay, config["max_delay"])
+        delay = float(config["base_delay"]) * (float(config["exponential_base"]) ** attempt)
+        delay = min(delay, float(config["max_delay"]))
         if config.get("jitter", True):
             delay *= 0.5 + random.random() * 0.5
         return delay
@@ -68,9 +68,7 @@ class RetryEngine:
             return True
         if "api key" in error_str or "unauthorized" in error_str:
             return False
-        if "invalid" in error_str or "bad request" in error_str:
-            return False
-        return True
+        return not ("invalid" in error_str or "bad request" in error_str)
 
     def _record_attempt(
         self, task_id: str, attempt: int, error: str | None, delay: float

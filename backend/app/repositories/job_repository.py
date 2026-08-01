@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -73,7 +74,7 @@ class JobRepository(BaseRepository[Job]):
         )
 
     async def mark_completed(
-        self, id_: str, result: dict | None = None
+        self, id_: str, result: dict[str, Any] | None = None
     ) -> Job | None:
         return await self.update(
             id_,
@@ -85,7 +86,7 @@ class JobRepository(BaseRepository[Job]):
             },
         )
 
-    async def mark_failed(self, id_: str, error: dict | None = None) -> Job | None:
+    async def mark_failed(self, id_: str, error: dict[str, Any] | None = None) -> Job | None:
         return await self.update(
             id_,
             {

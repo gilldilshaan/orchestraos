@@ -286,7 +286,7 @@ class RuntimeOrganizationManager:
         if not self._supervisor_analyses:
             return 1.0
         scores = [a["health_score"] for a in self._supervisor_analyses]
-        return sum(scores) / len(scores)
+        return float(sum(scores) / len(scores))
 
     def supervisor_bottlenecks(self) -> list[str]:
         all_bn: list[str] = []

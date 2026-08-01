@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,12 +22,27 @@ from app.repositories.features_repository import (
     BottleneckRepository,
     BusinessReadinessRepository,
     DecisionMemoryRepository,
-    DependencyGraphRepository,
     DevilsAdvocateRepository,
-    ResourceGapRepository,
     SuccessProbabilityRepository,
 )
+from app.repositories.job_repository import JobRepository
 from app.repositories.objective_repository import ObjectiveRepository
+
+DEPT_HEALTH_WEIGHTS: dict[str, float] = {
+    "active": 1.0,
+    "completed": 1.0,
+    "running": 0.6,
+    "paused": 0.5,
+    "proposed": 0.35,
+}
+
+
+def compute_org_health(depts: list[Any]) -> float | None:
+    """Derive an organization health score from department statuses."""
+    if not depts:
+        return None
+    scores = [DEPT_HEALTH_WEIGHTS.get(d.status or "proposed", 0.35) for d in depts]
+    return round(sum(scores) / len(scores), 2)
 
 
 class SimulationEngine:
@@ -67,7 +80,10 @@ class SimulationEngine:
             "roadmap": plan.roadmap if plan else None,
             "timeline": plan.timeline if plan else None,
             "total_cost": plan.total_cost if plan else None,
-            "milestones": [{"name": m.name, "order": m.order, "status": m.status} for m in (plan.milestones if plan else [])],
+            "milestones": [
+                {"name": m.name, "order": m.order, "status": m.status}
+                for m in (plan.milestones if plan else [])
+            ],
         } if plan else {}
 
         context = {
@@ -245,8 +261,8 @@ class KnowledgeGraphService:
             links.append(edge)
 
         decisions = await DecisionRepository(self._session).list_by_objective(objective_id)
-        for d in decisions:
-            edge = await self.add_edge("Objective", objective_id, "Decision", d.id, "HAS_DECISION")
+        for decision in decisions:
+            edge = await self.add_edge("Objective", objective_id, "Decision", decision.id, "HAS_DECISION")
             links.append(edge)
 
         return {"links_created": len(links)}
@@ -282,8 +298,6 @@ class DashboardAggregator:
                 completed_ms = sum(1 for m in milestones if m.status == "completed")
 
         total_head_count = sum(d.head_count or 0 for d in depts)
-        total_budget = sum(d.budget or 0 for d in depts) if depts else None
-        decision_risk = len([d for d in decisions if d.status == "PENDING"])
 
         # New feature data integrations
         readiness_repo = BusinessReadinessRepository(self._session)
@@ -316,6 +330,62 @@ class DashboardAggregator:
                 "created_at": e.created_at.isoformat() if e.created_at else None,
             }
 
+        # ── Derived (real) health signals ─────────────────────────────────
+        # Every score below is computed from persisted rows instead of
+        # hardcoded placeholders.
+        progress_pct = (
+            WorkflowStateMachine.get_progress_percent(objective.status)
+            if objective
+            else 0
+        )
+        status = objective.status if objective else None
+
+        if status == "completed":
+            execution_score = 1.0
+        elif status == "failed":
+            execution_score = 0.0
+        else:
+            milestone_progress = (
+                (completed_ms / len(milestones)) if milestones else None
+            )
+            milestone_bonus = milestone_progress if milestone_progress is not None else 0
+            execution_score = round(
+                0.35 + 0.45 * (progress_pct / 100) + 0.2 * milestone_bonus, 2
+            )
+
+        coordination_score = None
+        if depts:
+            active_dept_ratio = sum(1 for d in depts if d.status == "active") / len(depts)
+            avg_dept_size = total_head_count / len(depts) if total_head_count else 0
+            size_factor = min(avg_dept_size / 4.0, 1.0)
+            coordination_score = round(
+                0.6 * active_dept_ratio + 0.4 * size_factor, 2
+            )
+
+        confidence_sources: list[float] = []
+        if objective and objective.confidence is not None:
+            confidence_sources.append(float(objective.confidence))
+        if active_plan and active_plan.confidence is not None:
+            confidence_sources.append(float(active_plan.confidence))
+        for d in decisions:
+            if d.confidence is not None:
+                confidence_sources.append(float(d.confidence))
+        trust_score = (
+            round(sum(confidence_sources) / len(confidence_sources), 2)
+            if confidence_sources
+            else None
+        )
+
+        job_repo = JobRepository(self._session)
+        job_counts = {
+            "active": await job_repo.count({"status": "running"}),
+            "pending": await job_repo.count({"status": "pending"}),
+            "completed": await job_repo.count({"status": "completed"}),
+            "failed": await job_repo.count({"status": "failed"}),
+        }
+
+        org_health_score = compute_org_health(depts)
+
         return {
             "objective": {
                 "id": objective.id if objective else None,
@@ -331,11 +401,16 @@ class DashboardAggregator:
             },
             "organization": {
                 "departments": [
-                    {"name": d.name, "status": d.status, "role_count": len(d.roles) if d.roles else 0, "head_count": d.head_count or 0}
+                    {
+                        "name": d.name,
+                        "status": d.status,
+                        "role_count": len(d.roles) if d.roles else 0,
+                        "head_count": d.head_count or 0,
+                    }
                     for d in depts
                 ],
                 "total_head_count": total_head_count,
-                "health_score": 0.85 if depts else None,
+                "health_score": org_health_score,
             },
             "plan": {
                 "id": active_plan.id if active_plan else None,
@@ -375,7 +450,7 @@ class DashboardAggregator:
                     for d in pending_decisions[:10]
                 ],
             },
-            "jobs": {"active": 0, "pending": 0, "completed": 0, "failed": 0},
+            "jobs": job_counts,
             "business_readiness": {
                 "overall_score": readiness.overall_score if readiness else None,
                 "strengths": readiness.strengths if readiness else [],
@@ -411,10 +486,10 @@ class DashboardAggregator:
             },
             "executive_report": executive_report,
             "system_health": {
-                "execution_score": 0.82,
-                "coordination_score": 0.75,
+                "execution_score": execution_score,
+                "coordination_score": coordination_score,
                 "risk_index": (sum(r.risk_score or 0 for r in risks) / len(risks)) if risks else 0,
-                "trust_score": 0.88,
+                "trust_score": trust_score,
                 "decision_quality": (sum(d.confidence or 0 for d in decisions) / len(decisions)) if decisions else 0,
                 "business_readiness_score": readiness.overall_score if readiness else None,
                 "success_probability_score": probability.success_probability if probability else None,

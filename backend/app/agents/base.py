@@ -38,11 +38,11 @@ class BaseAgent(ABC):
         entity_id: str,
         recommendation: str,
         reasoning: str,
-        evidence: list | None = None,
+        evidence: list[Any] | None = None,
         confidence: float | None = None,
         risk_level: str | None = None,
         affected_departments: list[str] | None = None,
-        assumptions: list | None = None,
+        assumptions: list[Any] | None = None,
         model_used: str | None = None,
     ) -> None:
         from app.models.extensions import Explanation
@@ -60,6 +60,10 @@ class BaseAgent(ABC):
             risk_level=risk_level or "medium",
             affected_departments=affected_departments or [],
             dependencies=[],
-            model_used=model_used or (self._llm.model_router.get_preferred_provider("compile") if hasattr(self._llm, "model_router") else None),
+            model_used=model_used or (
+                self._llm.model_router.get_preferred_provider("compile")
+                if hasattr(self._llm, "model_router")
+                else None
+            ),
         )
         await repo.create(explanation)

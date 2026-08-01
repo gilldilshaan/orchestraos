@@ -24,6 +24,7 @@ import {
   LineChart,
   Plug,
   Zap,
+  FileText,
 } from "lucide-react";
 
 const navGroups = [
@@ -48,6 +49,7 @@ const navGroups = [
   {
     label: "Analyze",
     items: [
+      { href: "/reports", label: "Reports", icon: FileText },
       { href: "/analytics", label: "Runtime Analytics", icon: LineChart },
       { href: "/metrics", label: "Aggregate Metrics", icon: BarChart3 },
       { href: "/diff", label: "Execution Diff", icon: DiffIcon },

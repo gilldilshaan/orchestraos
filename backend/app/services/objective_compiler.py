@@ -24,7 +24,6 @@ from app.repositories.extensions_repository import ObjectiveCompilationRepositor
 from app.repositories.objective_repository import ObjectiveRepository
 from app.services.artifact_service import ArtifactService
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -103,64 +102,64 @@ class ObjectiveCompilerService:
 
         # ── Pipeline step handlers ────────────────────────────────────────
 
-        async def _compile_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _compile_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             return await self.compile(objective_id)
 
-        async def _readiness_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _readiness_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             from app.services.business_readiness import BusinessReadinessService
             svc = BusinessReadinessService(self._session)
             result = await svc.assess(objective_id)
             return result
 
-        async def _plan_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _plan_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             planner = PlannerAgent(self._session, kernel=ai_kernel)
             result = await planner.run(objective_id)
             await self._transition_state(objective_id, "planned")
             return result
 
-        async def _org_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _org_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             agent = OrganizationAgent(self._session, kernel=ai_kernel)
             result = await agent.run(objective_id)
             await self._transition_state(objective_id, "organized")
             return result
 
-        async def _risk_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _risk_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             agent = RiskAgent(self._session, kernel=ai_kernel)
             result = await agent.run(objective_id)
             await self._transition_state(objective_id, "risks_analyzed")
             return result
 
-        async def _decision_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _decision_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             agent = DecisionAgent(self._session, kernel=ai_kernel)
             result = await agent.run(objective_id)
             await self._transition_state(objective_id, "decision_pending")
             return result
 
-        async def _devils_advocate_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _devils_advocate_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             agent = DevilsAdvocateAgent(self._session, kernel=ai_kernel)
             return await agent.run(objective_id)
 
-        async def _success_prob_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _success_prob_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             from app.services.success_probability import SuccessProbabilityService
             svc = SuccessProbabilityService(self._session)
             return await svc.calculate(objective_id)
 
-        async def _resource_gap_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _resource_gap_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             from app.services.resource_gap import ResourceGapService
             svc = ResourceGapService(self._session)
             return await svc.analyze(objective_id)
 
-        async def _dep_graph_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _dep_graph_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             from app.services.dependency_engine import DependencyEngineService
             svc = DependencyEngineService(self._session)
             return await svc.build_graph(objective_id)
 
-        async def _bottleneck_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _bottleneck_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             from app.services.bottleneck_detection import BottleneckDetectionService
             svc = BottleneckDetectionService(self._session)
             return await svc.scan(objective_id)
 
-        async def _dashboard_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _dashboard_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             from app.agents.tasks import DashboardAgent
             from app.services.engine import DashboardAggregator
             agent = DashboardAgent(self._session, kernel=ai_kernel)
@@ -171,7 +170,7 @@ class ObjectiveCompilerService:
             aggregator = DashboardAggregator(self._session)
             return await aggregator.get_dashboard(objective_id)
 
-        async def _scenario_step(objective_id: str, **kwargs: Any) -> dict[str, Any]:
+        async def _scenario_step(objective_id: str, **_kwargs: Any) -> dict[str, Any]:
             from app.services.scenario_simulator import ScenarioSimulatorService
             svc = ScenarioSimulatorService(self._session)
             return await svc.simulate(objective_id)
@@ -218,6 +217,16 @@ class ObjectiveCompilerService:
             await explain.generate_pipeline_explanation(objective_id, pipeline_result)
         except Exception:
             logger.exception("Failed to generate pipeline explanation")
+
+        # Persist the pipeline report for the Reports page
+        try:
+            await self._persist_report(objective_id, {
+                "source": "full_pipeline",
+                "results": pipeline_result["results"],
+                "status": pipeline_result["status"],
+            })
+        except Exception:
+            logger.exception("Failed to persist pipeline report")
 
         return {
             "compilation": pipeline_result["results"].get("compiler"),
@@ -287,6 +296,26 @@ class ObjectiveCompilerService:
 
         await self._transition_state(objective_id, "completed")
 
+        # Persist the kernel report for the Reports page
+        try:
+            await self._persist_report(objective_id, {
+                "source": "dynamic_org",
+                "organization_report": org_result.get("organization_report"),
+                "final_report": org_result.get("final_report"),
+                "executive_decision": org_result.get("executive_decision"),
+                "results": [
+                    {
+                        "title": r["title"],
+                        "role_type": r["role_type"],
+                        "status": r["status"],
+                        "summary": r.get("summary"),
+                    }
+                    for r in org_result.get("results", [])
+                ],
+            })
+        except Exception:
+            logger.exception("Failed to persist report")
+
         return {
             "intelligence": intelligence.model_dump(),
             "ceo_analysis": ceo_analysis,
@@ -334,3 +363,17 @@ class ObjectiveCompilerService:
             )
         except ValueError:
             logger.warning("Invalid state transition: %s -> %s", current, target_state)
+
+    async def _persist_report(self, objective_id: str, payload: dict[str, Any]) -> None:
+        """Store the generated report in the objective's metadata for the Reports page."""
+        from datetime import UTC, datetime
+
+        objective = await self._obj_repo.get(objective_id)
+        if not objective:
+            return
+        metadata = dict(objective.metadata_ or {})
+        metadata["report"] = {
+            "generated_at": datetime.now(UTC).isoformat(),
+            **payload,
+        }
+        await self._obj_repo.update(objective_id, {"metadata_": metadata})

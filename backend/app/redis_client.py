@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import cast
 
 import redis.asyncio as aioredis
 
@@ -36,7 +36,7 @@ class RedisClient:
 
     async def get(self, key: str) -> str | None:
         if self._client:
-            return await self._client.get(key)
+            return cast(str | None, await self._client.get(key))
         return None
 
     async def set(self, key: str, value: str, ttl: int = 300) -> None:

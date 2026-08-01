@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
@@ -22,6 +23,7 @@ from app.schemas import (
 )
 from app.services.execution_events import sse_manager
 from app.services.objective_compiler import ObjectiveCompilerService
+from app.services.report_service import ReportService
 
 router = APIRouter(prefix="/objectives", tags=["Objectives"])
 
@@ -150,6 +152,18 @@ async def compile_objective(
     return ApiResponse(data=result)
 
 
+@router.get("/{objective_id}/report", response_model=ApiResponse)
+async def get_objective_report(
+    objective_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> ApiResponse:
+    service = ReportService(session)
+    report = await service.get_report(objective_id)
+    if report is None:
+        return ApiResponse(data=None, meta={"message": "Objective not found"})
+    return ApiResponse(data=report)
+
+
 @router.post("/{objective_id}/generate", response_model=ApiResponse)
 async def generate_full_pipeline(
     objective_id: str,
@@ -164,11 +178,20 @@ async def generate_full_pipeline(
 
 @router.get("/{objective_id}/events")
 async def stream_execution_events(objective_id: str, request: Request) -> StreamingResponse:
-    async def event_generator() -> str:
+    async def event_generator() -> AsyncGenerator[str, None]:
         q = sse_manager.subscribe(objective_id)
         try:
             # Send initial connection event
-            yield f"data: {json.dumps({'timestamp': None, 'stage': 'pipeline', 'status': 'connected', 'message': 'Connected to execution stream', 'progress': 0.0})}\n\n"
+            initial_event = json.dumps(
+                {
+                    "timestamp": None,
+                    "stage": "pipeline",
+                    "status": "connected",
+                    "message": "Connected to execution stream",
+                    "progress": 0.0,
+                }
+            )
+            yield f"data: {initial_event}\n\n"
             while True:
                 if await request.is_disconnected():
                     break

@@ -340,11 +340,19 @@ class CEOAggregator:
         self,
         final_summary: str = "",
         recommendations: list[str] | None = None,
+        supervisor_analyses: list[dict[str, Any]] | None = None,
+        supervisor_actions: list[dict[str, Any]] | None = None,
+        health_score: float = 1.0,
+        bottlenecks: list[str] | None = None,
     ) -> OrganizationReport:
         """Convenience wrapper — merge + detect conflicts in one call."""
         return self.merge_reports(
             final_summary=final_summary,
             recommendations=recommendations,
+            supervisor_analyses=supervisor_analyses,
+            supervisor_actions=supervisor_actions,
+            health_score=health_score,
+            bottlenecks=bottlenecks,
         )
 
 

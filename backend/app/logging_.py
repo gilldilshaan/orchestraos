@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from typing import cast
+
 import structlog
-from structlog.stdlib import ProcessorFormatter
 
 
 def configure_logging() -> None:
@@ -24,4 +25,4 @@ def configure_logging() -> None:
 
 
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
-    return structlog.get_logger(name or __name__)
+    return cast(structlog.stdlib.BoundLogger, structlog.get_logger(name or __name__))

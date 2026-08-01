@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, cast
 
 from sqlalchemy import select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
 from app.models.base import BaseEntity
 
-T = TypeVar("T", bound="BaseEntity")
 
-
-class BaseRepository(Generic[T]):
+class BaseRepository[T: BaseEntity]:
     def __init__(self, session: AsyncSession, model: type[T]) -> None:
         self._session = session
         self._model = model
@@ -83,7 +82,7 @@ class BaseRepository(Generic[T]):
             )
         )
         result = await self._session.execute(stmt)
-        return result.rowcount > 0
+        return cast(CursorResult[Any], result).rowcount > 0
 
     async def count(self, filters: dict[str, Any] | None = None) -> int:
         stmt = select(func.count()).select_from(self._model).where(

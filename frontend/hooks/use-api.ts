@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 
 // Background poll interval for widgets that should stay live even when no
@@ -199,6 +199,59 @@ export interface ApiDecision {
   created_at: string | null;
 }
 
+export interface ApiReportSpecialist {
+  specialist_id: string;
+  title: string;
+  executive: string;
+  confidence: number;
+  execution_time: number;
+  token_usage: Record<string, number>;
+  findings: string[];
+  recommendations: string[];
+}
+
+export interface ApiReportExecutive {
+  executive_id: string;
+  executive_title: string;
+  aggregated_findings: string[];
+  risks: string[];
+  confidence: number;
+  execution_summary: string;
+  status?: string;
+  specialist_reports: ApiReportSpecialist[];
+}
+
+export interface ApiReportConflict {
+  type: string;
+  description: string;
+  sources: string[];
+  severity: string;
+}
+
+export interface ApiReport {
+  objective_id: string;
+  objective_title: string;
+  status: string;
+  source: "kernel" | "synthesized";
+  generated_at: string | null;
+  final_summary: string;
+  health_score: number;
+  confidence: number;
+  recommendations: string[];
+  bottlenecks: string[];
+  conflicts: ApiReportConflict[];
+  execution_metrics: Record<string, unknown>;
+  executive_reports: ApiReportExecutive[];
+  supervisor_analyses: Record<string, unknown>[];
+  supervisor_actions: Record<string, unknown>[];
+  results: Array<{
+    title: string;
+    role_type: string;
+    status: string;
+    summary?: string;
+  }>;
+}
+
 export interface ApiOrganization {
   objective_id: string;
   departments: ApiDepartment[];
@@ -392,6 +445,63 @@ export function useDecisionsQuery(objectiveId?: string | null) {
       return apiClient.get<ApiDecision[]>(`/decisions${params}`);
     },
     staleTime: 15_000,
+    refetchInterval: LIVE_POLL_INTERVAL,
+  });
+}
+
+export function useApproveDecision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      decisionId,
+      notes,
+      userId,
+    }: {
+      decisionId: string;
+      notes?: string;
+      userId?: string;
+    }) =>
+      apiClient.post<{ id: string; status: string }>(`/decisions/${decisionId}/approve`, {
+        notes,
+        user_id: userId,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["decisions"] });
+    },
+  });
+}
+
+export function useRejectDecision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      decisionId,
+      notes,
+      userId,
+    }: {
+      decisionId: string;
+      notes?: string;
+      userId?: string;
+    }) =>
+      apiClient.post<{ id: string; status: string }>(`/decisions/${decisionId}/reject`, {
+        notes,
+        user_id: userId,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["decisions"] });
+    },
+  });
+}
+
+// ─── Reports ─────────────────────────────────────────────
+
+export function useReportQuery(objectiveId?: string | null) {
+  return useQuery({
+    queryKey: ["objectives", objectiveId, "report"],
+    queryFn: () =>
+      apiClient.get<ApiReport>(`/objectives/${objectiveId}/report`),
+    enabled: !!objectiveId,
+    staleTime: 30_000,
     refetchInterval: LIVE_POLL_INTERVAL,
   });
 }

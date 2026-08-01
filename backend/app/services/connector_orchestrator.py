@@ -146,7 +146,9 @@ class ConnectorOrchestrator:
         try:
             result = await instance.health()
             health = result.get("status", "error")
-            await self._config_repo.update_status(connector_id, "connected" if health == "connected" else "error", health)
+            await self._config_repo.update_status(
+                connector_id, "connected" if health == "connected" else "error", health
+            )
             return {"connector_id": connector_id, "health": result}
         except Exception as e:
             await self._config_repo.update_status(connector_id, "error", "error")
@@ -189,8 +191,12 @@ class ConnectorOrchestrator:
                 "completed_at": datetime.now(),
                 "duration_ms": round(elapsed * 1000, 2),
             })
-            await self._generate_event(objective_id or c.objective_id or "", action, action_status, f"{c.provider}/{action}")
-            await self._generate_telemetry(objective_id or c.objective_id or "", c.provider, action, action_status, elapsed)
+            await self._generate_event(
+                objective_id or c.objective_id or "", action, action_status, f"{c.provider}/{action}"
+            )
+            await self._generate_telemetry(
+                objective_id or c.objective_id or "", c.provider, action, action_status, elapsed
+            )
             await self._audit(actor, connector_id, action, f"{c.provider}:{action}", action_status, result, action_id)
             await self._deliver_webhooks(c, action, result)
             return {"action_id": action_id, "status": action_status, "result": result}

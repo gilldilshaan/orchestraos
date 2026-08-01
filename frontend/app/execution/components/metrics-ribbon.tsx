@@ -1,8 +1,10 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 import { useMetrics } from "@/hooks/use-dashboard";
 import { useSSEStore } from "@/store/sse-store";
+import { useEventsQuery, useTelemetrySummaryQuery } from "@/hooks/use-api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { cn } from "@/lib/utils";
 
@@ -40,14 +42,29 @@ export function MetricsRibbon() {
   const sseProgress = useSSEStore((s) => s.progress);
   const sseConnected = useSSEStore((s) => s.connected);
   const sseEvents = useSSEStore((s) => s.events);
+  const { data: persistedEvents } = useEventsQuery(objectiveId ?? null);
+  const { data: telemetrySummary } = useTelemetrySummaryQuery(objectiveId ?? null);
 
-  const runtime = (() => {
-    if (!sseEvents.length) return metrics.avgRuntime;
-    const first = sseEvents[0];
-    const last = sseEvents[sseEvents.length - 1];
-    if (!first?.timestamp || !last?.timestamp) return metrics.avgRuntime;
-    return (new Date(last.timestamp).getTime() - new Date(first.timestamp).getTime()) / 1000;
-  })();
+  const runtime = useMemo(() => {
+    if (sseEvents.length > 0) {
+      const first = sseEvents[0];
+      const last = sseEvents[sseEvents.length - 1];
+      if (first?.timestamp && last?.timestamp) {
+        return (new Date(last.timestamp).getTime() - new Date(first.timestamp).getTime()) / 1000;
+      }
+    }
+    if (telemetrySummary?.total_runtime_ms) {
+      return telemetrySummary.total_runtime_ms / 1000;
+    }
+    if (Array.isArray(persistedEvents) && persistedEvents.length > 0) {
+      const first = persistedEvents[0];
+      const last = persistedEvents[persistedEvents.length - 1];
+      if (first?.created_at && last?.created_at) {
+        return (new Date(last.created_at).getTime() - new Date(first.created_at).getTime()) / 1000;
+      }
+    }
+    return metrics.avgRuntime;
+  }, [sseEvents, persistedEvents, telemetrySummary, metrics.avgRuntime]);
 
   return (
     <div className="flex items-center border-t border-border/30 bg-card/60 px-2 py-1 backdrop-blur-sm">

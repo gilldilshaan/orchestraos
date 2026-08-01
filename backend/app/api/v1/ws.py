@@ -93,13 +93,13 @@ async def broadcast_dashboard_update(objective_id: str, data: dict[str, Any]) ->
 
 # Register event bus listeners for real-time WebSocket pushes
 async def _setup_event_listeners() -> None:
-    async def _on_state_changed(objective_id: str, data: dict[str, Any], **kwargs: Any) -> None:
+    async def _on_state_changed(objective_id: str, data: dict[str, Any], **_kwargs: Any) -> None:
         await broadcast_dashboard_update(objective_id, {
             "event": "state_changed",
             "payload": data,
         })
 
-    async def _on_step_completed(objective_id: str, data: dict[str, Any], **kwargs: Any) -> None:
+    async def _on_step_completed(objective_id: str, data: dict[str, Any], **_kwargs: Any) -> None:
         await broadcast_dashboard_update(objective_id, {
             "event": "step_completed",
             "payload": data,

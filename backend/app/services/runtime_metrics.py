@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from sqlalchemy import select, func as sa_func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.extensions import AgentTelemetry, Department, Decision, Milestone, Plan
@@ -67,6 +67,7 @@ class RuntimeMetricsAggregator:
         # -- Batch load departments for all terminal objectives ------------
         dept_counts: list[int] = []
         head_counts: list[int] = []
+        org_healths: list[float] = []
         if terminal_ids:
             stmt = (
                 select(Department)
@@ -80,11 +81,21 @@ class RuntimeMetricsAggregator:
             for d in all_depts:
                 depts_by_obj[d.objective_id].append(d)
 
+            weights = {
+                "active": 1.0,
+                "completed": 1.0,
+                "running": 0.6,
+                "paused": 0.5,
+                "proposed": 0.35,
+            }
             for oid in terminal_ids:
                 depts = depts_by_obj.get(oid, [])
                 if depts:
                     dept_counts.append(len(depts))
                     head_counts.append(sum(d.head_count or 0 for d in depts))
+                    org_healths.append(
+                        sum(weights.get(d.status or "proposed", 0.35) for d in depts) / len(depts)
+                    )
 
         avg_executives = (
             sum(dept_counts) / len(dept_counts) if dept_counts else None
@@ -119,20 +130,24 @@ class RuntimeMetricsAggregator:
             else 1
         )
 
+        avg_org_health = (
+            round(sum(org_healths) / len(org_healths), 2) if org_healths else None
+        )
+
         # -- Batch load decisions for all terminal objectives --------------
         decision_counts: list[int] = []
         if terminal_ids:
-            stmt = (
+            stmt_decisions = (
                 select(Decision)
                 .where(Decision.objective_id.in_(terminal_ids))
                 .where(Decision.deleted_at.is_(None))
             )
-            result = await self._session.execute(stmt)
-            all_decisions = result.scalars().all()
+            result_decisions = await self._session.execute(stmt_decisions)
+            all_decisions = result_decisions.scalars().all()
 
             decisions_by_obj: dict[str, list[Decision]] = defaultdict(list)
-            for d in all_decisions:
-                decisions_by_obj[d.objective_id].append(d)
+            for decision in all_decisions:
+                decisions_by_obj[decision.objective_id].append(decision)
 
             for oid in terminal_ids:
                 decision_counts.append(len(decisions_by_obj.get(oid, [])))
@@ -146,13 +161,13 @@ class RuntimeMetricsAggregator:
         # -- Batch load plans + milestones for all completed objectives ----
         milestone_counts: list[int] = []
         if completed_ids:
-            stmt = (
+            stmt_plans = (
                 select(Plan)
                 .where(Plan.objective_id.in_(completed_ids))
                 .where(Plan.deleted_at.is_(None))
             )
-            result = await self._session.execute(stmt)
-            all_plans = result.scalars().all()
+            result_plans = await self._session.execute(stmt_plans)
+            all_plans = result_plans.scalars().all()
 
             plan_ids = [p.id for p in all_plans]
             plans_by_obj: dict[str, list[Plan]] = defaultdict(list)
@@ -161,15 +176,16 @@ class RuntimeMetricsAggregator:
 
             milestones_by_plan: dict[str, list[Milestone]] = defaultdict(list)
             if plan_ids:
-                stmt = (
+                stmt_milestones = (
                     select(Milestone)
                     .where(Milestone.plan_id.in_(plan_ids))
                     .where(Milestone.deleted_at.is_(None))
                 )
-                result = await self._session.execute(stmt)
-                all_ms = result.scalars().all()
+                result_milestones = await self._session.execute(stmt_milestones)
+                all_ms = result_milestones.scalars().all()
                 for ms in all_ms:
-                    milestones_by_plan[ms.plan_id].append(ms)
+                    if ms.plan_id is not None:
+                        milestones_by_plan[ms.plan_id].append(ms)
 
             for oid in completed_ids:
                 plans = plans_by_obj.get(oid, [])
@@ -185,14 +201,14 @@ class RuntimeMetricsAggregator:
         # -- Batch load plans for all terminal objectives (confidence) -----
         plan_confidences: list[float] = []
         if terminal_ids:
-            stmt = (
+            stmt_conf = (
                 select(Plan.confidence)
                 .where(Plan.objective_id.in_(terminal_ids))
                 .where(Plan.confidence.isnot(None))
                 .where(Plan.deleted_at.is_(None))
             )
-            result = await self._session.execute(stmt)
-            plan_confidences = [row[0] for row in result if row[0] is not None]
+            result_conf = await self._session.execute(stmt_conf)
+            plan_confidences = [row[0] for row in result_conf if row[0] is not None]
 
         if plan_confidences:
             avg_org_health = sum(plan_confidences) / len(plan_confidences)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Header, HTTPException, Request
+from fastapi import Header, HTTPException
 
 from app.redis_client import redis_client
 

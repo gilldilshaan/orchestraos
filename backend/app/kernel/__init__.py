@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from app.kernel.ai_kernel import AIKernel
 from app.kernel.event_system import (
     EventMetadata,
@@ -15,7 +17,7 @@ from app.kernel.event_system import (
 def ExecutionEngine(*args: object, **kwargs: object) -> object:  # noqa: N802
     """Lazy import to avoid circular dependency with app.agents."""
     from app.kernel.execution_engine import ExecutionEngine as E
-    return E(*args, **kwargs)
+    return E(*cast(Any, args), **cast(Any, kwargs))
 
 
 ai_kernel = AIKernel()

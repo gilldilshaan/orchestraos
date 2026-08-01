@@ -1,22 +1,23 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { motion } from "motion/react";
 import { useSSEStore } from "@/store/sse-store";
-import { Orbit, UserCheck, FileText, Scale, Activity, Zap, Radio } from "lucide-react";
+import { Orbit, FileText, Scale, Activity, Zap, Radio, Terminal } from "lucide-react";
 import { PulseRing } from "@/components/premium/page-transition";
+import { cn } from "@/lib/utils";
 
-const stageIcons: Record<string, { icon: typeof Orbit; color: string; bg: string }> = {
-  compiler: { icon: Orbit, color: "text-sky-400", bg: "bg-sky-400/10" },
-  planner: { icon: FileText, color: "text-violet-400", bg: "bg-violet-400/10" },
-  organization: { icon: Orbit, color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  risk: { icon: Scale, color: "text-amber-400", bg: "bg-amber-400/10" },
-  decision: { icon: Scale, color: "text-rose-400", bg: "bg-rose-400/10" },
-  devils_advocate: { icon: Activity, color: "text-cyan-400", bg: "bg-cyan-400/10" },
-  dashboard: { icon: FileText, color: "text-indigo-400", bg: "bg-indigo-400/10" },
+const stageIcons: Record<string, { icon: typeof Orbit; color: string }> = {
+  compiler: { icon: Orbit, color: "text-primary" },
+  planner: { icon: FileText, color: "text-primary" },
+  organization: { icon: Orbit, color: "text-success" },
+  risk: { icon: Scale, color: "text-violet-400" },
+  decision: { icon: Scale, color: "text-violet-400" },
+  devils_advocate: { icon: Activity, color: "text-cyan-400" },
+  dashboard: { icon: FileText, color: "text-primary" },
 };
 
-const defaultIcon = { icon: Zap, color: "text-muted-foreground/50", bg: "bg-muted/10" };
+const defaultIcon = { icon: Zap, color: "text-warning" };
 
 function stageLabel(stage: string): string {
   return stage
@@ -27,6 +28,8 @@ function stageLabel(stage: string): string {
 export function LiveActivity() {
   const sseEvents = useSSEStore((s) => s.events);
   const connected = useSSEStore((s) => s.connected);
+  const progress = useSSEStore((s) => s.progress);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const events = useMemo(() => {
     return sseEvents.slice(-15).map((e) => {
@@ -37,10 +40,15 @@ export function LiveActivity() {
         detail: e.message,
         time: e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "\u2014",
         color: cfg.color,
-        bg: cfg.bg,
       };
     });
   }, [sseEvents]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [events.length]);
 
   return (
     <div className="panel">
@@ -50,8 +58,11 @@ export function LiveActivity() {
             <Radio className="h-3.5 w-3.5 text-primary" />
           </div>
           <span className="panel-header-title">Live Activity</span>
+          <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[9px] tabular-nums text-primary">
+            {sseEvents.length} evt
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <PulseRing
             active={connected}
             color={connected ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
@@ -60,53 +71,78 @@ export function LiveActivity() {
           <span className="text-[10px] text-muted-foreground/40">{connected ? "Live" : "Disconnected"}</span>
         </div>
       </div>
-      <div className="panel-body max-h-[380px] overflow-y-auto p-0">
+      <div className="panel-body max-h-[320px] overflow-y-auto p-0" ref={scrollRef}>
         {events.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center px-6">
-            <div className="relative mb-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border/20">
-                <Radio className="h-6 w-6 text-muted-foreground/30" />
-              </div>
-              <motion.div
-                className="pointer-events-none absolute -inset-2 rounded-2xl border border-border/10"
-                animate={{ opacity: [0.2, 0.5, 0.2], scale: [1, 1.05, 1] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              />
-            </div>
-            <p className="text-sm font-medium text-foreground/60">No Activity Yet</p>
-            <p className="mt-1 max-w-xs text-xs text-muted-foreground/40 leading-relaxed">
-              Start a pipeline run to see live events here.
+          <div className="flex flex-col items-center justify-center gap-2 py-12">
+            <motion.div
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/8"
+              animate={{ opacity: [1, 0.5, 1] }}
+              transition={{ duration: 2.5, repeat: Infinity }}
+            >
+              <Terminal className="h-4 w-4 text-primary/60" />
+            </motion.div>
+            <p className="font-mono text-xs text-muted-foreground/45">
+              <span className="text-success/70">$</span> awaiting pipeline events...
+            </p>
+            <p className="text-[11px] text-muted-foreground/35">
+              Start a run to stream live agent activity here.
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-border/5">
+          <div className="divide-y divide-border/10">
             {events.slice(0, 15).map((event, i) => {
               const Icon = event.Icon;
+              const isLatest = i === Math.min(events.length - 1, 14);
               return (
                 <motion.div
                   key={`${event.time}-${i}`}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.35, delay: i * 0.03, ease: [0.16, 1, 0.3, 1] }}
-                  className="group/event flex items-start gap-3 px-6 py-3.5 transition-colors duration-200 hover:bg-muted/10"
+                  transition={{ duration: 0.3, delay: i * 0.02 }}
+                  className={cn(
+                    "group flex items-start gap-3 px-6 py-3 transition-colors hover:bg-muted/10",
+                    isLatest && connected && "bg-primary/[0.03]"
+                  )}
                 >
-                  <div
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${event.bg} border border-border/10 transition-transform duration-200 group-hover/event:scale-105`}
-                  >
-                    <Icon className={`h-3.5 w-3.5 ${event.color}`} />
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-card/80 ${event.color} [&>svg]:h-3.5 [&>svg]:w-3.5`}>
+                    <Icon className={event.color} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-foreground/70">{event.label}</span>
-                      <span className="font-mono text-[10px] tabular-nums text-muted-foreground/25">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-foreground/70">
+                        <span className={cn("font-mono text-[10px]", isLatest ? "text-success/80" : "text-muted-foreground/25")}>
+                          {"$"}
+                        </span>
+                        {event.label}
+                        {isLatest && connected && (
+                          <motion.span
+                            className="ml-0.5 inline-block h-3 w-[6px] bg-primary/70"
+                            animate={{ opacity: [1, 0.15, 1] }}
+                            transition={{ duration: 0.9, repeat: Infinity }}
+                          />
+                        )}
+                      </span>
+                      <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/25">
                         {event.time}
                       </span>
                     </div>
-                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground/45">{event.detail}</p>
+                    <p className="truncate text-[11px] text-muted-foreground/45">{event.detail}</p>
                   </div>
                 </motion.div>
               );
             })}
+          </div>
+        )}
+        {events.length > 0 && connected && (
+          <div className="sticky bottom-0 flex items-center gap-2 border-t border-border/10 bg-card/90 px-6 py-2 backdrop-blur">
+            <motion.span
+              className="h-1.5 w-1.5 rounded-full bg-success"
+              animate={{ opacity: [1, 0.3, 1] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+            />
+            <span className="font-mono text-[10px] text-muted-foreground/45">
+              streaming ┬╖ progress {Math.round(progress)}%
+            </span>
           </div>
         )}
       </div>

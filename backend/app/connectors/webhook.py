@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import time
 from typing import Any
 
 import httpx
@@ -17,10 +16,26 @@ class WebhookEngine(BaseConnector):
 
     def get_actions(self) -> list[dict[str, Any]]:
         return [
-            {"name": "post", "description": "Send HTTP POST", "params": {"url": "str", "body": "any", "headers": "dict (optional)"}},
-            {"name": "put", "description": "Send HTTP PUT", "params": {"url": "str", "body": "any", "headers": "dict (optional)"}},
-            {"name": "patch", "description": "Send HTTP PATCH", "params": {"url": "str", "body": "any", "headers": "dict (optional)"}},
-            {"name": "delete", "description": "Send HTTP DELETE", "params": {"url": "str", "headers": "dict (optional)"}},
+            {
+                "name": "post",
+                "description": "Send HTTP POST",
+                "params": {"url": "str", "body": "any", "headers": "dict (optional)"},
+            },
+            {
+                "name": "put",
+                "description": "Send HTTP PUT",
+                "params": {"url": "str", "body": "any", "headers": "dict (optional)"},
+            },
+            {
+                "name": "patch",
+                "description": "Send HTTP PATCH",
+                "params": {"url": "str", "body": "any", "headers": "dict (optional)"},
+            },
+            {
+                "name": "delete",
+                "description": "Send HTTP DELETE",
+                "params": {"url": "str", "headers": "dict (optional)"},
+            },
             {"name": "get", "description": "Send HTTP GET", "params": {"url": "str", "headers": "dict (optional)"}},
         ]
 

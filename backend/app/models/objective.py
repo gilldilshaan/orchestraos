@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Float, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -28,8 +28,8 @@ class Objective(Base, BaseEntity):
     raw_input: Mapped[str] = mapped_column(Text, nullable=False)
     compiled_summary: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     structured_goal: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    constraints: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
-    success_criteria: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    constraints: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    success_criteria: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     status: Mapped[str] = mapped_column(
         String(50), nullable=False, default="draft"

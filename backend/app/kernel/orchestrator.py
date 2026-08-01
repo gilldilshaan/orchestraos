@@ -66,7 +66,7 @@ class PipelineStep:
         handler: StepHandler,
         depends_on: list[str] | None = None,
         optional: bool = False,
-        timeout_seconds: int = 120,
+        timeout_seconds: int = 300,
         context_field: str | None = None,
     ) -> None:
         self.name = name
@@ -127,7 +127,7 @@ class AgentOrchestrator:
         progress: float = 0.0,
         event_order: int = 0,
     ) -> None:
-        session = self._ensure_artifact_session()
+        _session = self._ensure_artifact_session()
         svc = self._artifact_service
         if not svc:
             return
@@ -406,12 +406,14 @@ class AgentOrchestrator:
             step_results: list[Exception | dict[str, Any]] = []
             for s in ready:
                 try:
-                    result = await self._execute_single_step(s, objective_id, context)
+                    step_result: Exception | dict[str, Any] = await self._execute_single_step(
+                        s, objective_id, context
+                    )
                 except Exception as exc:
-                    result = exc
-                step_results.append(result)
+                    step_result = exc
+                step_results.append(step_result)
 
-            for step, result in zip(ready, step_results):
+            for step, result in zip(ready, step_results, strict=True):
                 if isinstance(result, Exception):
                     err = await self._handle_step_error(
                         step, result, objective_id, context,

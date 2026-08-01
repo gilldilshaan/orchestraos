@@ -1,11 +1,13 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useArtifactsQuery } from "@/hooks/use-snapshot";
 import Link from "next/link";
+import { useLatestObjectiveIdQuery } from "@/hooks/use-api";
+import { useObjectiveContextStore } from "@/store";
 import { StatusBadge } from "@/components/status-badge";
 import {
   Folder, FileJson, FileText, ChevronRight,
@@ -30,7 +32,17 @@ export default function ArtifactsPage() {
 
 function ArtifactsContent() {
   const searchParams = useSearchParams();
-  const objectiveId = searchParams.get("id");
+  const { setActiveObjectiveId } = useObjectiveContextStore();
+  const urlId = searchParams.get("id");
+  const { data: latestId } = useLatestObjectiveIdQuery(!urlId);
+  const objectiveId = urlId ?? latestId ?? null;
+
+  // Sync URL param to global execution context
+  useEffect(() => {
+    if (urlId) {
+      setActiveObjectiveId(urlId);
+    }
+  }, [urlId, setActiveObjectiveId]);
   const { events, telemetry, snapshot, isLoading } = useArtifactsQuery(objectiveId);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(["events", "telemetry"]));
   const [selectedFile, setSelectedFile] = useState<{ name: string; data: unknown } | null>(null);

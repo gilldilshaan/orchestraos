@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import DateTime, Integer, TypeDecorator
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column
 
 from app.database.uuid7 import uuid7
@@ -13,11 +15,11 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class UTCDateTime(TypeDecorator):
+class UTCDateTime(TypeDecorator[datetime]):
     impl = DateTime(timezone=True)
     cache_ok = True
 
-    def process_bind_param(self, value, _dialect):
+    def process_bind_param(self, value: datetime | None, _dialect: Dialect) -> datetime | None:
         if value is not None and value.tzinfo is None:
             return value.replace(tzinfo=UTC)
         return value
@@ -61,13 +63,13 @@ class BaseEntity(MappedAsDataclass):
         nullable=True,
         init=False,
     )
-    version: Mapped[int] = mapped_column(
+    version: Mapped[int | str] = mapped_column(
         Integer,
         default=1,
         nullable=False,
         init=False,
     )
-    metadata_: Mapped[dict | None] = mapped_column(
+    metadata_: Mapped[dict[str, Any] | None] = mapped_column(
         "metadata",
         JSONB,
         default=None,

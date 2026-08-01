@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from datetime import UTC, datetime
+from typing import Any, ClassVar
 
 
 class ObservabilityTracker:
@@ -11,7 +11,7 @@ class ObservabilityTracker:
     estimated cost, retry count, and failure reason.
     """
 
-    ESTIMATED_COST_PER_1K_TOKENS: dict[str, dict[str, float]] = {
+    ESTIMATED_COST_PER_1K_TOKENS: ClassVar[dict[str, dict[str, float]]] = {
         "gpt-4o": {"input": 0.01, "output": 0.03},
         "gpt-4o-mini": {"input": 0.0015, "output": 0.006},
         "claude-3-opus": {"input": 0.015, "output": 0.075},
@@ -108,7 +108,11 @@ class ObservabilityTracker:
                 "count": data["count"],
                 "failures": data["failures"],
                 "total_cost": round(data["total_cost"], 6),
-                "avg_latency_ms": round(sum(data["latencies"]) / len(data["latencies"]), 2) if data["latencies"] else 0.0,
+                "avg_latency_ms": (
+                    round(sum(data["latencies"]) / len(data["latencies"]), 2)
+                    if data["latencies"]
+                    else 0.0
+                ),
             }
             for task, data in groups.items()
         }

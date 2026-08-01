@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -193,7 +193,7 @@ class ExecutionEngine:
         objective_id: str,
         organization: DynamicOrganizationStructure,
     ) -> list[NodeExecutionResult]:
-        tasks: list[asyncio.Task] = []
+        tasks: list[asyncio.Task[Any]] = []
         for node_id in group:
             node = graph.get_node(node_id)
             if node is None:
@@ -215,7 +215,7 @@ class ExecutionEngine:
                     error=str(res),
                 ))
             else:
-                results.append(res)
+                results.append(cast(NodeExecutionResult, res))
 
         return results
 
@@ -719,8 +719,8 @@ class ExecutionEngine:
             component="execution_engine",
             payload={
                 "confidence": executive_decision.confidence,
-                "decision_type": executive_decision.decision_type,
-                "option_count": len(executive_decision.options),
+                "decision_type": executive_decision.recommended_action,
+                "option_count": len(executive_decision.tradeoffs),
             },
         )
 

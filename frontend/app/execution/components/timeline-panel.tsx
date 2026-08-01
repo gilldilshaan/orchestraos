@@ -1,9 +1,11 @@
 "use client";
 
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useSSEStore } from "@/store/sse-store";
 import { useTimelineStore } from "@/store/execution-stores";
+import { useEventsQuery } from "@/hooks/use-api";
 import { StatusBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
 import { Search, ChevronRight, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
@@ -89,8 +91,11 @@ const stageOrder = [
 ];
 
 export function TimelinePanel() {
+  const searchParams = useSearchParams();
+  const objectiveId = searchParams.get("id");
   const sseEvents = useSSEStore((s) => s.events);
   const ssePipelineStatus = useSSEStore((s) => s.pipelineStatus);
+  const { data: persistedEvents } = useEventsQuery(objectiveId);
   const { searchQuery, setSearchQuery } = useTimelineStore();
   const listRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -99,9 +104,10 @@ export function TimelinePanel() {
   expandedRef.current = expanded;
 
   const groups = useMemo(() => {
-    return groupByStage(sseEvents as RawEvent[])
+    const source = sseEvents.length > 0 ? sseEvents : (persistedEvents ?? []);
+    return groupByStage(source as RawEvent[])
       .sort((a, b) => stageOrder.indexOf(a.name) - stageOrder.indexOf(b.name));
-  }, [sseEvents]);
+  }, [sseEvents, persistedEvents]);
 
   // Auto-expand running stage — only when it changes
   useEffect(() => {
@@ -263,9 +269,9 @@ export function TimelinePanel() {
 
       <div className="shrink-0 border-t border-border/30 px-3 py-1.5">
         <div className="flex items-center justify-between text-[10px] text-muted-foreground/50">
-          <span>{groups.length} stages · {sseEvents.length} events</span>
-          <span className={cn("font-mono tabular-nums", ssePipelineStatus === "completed" ? "text-emerald-400" : ssePipelineStatus === "error" ? "text-red-400" : "text-primary")}>
-            {ssePipelineStatus === "completed" ? "Done" : ssePipelineStatus === "error" ? "Failed" : "Running"}
+          <span>{groups.length} stages · {(sseEvents.length || persistedEvents?.length || 0)} events</span>
+          <span className={cn("font-mono tabular-nums", ssePipelineStatus === "completed" || (!sseEvents.length && persistedEvents?.length) ? "text-emerald-400" : ssePipelineStatus === "error" ? "text-red-400" : "text-primary")}>
+            {ssePipelineStatus === "completed" ? "Done" : ssePipelineStatus === "error" ? "Failed" : sseEvents.length > 0 ? "Running" : persistedEvents?.length ? "Done" : "Idle"}
           </span>
         </div>
       </div>

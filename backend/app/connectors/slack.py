@@ -13,12 +13,36 @@ class SlackConnector(BaseConnector):
 
     def get_actions(self) -> list[dict[str, Any]]:
         return [
-            {"name": "list_channels", "description": "List public channels", "params": {"limit": "int (optional)"}},
-            {"name": "send_message", "description": "Send message to channel", "params": {"channel": "str", "text": "str"}},
-            {"name": "reply_in_thread", "description": "Reply in a thread", "params": {"channel": "str", "thread_ts": "str", "text": "str"}},
-            {"name": "create_channel", "description": "Create a public channel", "params": {"name": "str", "is_private": "bool (optional)"}},
-            {"name": "get_channel_history", "description": "Get recent messages", "params": {"channel": "str", "limit": "int (optional)"}},
-            {"name": "send_notification", "description": "Send notification (markdown)", "params": {"channel": "str", "text": "str"}},
+            {
+                "name": "list_channels",
+                "description": "List public channels",
+                "params": {"limit": "int (optional)"},
+            },
+            {
+                "name": "send_message",
+                "description": "Send message to channel",
+                "params": {"channel": "str", "text": "str"},
+            },
+            {
+                "name": "reply_in_thread",
+                "description": "Reply in a thread",
+                "params": {"channel": "str", "thread_ts": "str", "text": "str"},
+            },
+            {
+                "name": "create_channel",
+                "description": "Create a public channel",
+                "params": {"name": "str", "is_private": "bool (optional)"},
+            },
+            {
+                "name": "get_channel_history",
+                "description": "Get recent messages",
+                "params": {"channel": "str", "limit": "int (optional)"},
+            },
+            {
+                "name": "send_notification",
+                "description": "Send notification (markdown)",
+                "params": {"channel": "str", "text": "str"},
+            },
         ]
 
     def _token(self) -> str:
@@ -57,18 +81,44 @@ class SlackConnector(BaseConnector):
         try:
             if action == "list_channels":
                 limit = params.get("limit", 100)
-                resp = await sess.get(f"https://slack.com/api/conversations.list?limit={limit}&types=public_channel", headers=hdrs)
+                resp = await sess.get(
+                    f"https://slack.com/api/conversations.list?limit={limit}&types=public_channel",
+                    headers=hdrs,
+                )
             elif action == "send_message":
-                resp = await sess.post("https://slack.com/api/chat.postMessage", headers=hdrs, json={"channel": params["channel"], "text": params["text"]})
+                resp = await sess.post(
+                    "https://slack.com/api/chat.postMessage",
+                    headers=hdrs,
+                    json={"channel": params["channel"], "text": params["text"]},
+                )
             elif action == "reply_in_thread":
-                resp = await sess.post("https://slack.com/api/chat.postMessage", headers=hdrs, json={"channel": params["channel"], "thread_ts": params["thread_ts"], "text": params["text"]})
+                resp = await sess.post(
+                    "https://slack.com/api/chat.postMessage",
+                    headers=hdrs,
+                    json={
+                        "channel": params["channel"],
+                        "thread_ts": params["thread_ts"],
+                        "text": params["text"],
+                    },
+                )
             elif action == "create_channel":
-                resp = await sess.post("https://slack.com/api/conversations.create", headers=hdrs, json={"name": params["name"], "is_private": params.get("is_private", False)})
+                resp = await sess.post(
+                    "https://slack.com/api/conversations.create",
+                    headers=hdrs,
+                    json={"name": params["name"], "is_private": params.get("is_private", False)},
+                )
             elif action == "get_channel_history":
                 limit = params.get("limit", 10)
-                resp = await sess.get(f"https://slack.com/api/conversations.history?channel={params['channel']}&limit={limit}", headers=hdrs)
+                resp = await sess.get(
+                    f"https://slack.com/api/conversations.history?channel={params['channel']}&limit={limit}",
+                    headers=hdrs,
+                )
             elif action == "send_notification":
-                resp = await sess.post("https://slack.com/api/chat.postMessage", headers=hdrs, json={"channel": params["channel"], "text": params["text"], "mrkdwn": True})
+                resp = await sess.post(
+                    "https://slack.com/api/chat.postMessage",
+                    headers=hdrs,
+                    json={"channel": params["channel"], "text": params["text"], "mrkdwn": True},
+                )
             else:
                 return {"status": "error", "message": f"Unknown action: {action}"}
 

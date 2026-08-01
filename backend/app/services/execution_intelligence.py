@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.extensions_repository import (
     AgentTelemetryRepository,
-    StoredExecutionEventRepository,
+    DecisionRepository,
+    RiskRepository,
 )
 from app.repositories.intelligence_repository import (
     AgentConflictRepository,
@@ -433,7 +434,11 @@ class WatchdogService:
         a = await self._alert_repo.acknowledge(alert_id)
         if not a:
             return None
-        return {"id": a.id, "acknowledged": a.acknowledged, "acknowledged_at": a.acknowledged_at.isoformat() if a.acknowledged_at else None}
+        return {
+            "id": a.id,
+            "acknowledged": a.acknowledged,
+            "acknowledged_at": a.acknowledged_at.isoformat() if a.acknowledged_at else None,
+        }
 
     async def resolve_alert(self, alert_id: str) -> dict[str, Any] | None:
         a = await self._alert_repo.resolve_alert(alert_id)
@@ -517,7 +522,11 @@ class SelfHealingService:
             "success_count": success,
             "failure_count": failure,
             "partial_count": partial,
-            "success_rate": round(success / (success + failure + partial) * 100, 1) if (success + failure + partial) > 0 else 100.0,
+            "success_rate": (
+                round(success / (success + failure + partial) * 100, 1)
+                if (success + failure + partial) > 0
+                else 100.0
+            ),
             "unresolved_alerts": unresolved_alerts,
         }
 
@@ -608,37 +617,86 @@ class OperationsDashboardService:
         self._checkpoint_repo = ExecutionCheckpointRepository(session)
         self._heal_repo = SelfHealingActionRepository(session)
         self._gate_repo = ApprovalGateRepository(session)
-        self._event_repo = StoredExecutionEventRepository(session)
+        self._risk_repo = RiskRepository(session)
+        self._decision_repo = DecisionRepository(session)
 
     async def get_operations_summary(self) -> dict[str, Any]:
-        objectives = await self._objective_repo.count()
-        agents = await self._agent_telemetry_repo.list()
-        active_agent_ids = set(a.agent_id for a in agents if a.status == "running")
+        status_counts = await self._objective_repo.count_by_status()
+        active_objectives = sum(
+            count
+            for status, count in status_counts.items()
+            if status not in ("completed", "failed", "cancelled")
+        ) or await self._objective_repo.count_active()
+
+        agents = await self._agent_telemetry_repo.list(limit=1000)
+        running_agents = len({
+            a.agent_id for a in agents
+            if a.status in ("running", "in_progress", "executing")
+        })
+        completed_agents = sum(1 for a in agents if a.status == "completed")
+        failed_agents = sum(1 for a in agents if a.status == "failed")
+
+        token_usage = sum(a.total_tokens or 0 for a in agents)
+        cost_today = sum(a.total_cost or 0 for a in agents)
+
         unresolved_alerts = await self._alert_repo.count_unresolved()
         gates = await self._gate_repo.list()
         pending_gates = sum(1 for g in gates if g.status == "pending")
+
+        risks = await self._risk_repo.list()
+        closed_statuses = {"mitigated", "resolved", "closed"}
+        active_risks = sum(
+            1 for r in risks
+            if (r.status or "identified") not in closed_statuses
+        )
+
+        decision_counts = await self._decision_repo.count_by_status()
+        pending_approvals = pending_gates + decision_counts.get("PENDING", 0)
+
         all_actions = await self._heal_repo.list()
         total_actions = len(all_actions)
         success_count = sum(1 for a_ in all_actions if a_.result == "success")
-        failure_count = sum(1 for a_ in all_actions if a_.result == "failure")
-        all_events = await self._event_repo.list()
-        total_events = len(all_events)
+
+        if total_actions > 0:
+            success_rate = round(success_count / total_actions * 100, 1)
+        elif completed_agents + failed_agents > 0:
+            success_rate = round(
+                completed_agents / (completed_agents + failed_agents) * 100, 1
+            )
+        else:
+            success_rate = 0.0
+
         checkpoints = await self._checkpoint_repo.count()
 
+        queue_depth = sum(
+            count
+            for status, count in status_counts.items()
+            if status in ("queued", "executing", "draft", "compiling", "planned")
+        )
+        failed_objectives = status_counts.get("failed", 0)
+
+        health_score = round(
+            max(0.0, min(100.0, (
+                100
+                - unresolved_alerts * 5
+                - failed_objectives * 15
+                - pending_gates * 3
+                - (100 - success_rate) * 0.2
+            ))),
+            1,
+        )
+
         return {
-            "active_objectives": objectives,
-            "running_agents": len(active_agent_ids),
-            "queue_depth": 0,
-            "blocked_work_items": pending_gates,
-            "pending_approvals": pending_gates,
-            "health_score": round(
-                max(0, 100 - (unresolved_alerts * 5)),
-                1,
-            ),
-            "cost_today": 0,
-            "token_usage": total_events,
-            "success_rate": round(success_count / max(total_actions, 1) * 100, 1),
-            "active_risks": unresolved_alerts,
+            "active_objectives": active_objectives,
+            "running_agents": running_agents,
+            "queue_depth": queue_depth,
+            "blocked_work_items": pending_gates + failed_objectives,
+            "pending_approvals": pending_approvals,
+            "health_score": health_score,
+            "cost_today": round(cost_today, 2),
+            "token_usage": token_usage,
+            "success_rate": success_rate,
+            "active_risks": active_risks,
             "total_alerts": unresolved_alerts,
             "pending_gates": pending_gates,
             "total_checkpoints": checkpoints,

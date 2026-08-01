@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +21,7 @@ async def list_events(
     objective_id: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(500, ge=1, le=2000),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> ApiResponse:
     svc = ArtifactService(session)
     result = await svc.get_events(objective_id, skip=skip, limit=limit)
@@ -35,7 +36,7 @@ async def create_event(
     message: str | None = None,
     progress: float = 0.0,
     event_order: int = 0,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> ApiResponse:
     svc = ArtifactService(session)
     result = await svc.persist_event(
@@ -47,7 +48,7 @@ async def create_event(
 @router.delete("/{objective_id}/events")
 async def clear_events(
     objective_id: str,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> ApiResponse:
     svc = ArtifactService(session)
     result = await svc.clear_events(objective_id)
@@ -62,7 +63,7 @@ async def list_telemetry(
     objective_id: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(200, ge=1, le=1000),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> ApiResponse:
     svc = ArtifactService(session)
     result = await svc.get_telemetry(objective_id, skip=skip, limit=limit)
@@ -94,17 +95,17 @@ async def create_telemetry(
     retries: int = 0,
     timeout_seconds: int | None = None,
     error: str | None = None,
-    parent_agents: dict | None = None,
-    child_agents: dict | None = None,
-    upstream: list | None = None,
-    downstream: list | None = None,
-    tool_calls: list | None = None,
+    parent_agents: dict[str, Any] | None = None,
+    child_agents: dict[str, Any] | None = None,
+    upstream: list[Any] | None = None,
+    downstream: list[Any] | None = None,
+    tool_calls: list[Any] | None = None,
     reasoning_summary: str | None = None,
     decision_summary: str | None = None,
-    artifacts_produced: list | None = None,
+    artifacts_produced: list[Any] | None = None,
     confidence: float | None = None,
-    output_metadata: dict | None = None,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    output_metadata: dict[str, Any] | None = None,
+    session: AsyncSession = Depends(get_session),
 ) -> ApiResponse:
     svc = ArtifactService(session)
     result = await svc.persist_telemetry(
@@ -148,7 +149,7 @@ async def create_telemetry(
 @router.get("/{objective_id}/telemetry/summary")
 async def telemetry_summary(
     objective_id: str,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> ApiResponse:
     svc = ArtifactService(session)
     result = await svc.get_telemetry_summary(objective_id)
@@ -161,7 +162,7 @@ async def telemetry_summary(
 @router.get("/{objective_id}/snapshot")
 async def get_snapshot(
     objective_id: str,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> ApiResponse:
     svc = ArtifactService(session)
     result = await svc.get_snapshot(objective_id)
@@ -171,9 +172,9 @@ async def get_snapshot(
 @router.post("/{objective_id}/snapshot")
 async def save_snapshot(
     objective_id: str,
-    snapshot_data: dict,
+    snapshot_data: dict[str, Any],
     snapshot_version: int = 1,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> ApiResponse:
     svc = ArtifactService(session)
     result = await svc.save_snapshot(

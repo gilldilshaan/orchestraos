@@ -1,5 +1,12 @@
 from app.models.base import BaseEntity
+from app.models.connectors import (
+    ConnectorAction,
+    ConnectorAuditLog,
+    ConnectorConfig,
+    ConnectorWebhook,
+)
 from app.models.extensions import (
+    KPI,
     AgentConflict,
     AgentMessage,
     AgentTelemetry,
@@ -10,9 +17,8 @@ from app.models.extensions import (
     ExecutionCheckpoint,
     ExecutionSnapshot,
     Explanation,
-    KPI,
-    KPIHistory,
     KnowledgeGraphEdge,
+    KPIHistory,
     Milestone,
     ObjectiveCompilation,
     Plan,
@@ -34,34 +40,33 @@ from app.models.features import (
     ResourceGap,
     SuccessProbability,
 )
-from app.models.connectors import ConnectorAction, ConnectorAuditLog, ConnectorConfig, ConnectorWebhook
 from app.models.job import Job
 from app.models.objective import Objective
 from app.models.user import User
 
 __all__ = [
+    "KPI",
     "AgentConflict",
     "AgentMessage",
     "AgentTelemetry",
     "ApprovalGate",
     "BaseEntity",
+    "Bottleneck",
+    "BusinessReadiness",
     "ConnectorAction",
     "ConnectorAuditLog",
     "ConnectorConfig",
     "ConnectorWebhook",
-    "Bottleneck",
-    "BusinessReadiness",
     "Decision",
     "DecisionMemoryEntry",
     "DecisionOption",
-    "DependencyGraph",
     "Department",
+    "DependencyGraph",
     "DevilsAdvocateCritique",
     "ExecutionCheckpoint",
     "ExecutionSnapshot",
     "Explanation",
     "Job",
-    "KPI",
     "KPIHistory",
     "KnowledgeGraphEdge",
     "Milestone",

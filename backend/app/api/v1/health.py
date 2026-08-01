@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database.session import check_database_health, get_session
 from app.dependencies import get_redis_health
-from app.repositories.extensions_repository import DecisionRepository, DepartmentRepository, RoleRepository
+from app.repositories.extensions_repository import (
+    DecisionRepository,
+    DepartmentRepository,
+    RoleRepository,
+)
+from app.repositories.job_repository import JobRepository
 from app.repositories.objective_repository import ObjectiveRepository
 
 router = APIRouter(tags=["Health"])
@@ -19,7 +26,7 @@ AGENT_MODULES = [
 
 
 @router.get("/system")
-async def health_system() -> dict:
+async def health_system() -> dict[str, Any]:
     db_healthy = await check_database_health()
     redis_healthy = await get_redis_health()
 
@@ -43,7 +50,7 @@ async def health_system() -> dict:
 
 
 @router.get("/ai")
-async def health_ai(session: AsyncSession = Depends(get_session)) -> dict:
+async def health_ai(session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
     from app.kernel import ai_kernel
     from app.llm.client import llm_client
     from app.process_info import uptime_seconds
@@ -52,10 +59,13 @@ async def health_ai(session: AsyncSession = Depends(get_session)) -> dict:
     obj_repo = ObjectiveRepository(session)
     dept_repo = DepartmentRepository(session)
     role_repo = RoleRepository(session)
+    job_repo = JobRepository(session)
 
     active_runs = await obj_repo.count_active()
     active_executives = await dept_repo.count({"status": "active"})
     active_specialists = await role_repo.sum_head_count_by_status("active")
+    pending_tasks = await job_repo.count({"status": "pending"})
+    running_jobs = await job_repo.count({"status": "running"})
 
     return {
         "data": {
@@ -67,10 +77,8 @@ async def health_ai(session: AsyncSession = Depends(get_session)) -> dict:
             "provider": llm_client.provider_name,
             "model": llm_client.default_model,
             "active_runs": active_runs,
-            # Execution is fully synchronous today — there is no background
-            # job queue, so there is nothing to report a depth for.
-            "queue_depth": 0,
-            "pending_tasks": 0,
+            "queue_depth": pending_tasks + running_jobs,
+            "pending_tasks": pending_tasks,
             "uptime_seconds": round(uptime_seconds(), 1),
             "kernel": {
                 "total_calls": stats["observability"]["total_calls"],
@@ -83,7 +91,7 @@ async def health_ai(session: AsyncSession = Depends(get_session)) -> dict:
 
 
 @router.get("/organization")
-async def health_organization(session: AsyncSession = Depends(get_session)) -> dict:
+async def health_organization(session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
     obj_repo = ObjectiveRepository(session)
     dept_repo = DepartmentRepository(session)
     role_repo = RoleRepository(session)

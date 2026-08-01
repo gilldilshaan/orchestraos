@@ -1,9 +1,15 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { HealthBadge } from "@/components/health-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
-import { useDashboardsQuery } from "@/hooks/use-api";
+import { useObjectivesQuery } from "@/hooks/use-api";
+import { useObjectiveContextStore } from "@/store";
+import {
+  ExternalLink, RotateCcw, ArrowRightLeft,
+  GitBranch, Building2, Radio, Scale, FolderOpen, LineChart,
+} from "lucide-react";
 
 function runtimeSeconds(createdAt: string | null, updatedAt: string | null, isTerminal: boolean): number {
   if (!createdAt) return 0;
@@ -13,19 +19,25 @@ function runtimeSeconds(createdAt: string | null, updatedAt: string | null, isTe
 }
 
 export default function RunsPage() {
-  const { data: dashboards } = useDashboardsQuery();
+  const router = useRouter();
+  const { setActiveObjectiveId } = useObjectiveContextStore();
+  const { data: objectives } = useObjectivesQuery();
+
+  const navigateTo = (path: string, id: string) => {
+    setActiveObjectiveId(id);
+    router.push(`${path}?id=${id}`);
+  };
 
   const TERMINAL_STATES = new Set(["completed", "failed", "cancelled"]);
-  const runs = (dashboards ?? []).map((d) => {
-    const objStatus = d.objective?.status ?? "";
+  const runs = (objectives ?? []).map((o) => {
+    const objStatus = o.status ?? "";
     const isTerminal = TERMINAL_STATES.has(objStatus);
     return {
-      id: d.objective?.id ?? "—",
-      objective: d.objective?.summary ?? "Unknown Objective",
-      date: d.objective?.created_at ?? null,
-      duration: runtimeSeconds(d.objective?.created_at ?? null, d.objective?.updated_at ?? null, isTerminal),
-      confidence: d.objective?.confidence ?? null,
-      nodes: d.organization?.total_head_count ?? 0,
+      id: o.id ?? "—",
+      objective: o.raw_input ?? "—",
+      date: o.created_at ?? null,
+      duration: runtimeSeconds(o.created_at ?? null, o.updated_at ?? null, isTerminal),
+      confidence: o.confidence ?? null,
       status: objStatus === "completed" ? "completed" as const : objStatus === "failed" ? "failed" as const : "running" as const,
     };
   });
@@ -68,22 +80,19 @@ export default function RunsPage() {
               <thead>
                 <tr className="border-b border-border/50">
                   <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                    Run
-                  </th>
-                  <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                     Objective
                   </th>
                   <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                     Duration
                   </th>
                   <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                    Nodes
-                  </th>
-                  <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                     Confidence
                   </th>
                   <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                     Status
+                  </th>
+                  <th className="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -94,17 +103,16 @@ export default function RunsPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.03 }}
-                    className="cursor-pointer transition-colors hover:bg-muted/20"
+                    className="transition-colors hover:bg-muted/20"
                   >
-                    <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
-                      {run.id.length > 12 ? `${run.id.slice(0, 12)}...` : run.id}
+                    <td className="px-5 py-3.5">
+                      <div className="text-sm font-medium line-clamp-1">{run.objective}</div>
+                      <div className="text-[10px] text-muted-foreground/60 font-mono mt-0.5">
+                        {run.id.slice(0, 12)}... &middot; {run.date ? new Date(run.date).toLocaleDateString() : "—"}
+                      </div>
                     </td>
-                    <td className="px-5 py-3.5 font-medium">{run.objective}</td>
-                    <td className="px-5 py-3.5 text-right font-mono tabular-nums text-muted-foreground">
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums text-muted-foreground text-sm">
                       {run.duration.toFixed(1)}s
-                    </td>
-                    <td className="px-5 py-3.5 text-right font-mono tabular-nums text-muted-foreground">
-                      {run.nodes}
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       {run.confidence != null ? (
@@ -120,6 +128,73 @@ export default function RunsPage() {
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <HealthBadge status={run.status} size="sm" />
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => navigateTo("/execution", run.id)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                          title="Mission Control"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => navigateTo("/replay", run.id)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                          title="Replay"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => navigateTo("/graph", run.id)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                          title="Execution Graph"
+                        >
+                          <GitBranch className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => navigateTo("/organization", run.id)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                          title="Organization"
+                        >
+                          <Building2 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => navigateTo("/telemetry", run.id)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                          title="Telemetry"
+                        >
+                          <Radio className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => navigateTo("/decisions", run.id)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                          title="Decision Center"
+                        >
+                          <Scale className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => navigateTo("/artifacts", run.id)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                          title="Artifacts"
+                        >
+                          <FolderOpen className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => navigateTo("/analytics", run.id)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                          title="Analytics"
+                        >
+                          <LineChart className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => router.push(`/diff?id1=${run.id}`)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                          title="Compare"
+                        >
+                          <ArrowRightLeft className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
                 ))}

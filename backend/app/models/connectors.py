@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -15,18 +15,20 @@ class ConnectorConfig(Base, BaseEntity):
     __tablename__ = "connector_configs"
 
     objective_id: Mapped[str | None] = mapped_column(
-        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=True, index=True
+        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=True, index=True, default=None
     )
-    provider: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    auth_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    credentials_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
-    config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    provider: Mapped[str] = mapped_column(String(100), nullable=False, index=True, default="")
+    name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    auth_type: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+    credentials_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=None)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="disconnected")
     last_health_check: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, default=None)
     health_status: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
     metadata_: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSONB, nullable=True, default=None, init=False)
-    version: Mapped[str] = mapped_column(String(20), nullable=False, default="1.0", init=False)
+    version: Mapped[str] = cast(
+        Mapped[str], mapped_column(String(20), nullable=False, default="1.0", init=False)
+    )
 
 
 class ConnectorAction(Base, BaseEntity):
@@ -85,7 +87,7 @@ class ConnectorAuditLog(Base, BaseEntity):
     target: Mapped[str] = mapped_column(String(500), nullable=False)
     result: Mapped[str] = mapped_column(String(50), nullable=False)
     details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
-    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True, default=None)
 
 
 Index("ix_connector_actions_connector", ConnectorAction.connector_id, ConnectorAction.created_at)

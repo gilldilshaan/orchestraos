@@ -89,4 +89,18 @@ class ExplainableAIService:
     async def get_explanations(
         self, entity_type: str, entity_id: str, skip: int = 0, limit: int = 50
     ) -> list[dict[str, Any]]:
-        return await self._repo.list_by_entity(entity_type, entity_id, skip=skip, limit=limit)
+        explanations = await self._repo.list_by_entity(
+            entity_type, entity_id, skip=skip, limit=limit
+        )
+        return [
+            {
+                "id": e.id,
+                "entity_type": e.entity_type,
+                "entity_id": e.entity_id,
+                "recommendation": e.recommendation,
+                "reasoning": e.reasoning,
+                "confidence": e.confidence,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in explanations
+        ]

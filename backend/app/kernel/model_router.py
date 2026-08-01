@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar, cast
 
-
-_DEFAULT_MODEL = "llama-3.3-70b-versatile"
-_DEFAULT_PROVIDER = "groq"
+_DEFAULT_MODEL = "claude-sonnet-4-5"
+_DEFAULT_PROVIDER = "anthropic"
 
 
 def _route(temp: float, priority: int = 1) -> dict[str, Any]:
@@ -24,9 +23,9 @@ class ModelRouter:
     if a provider is unavailable or rate-limited.
     """
 
-    PROVIDER_PRIORITY = ["groq", "openai", "anthropic", "google", "litellm", "fallback"]
+    PROVIDER_PRIORITY: ClassVar[list[str]] = ["anthropic", "groq", "openai", "google", "litellm", "fallback"]
 
-    TASK_ROUTES: dict[str, dict[str, Any]] = {
+    TASK_ROUTES: ClassVar[dict[str, dict[str, Any]]] = {
         "compile": _route(0.3),
         "plan": _route(0.4),
         "organization": _route(0.4),
@@ -57,7 +56,7 @@ class ModelRouter:
 
     def get_preferred_provider(self, task_type: str) -> str:
         route = dict(self.TASK_ROUTES.get(task_type, self.TASK_ROUTES["compile"]))
-        preferred = route.get("provider", _DEFAULT_PROVIDER)
+        preferred = cast(str, route.get("provider", _DEFAULT_PROVIDER))
         if self._provider_availability.get(preferred, True):
             return preferred
         for provider in self.PROVIDER_PRIORITY:

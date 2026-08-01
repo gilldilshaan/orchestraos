@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_session
-from app.repositories.objective_repository import ObjectiveRepository
 from app.repositories.extensions_repository import DepartmentRepository, PlanRepository
+from app.repositories.objective_repository import ObjectiveRepository
 from app.schemas import ApiResponse
 from app.services.engine import DashboardAggregator
 
@@ -33,7 +33,18 @@ async def list_dashboards(
     objectives = await obj_repo.list(limit=limit, order_by="created_at", descending=True)
     dashboards = []
     for obj in objectives:
-        dashboards.append(await _lightweight_dashboard(session, obj.id, obj.raw_input[:200] if obj.raw_input else "", obj.status or "", obj.current_stage or "", obj.confidence, obj.created_at, obj.updated_at))
+        dashboards.append(
+            await _lightweight_dashboard(
+                session,
+                obj.id,
+                obj.raw_input[:200] if obj.raw_input else "",
+                obj.status or "",
+                obj.current_stage or "",
+                obj.confidence,
+                obj.created_at,
+                obj.updated_at,
+            )
+        )
     return ApiResponse(data=dashboards)
 
 
@@ -47,7 +58,7 @@ async def _lightweight_dashboard(
     created_at: object,
     updated_at: object,
 ) -> dict[str, Any]:
-    from app.services.engine import WorkflowStateMachine
+    from app.kernel.state_machine import WorkflowStateMachine
 
     dept_repo = DepartmentRepository(session)
     plan_repo = PlanRepository(session)
@@ -69,7 +80,12 @@ async def _lightweight_dashboard(
         },
         "organization": {
             "departments": [
-                {"name": d.name, "status": d.status, "role_count": len(d.roles) if d.roles else 0, "head_count": d.head_count or 0}
+                {
+                    "name": d.name,
+                    "status": d.status,
+                    "role_count": len(d.roles) if d.roles else 0,
+                    "head_count": d.head_count or 0,
+                }
                 for d in depts
             ],
             "total_head_count": total_head_count,

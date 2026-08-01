@@ -15,7 +15,12 @@ class ScenarioSimulatorService:
         self._scenarios: dict[str, list[dict[str, Any]]] = {}
 
     async def simulate(
-        self, objective_id: str, scenario_input: str | None = None
+        self,
+        objective_id: str,
+        parameters: dict[str, Any] | None = None,
+        base_plan_id: str | None = None,
+        name: str | None = None,
+        description: str | None = None,
     ) -> dict[str, Any]:
         objective = await self._obj_repo.get(objective_id)
         if not objective:
@@ -23,7 +28,9 @@ class ScenarioSimulatorService:
 
         context = {
             "objective": {"raw": objective.raw_input},
-            "scenario_input": scenario_input or "Default scenario",
+            "scenario_input": name or description or "Default scenario",
+            "parameters": parameters or {},
+            "base_plan_id": base_plan_id,
         }
 
         result = await ai_kernel.run(
@@ -35,8 +42,8 @@ class ScenarioSimulatorService:
         scenario = {
             "id": __import__("uuid").uuid4().hex[:12],
             "objective_id": objective_id,
-            "scenario_name": result.get("scenario_name", scenario_input or "Default"),
-            "description": result.get("description", ""),
+            "scenario_name": name or result.get("scenario_name", name or "Default"),
+            "description": description or result.get("description", ""),
             "success_probability": result.get("success_probability", 0.5),
             "timeline_impact": result.get("timeline_impact", ""),
             "resource_impact": result.get("resource_impact", ""),
@@ -53,15 +60,16 @@ class ScenarioSimulatorService:
         return scenario
 
     async def list_scenarios(
-        self, objective_id: str
+        self, objective_id: str, skip: int = 0, limit: int = 100
     ) -> list[dict[str, Any]]:
-        return self._scenarios.get(objective_id, [])
+        items = self._scenarios.get(objective_id, [])
+        return items[skip : skip + limit] if limit else items
 
     async def get_scenario(
-        self, objective_id: str, scenario_id: str
+        self, scenario_id: str
     ) -> dict[str, Any] | None:
-        scenarios = self._scenarios.get(objective_id, [])
-        for s in scenarios:
-            if s["id"] == scenario_id:
-                return s
+        for scenarios in self._scenarios.values():
+            for s in scenarios:
+                if s["id"] == scenario_id:
+                    return s
         return None

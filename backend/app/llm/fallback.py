@@ -669,7 +669,7 @@ def _profile_for(facts: dict[str, Any]) -> dict[str, Any]:
 
 
 def _summarize_objective(facts: dict[str, Any]) -> str:
-    text = facts.get("objective_text", "").strip()
+    text = str(facts.get("objective_text", "")).strip()
     if not text:
         return "the stated objective"
     return text[:120] + ("..." if len(text) > 120 else "")

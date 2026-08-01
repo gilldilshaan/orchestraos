@@ -4,7 +4,6 @@ import json
 import os
 from typing import Any
 
-
 PROMPT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "prompts")
 
 

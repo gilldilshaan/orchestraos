@@ -25,14 +25,14 @@ class ObjectiveCompilation(Base, BaseEntity):
     vision: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     business_type: Mapped[str | None] = mapped_column(String(100), default=None, nullable=True)
     industry: Mapped[str | None] = mapped_column(String(200), default=None, nullable=True)
-    stakeholders: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    kpis: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    timeline: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
-    budget: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
-    dependencies: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    assumptions: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    risks: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    success_metrics: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    stakeholders: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    kpis: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    timeline: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    budget: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    dependencies: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    assumptions: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    risks: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    success_metrics: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
     objective: Mapped[Objective | None] = relationship(
         "Objective", back_populates="compilation", lazy="selectin", init=False
@@ -49,8 +49,8 @@ class Plan(Base, BaseEntity):
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="draft", nullable=False)
     plan_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    roadmap: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
-    timeline: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    roadmap: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    timeline: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     total_cost: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
 
@@ -72,9 +72,9 @@ class PlanVersion(Base, BaseEntity):
         UUID(as_uuid=False), ForeignKey("plans.id"), nullable=False
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    changes: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    changes: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     diff_summary: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    snapshot: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
     plan: Mapped[Plan | None] = relationship(
         "Plan", back_populates="versions", lazy="selectin", init=False
@@ -94,8 +94,8 @@ class Milestone(Base, BaseEntity):
     )
     status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False)
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    dependencies: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    kpis: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    dependencies: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    kpis: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
     plan: Mapped[Plan | None] = relationship(
         "Plan", back_populates="milestones", lazy="selectin", init=False
@@ -133,8 +133,8 @@ class Role(Base, BaseEntity):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    responsibilities: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    required_skills: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    responsibilities: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    required_skills: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     hiring_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     reports_to: Mapped[str | None] = mapped_column(
         String(255), default=None, nullable=True
@@ -184,10 +184,10 @@ class Decision(Base, BaseEntity):
     decision_type: Mapped[str] = mapped_column(String(100), default="strategic", nullable=False)
     recommendation: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     reasoning: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    evidence: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    evidence: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     risk_level: Mapped[str | None] = mapped_column(String(50), default=None, nullable=True)
-    affected_departments: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    affected_departments: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
     reviewed_by: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), default=None, nullable=True
@@ -213,9 +213,9 @@ class DecisionOption(Base, BaseEntity):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    pros: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    cons: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    risks: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    pros: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    cons: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    risks: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     cost: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     timeline_impact: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
@@ -235,12 +235,12 @@ class Explanation(Base, BaseEntity):
     )
     recommendation: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     reasoning: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    evidence: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    assumptions: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    evidence: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    assumptions: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     risk_level: Mapped[str | None] = mapped_column(String(50), default=None, nullable=True)
-    affected_departments: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    dependencies: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    affected_departments: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    dependencies: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     model_used: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
 
 
@@ -251,13 +251,13 @@ class Scenario(Base, BaseEntity):
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    parameters: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    parameters: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     base_plan_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("plans.id"), default=None, nullable=True
     )
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    results: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
-    comparison: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    results: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    comparison: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="draft", nullable=False)
 
     objective: Mapped[Objective | None] = relationship(
@@ -277,7 +277,7 @@ class KnowledgeGraphEdge(Base, BaseEntity):
         UUID(as_uuid=False), nullable=False
     )
     relationship_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    properties: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    properties: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
 
 class KPI(Base, BaseEntity):
@@ -372,20 +372,20 @@ class AgentTelemetry(Base, BaseEntity):
     error: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
 
     # Dependencies
-    parent_agents: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
-    child_agents: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
-    upstream: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
-    downstream: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    parent_agents: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    child_agents: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    upstream: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    downstream: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
     # Tool Calls
-    tool_calls: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    tool_calls: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
     # Outputs
     reasoning_summary: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
     decision_summary: Mapped[str | None] = mapped_column(Text, default=None, nullable=True)
-    artifacts_produced: Mapped[list | None] = mapped_column(JSONB, default=None, nullable=True)
+    artifacts_produced: Mapped[list[Any] | None] = mapped_column(JSONB, default=None, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
-    output_metadata: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    output_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
 
 class ExecutionSnapshot(Base, BaseEntity):
@@ -396,7 +396,7 @@ class ExecutionSnapshot(Base, BaseEntity):
     objective_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True, unique=True
     )
-    snapshot_data: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    snapshot_data: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     snapshot_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
@@ -409,7 +409,9 @@ from app.models.objective import Objective  # noqa: E402
 class AgentMessage(Base, BaseEntity):
     __tablename__ = "agent_messages"
 
-    objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
+    objective_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True
+    )
     from_agent: Mapped[str] = mapped_column(String(100), nullable=False)
     to_agent: Mapped[str] = mapped_column(String(100), nullable=False)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -428,13 +430,15 @@ class AgentMessage(Base, BaseEntity):
 class AgentConflict(Base, BaseEntity):
     __tablename__ = "agent_conflicts"
 
-    objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
+    objective_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True
+    )
     agent_a: Mapped[str] = mapped_column(String(100), nullable=False)
     agent_b: Mapped[str] = mapped_column(String(100), nullable=False)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
     disagreement: Mapped[str] = mapped_column(Text, nullable=False)
-    evidence_a: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=None)
-    evidence_b: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=None)
+    evidence_a: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True, default=None)
+    evidence_b: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True, default=None)
     alternatives: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True, default=None)
     resolution: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     resolved_by: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
@@ -448,7 +452,9 @@ class AgentConflict(Base, BaseEntity):
 class ApprovalGate(Base, BaseEntity):
     __tablename__ = "approval_gates"
 
-    objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
+    objective_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True
+    )
     gate_type: Mapped[str] = mapped_column(String(100), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     proposed_by: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -485,7 +491,9 @@ class ExecutionCheckpoint(Base, BaseEntity):
 class WatchdogAlert(Base, BaseEntity):
     __tablename__ = "watchdog_alerts"
 
-    objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
+    objective_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True
+    )
     alert_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     source: Mapped[str] = mapped_column(String(200), nullable=False)
     message: Mapped[str] = mapped_column(String(2000), nullable=False)
@@ -503,7 +511,9 @@ class WatchdogAlert(Base, BaseEntity):
 class SelfHealingAction(Base, BaseEntity):
     __tablename__ = "self_healing_actions"
 
-    objective_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True)
+    objective_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("objectives.id"), nullable=False, index=True
+    )
     trigger_event: Mapped[str] = mapped_column(String(500), nullable=False)
     action_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target: Mapped[str] = mapped_column(String(200), nullable=False)

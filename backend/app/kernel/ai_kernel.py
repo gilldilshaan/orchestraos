@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import time
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -126,7 +126,7 @@ class AIKernel:
                     "[%s] Cache HIT  (%.1fs)",
                     agent_name, elapsed_ms / 1000,
                 )
-                return cached
+                return cast(dict[str, Any], cached)
 
         # 3. Determine model route
         route = self.model_router.get_route(task_type)

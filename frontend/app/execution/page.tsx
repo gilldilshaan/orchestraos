@@ -14,11 +14,13 @@ import { TopToolbar } from "./components/top-toolbar";
 import { MetricsRibbon } from "./components/metrics-ribbon";
 import { useViewStore } from "@/store/execution-stores";
 import { useSSEStore } from "@/store/sse-store";
+import { useObjectiveContextStore } from "@/store";
 import { useSSE } from "@/hooks/use-sse-events";
 import { useExecutionRun, useExecutionNodes } from "@/hooks/use-execution";
-import { useEventsQuery, useTelemetryQuery } from "@/hooks/use-api";
+import { useEventsQuery, useTelemetryQuery, useTelemetrySummaryQuery } from "@/hooks/use-api";
 import { StatusBadge } from "@/components/status-badge";
 import { OrganizationUniverse } from "@/components/3d/scene-wrapper";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { useToastStore } from "@/lib/use-toast";
 import {
   AlertTriangle, XCircle, RotateCcw, ChevronDown,
@@ -37,7 +39,15 @@ function ExecutionContent() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
+  const { setActiveObjectiveId } = useObjectiveContextStore();
   const objectiveId = searchParams.get("id");
+
+  // Sync URL param to global execution context
+  useEffect(() => {
+    if (objectiveId) {
+      setActiveObjectiveId(objectiveId);
+    }
+  }, [objectiveId, setActiveObjectiveId]);
 
   useSSE(objectiveId);
 
@@ -52,18 +62,21 @@ function ExecutionContent() {
   const { nodes: orgNodes } = useExecutionNodes();
   const { data: persistedEvents } = useEventsQuery(objectiveId);
   const { data: persistedTelemetry } = useTelemetryQuery(objectiveId);
+  const { data: telemetrySummary } = useTelemetrySummaryQuery(objectiveId);
   const [showFailureAnalysis, setShowFailureAnalysis] = useState(false);
 
-  // Detect terminal status from SSE pipeline events
+  // Detect terminal status from SSE or REST
   useEffect(() => {
-    if (!sseConnected || notifiedRef.current) return;
+    if (notifiedRef.current) return;
 
     const isTerminal =
       ssePipelineStatus === "completed" ||
       ssePipelineStatus === "completed_with_errors" ||
-      ssePipelineStatus === "error";
+      ssePipelineStatus === "error" ||
+      run.status === "completed" ||
+      run.status === "failed";
 
-    if (isTerminal) {
+    if (isTerminal && (sseConnected || run.status !== "running")) {
       notifiedRef.current = true;
 
       queryClient.invalidateQueries({ queryKey: ["objectives"] });
@@ -73,21 +86,14 @@ function ExecutionContent() {
       queryClient.invalidateQueries({ queryKey: ["decisions"] });
       queryClient.invalidateQueries({ queryKey: ["plans"] });
 
-      if (ssePipelineStatus === "completed") {
+      if (run.status === "completed" || ssePipelineStatus === "completed") {
         addToast({
           title: "Pipeline Completed",
           description: "All stages finished successfully",
           variant: "success",
           duration: 5000,
         });
-      } else if (ssePipelineStatus === "completed_with_errors") {
-        addToast({
-          title: "Completed with Errors",
-          description: "Some stages failed but pipeline completed",
-          variant: "success",
-          duration: 6000,
-        });
-      } else {
+      } else if (run.status === "failed" || ssePipelineStatus === "error") {
         addToast({
           title: "Pipeline Failed",
           description: "An error occurred during execution",
@@ -96,9 +102,9 @@ function ExecutionContent() {
         });
       }
     }
-  }, [ssePipelineStatus, sseConnected, addToast, queryClient]);
+  }, [ssePipelineStatus, sseConnected, run.status, addToast, queryClient]);
 
-  // Source of truth: REST API for terminal, SSE for live
+  // Source of truth: REST API for terminal/refresh, SSE for live
   const restTerminal = run.status === "completed" || run.status === "failed";
   const sseTerminal =
     ssePipelineStatus === "completed" ||
@@ -154,15 +160,33 @@ function ExecutionContent() {
   const isFailed = healthStatus === "failed" || ssePipelineStatus === "error";
 
   const runtime = useMemo(() => {
-    if (!sseEvents.length) return run.eta ?? "—";
-    const first = sseEvents[0];
-    const last = sseEvents[sseEvents.length - 1];
-    if (!first.timestamp || !last.timestamp) return "—";
-    const diff = new Date(last.timestamp).getTime() - new Date(first.timestamp).getTime();
-    const s = Math.floor(diff / 1000);
-    const m = Math.floor(s / 60);
-    return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
-  }, [sseEvents, run.eta]);
+    if (sseEvents.length > 0) {
+      const first = sseEvents[0];
+      const last = sseEvents[sseEvents.length - 1];
+      if (first.timestamp && last.timestamp) {
+        const diff = new Date(last.timestamp).getTime() - new Date(first.timestamp).getTime();
+        const s = Math.floor(diff / 1000);
+        const m = Math.floor(s / 60);
+        return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+      }
+    }
+    if (telemetrySummary?.total_runtime_ms) {
+      const s = Math.floor(telemetrySummary.total_runtime_ms / 1000);
+      const m = Math.floor(s / 60);
+      return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+    }
+    if (Array.isArray(persistedEvents) && persistedEvents.length > 0) {
+      const first = persistedEvents[0];
+      const last = persistedEvents[persistedEvents.length - 1];
+      if (first.created_at && last.created_at) {
+        const diff = new Date(last.created_at).getTime() - new Date(first.created_at).getTime();
+        const s = Math.floor(diff / 1000);
+        const m = Math.floor(s / 60);
+        return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+      }
+    }
+    return "—";
+  }, [sseEvents, persistedEvents, telemetrySummary]);
 
   return (
     <div className="relative flex h-[calc(100vh-var(--topbar-height)-var(--statusbar-height)-2rem)] flex-col">
@@ -178,33 +202,69 @@ function ExecutionContent() {
             </div>
             {progress > 0 && (
               <div className="flex items-center gap-2 shrink-0">
-                <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
+                <div className="relative h-1.5 w-24 overflow-hidden rounded-full bg-muted">
                   <motion.div
-                    className="h-full rounded-full bg-primary"
+                    className="relative h-full rounded-full bg-gradient-to-r from-primary/70 via-primary to-primary/80"
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(progress, 100)}%` }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                  />
+                    transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <motion.div
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%)",
+                        backgroundSize: "200% 100%",
+                      }}
+                      animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    />
+                  </motion.div>
                 </div>
-                <span className="font-mono text-[11px] font-medium tabular-nums text-foreground/80">{Math.round(progress)}%</span>
+                <motion.span
+                  className="font-mono text-[11px] font-medium tabular-nums text-foreground/80"
+                  key={Math.round(progress)}
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {Math.round(progress)}%
+                </motion.span>
               </div>
             )}
           </div>
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <motion.div
+            className="mt-2.5 flex flex-wrap items-center gap-1.5"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.04 } },
+            }}
+          >
             {[
               { label: "Stage", value: phase },
-              { label: "Runtime", value: runtime },
+              {
+                label: "Runtime",
+                value: runtime !== "—"
+                  ? <span className="font-mono font-medium text-foreground/80 tabular-nums">{runtime}</span>
+                  : "—",
+              },
               { label: "Objective ID", value: run.id.length > 10 ? run.id.slice(0, 10) + "…" : run.id, mono: true },
               { label: "Steps", value: totalSteps > 0 ? `${completedStepNames.length}/${totalSteps}` : "—" },
             ].map((chip) => (
-              <span key={chip.label}
+              <motion.span
+                key={chip.label}
+                variants={{
+                  hidden: { opacity: 0, y: -4, scale: 0.95 },
+                  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } },
+                }}
                 className="inline-flex items-center gap-1.5 rounded-md border border-border/30 bg-muted/20 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
               >
                 <span className="text-muted-foreground/50">{chip.label}</span>
-                <span className={cn("font-medium text-foreground/80", chip.mono && "font-mono tabular-nums")}>{chip.value}</span>
-              </span>
+                <span className={cn("font-medium", chip.mono && "font-mono tabular-nums")}>{chip.value}</span>
+              </motion.span>
             ))}
-          </div>
+          </motion.div>
         </div>
         <TopToolbar />
       </div>

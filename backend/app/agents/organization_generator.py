@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from app.agents.base import BaseAgent
 from app.schemas.dynamic_org import (
     DynamicOrganizationStructure,
@@ -10,6 +12,11 @@ from app.schemas.dynamic_org import (
 
 
 class OrganizationGenerator(BaseAgent):
+    async def run(self, objective_id: str) -> dict[str, Any]:
+        intelligence = OrganizationIntelligence(domain="general", complexity="medium")
+        org = await self.generate(objective_id, intelligence)
+        return org.model_dump()
+
     async def generate(
         self,
         objective_id: str,

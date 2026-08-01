@@ -42,11 +42,17 @@ class Settings(BaseSettings):
         if self.app_env != "development":
             if not self.jwt_secret:
                 import warnings
-                warnings.warn("JWT_SECRET is not set! Using insecure default. Set a strong secret for production.")
+                warnings.warn(
+                    "JWT_SECRET is not set! Using insecure default. Set a strong secret for production.",
+                    stacklevel=2,
+                )
                 self.jwt_secret = "dev-jwt-secret"
             if not self.secret_key:
                 import warnings
-                warnings.warn("SECRET_KEY is not set! Using insecure default. Set a strong secret for production.")
+                warnings.warn(
+                    "SECRET_KEY is not set! Using insecure default. Set a strong secret for production.",
+                    stacklevel=2,
+                )
                 self.secret_key = "dev-secret-key"
 
 

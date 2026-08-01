@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useInspectorStore } from "@/store";
 import { useExecutionNodes } from "@/hooks/use-execution";
 import { useSSEStore } from "@/store/sse-store";
-import { useDashboardQuery } from "@/hooks/use-api";
+import { useDashboardQuery, useEventsQuery } from "@/hooks/use-api";
 import { useSearchParams } from "next/navigation";
 import { HealthBadge } from "@/components/health-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
@@ -116,17 +116,17 @@ function OrgSummary() {
   const objectiveId = useObjectiveIdFromParams();
   const { data: dashboard } = useDashboardQuery(objectiveId);
   const sseEvents = useSSEStore((s) => s.events);
+  const { data: persistedEvents } = useEventsQuery(objectiveId);
   const { nodes } = useExecutionNodes();
+  const sourceEvents = sseEvents.length > 0 ? sseEvents : (persistedEvents ?? []);
 
-  // Count stages by status from SSE events
+  // Count stages by status from events
   const stageStatuses = useMemo(() => {
     const map: Record<string, string> = {};
-    if (sseEvents.length > 0) {
-      for (const ev of sseEvents) {
-        if (ev.stage && ev.stage !== "pipeline") {
-          if (ev.status === "completed" || ev.status === "error") map[ev.stage] = ev.status;
-          else if (!map[ev.stage]) map[ev.stage] = ev.status;
-        }
+    for (const ev of sourceEvents as Array<{ stage?: string; status?: string }>) {
+      if (ev.stage && ev.stage !== "pipeline") {
+        if (ev.status === "completed" || ev.status === "error") map[ev.stage] = ev.status;
+        else if (!map[ev.stage]) map[ev.stage] = ev.status ?? "pending";
       }
     }
     const values = Object.values(map);
@@ -134,15 +134,14 @@ function OrgSummary() {
       completed: values.filter(v => v === "completed").length,
       running: values.filter(v => v === "started" || v === "progress").length,
       failed: values.filter(v => v === "error").length,
-      pending: values.filter(v => v !== "completed" && v !== "started" && v !== "progress" && v !== "error" && v !== "started").length,
+      pending: values.filter(v => v !== "completed" && v !== "started" && v !== "progress" && v !== "error").length,
     };
-  }, [sseEvents]);
+  }, [sourceEvents]);
 
-  // Fallback: if no SSE, use org node data
-  const completed = sseEvents.length > 0 ? stageStatuses.completed : nodes.filter((n) => n.status === "completed").length;
-  const running = sseEvents.length > 0 ? stageStatuses.running : nodes.filter((n) => n.status === "running").length;
-  const failed = sseEvents.length > 0 ? stageStatuses.failed : nodes.filter((n) => n.status === "failed").length;
-  const pending = sseEvents.length > 0 ? stageStatuses.pending : nodes.filter((n) => n.status === "pending" || n.status === "ready").length;
+  const completed = sourceEvents.length > 0 ? stageStatuses.completed : nodes.filter((n) => n.status === "completed").length;
+  const running = sourceEvents.length > 0 ? stageStatuses.running : nodes.filter((n) => n.status === "running").length;
+  const failed = sourceEvents.length > 0 ? stageStatuses.failed : nodes.filter((n) => n.status === "failed").length;
+  const pending = sourceEvents.length > 0 ? stageStatuses.pending : nodes.filter((n) => n.status === "pending" || n.status === "ready").length;
 
   const deptCount = dashboard?.organization?.departments?.length ?? 0;
   const headCount = dashboard?.organization?.total_head_count ?? 0;

@@ -7,7 +7,6 @@ from app.database.session import get_session
 from app.schemas import ApiResponse
 from app.schemas.features import (
     AdaptiveReplanRequest,
-    BusinessReadinessRequest,
     DecisionMemoryEntryCreate,
     DevilsAdvocateRequest,
     MissingInfoRefineRequest,
@@ -247,6 +246,8 @@ async def resolve_bottleneck(
 ) -> ApiResponse:
     service = BottleneckDetectionService(session)
     result = await service.resolve_bottleneck(bottleneck_id)
+    if not result:
+        return ApiResponse(data=None, meta={"message": "Bottleneck not found"})
     if "error" in result:
         return ApiResponse(data=None, meta={"message": result["error"]})
     return ApiResponse(data=result)
@@ -293,8 +294,11 @@ async def get_executive_dashboard(
     overall_health = {
         "readiness_score": readiness["overall_score"] if readiness else None,
         "success_probability": probability["success_probability"] if probability else None,
-        "bottleneck_count": bottlenecks["total"] if bottlenecks else 0,
-        "critical_bottlenecks": bottlenecks["critical_count"] if bottlenecks else 0,
+        "bottleneck_count": len(bottlenecks) if bottlenecks else 0,
+        "critical_bottlenecks": (
+            sum(1 for b in bottlenecks if b.get("severity") == "critical")
+            if bottlenecks else 0
+        ),
         "has_devils_advocate": devils_advocate_data is not None,
     }
 
@@ -368,8 +372,8 @@ async def adaptive_replan(
     body: AdaptiveReplanRequest,
     session: AsyncSession = Depends(get_session),
 ) -> ApiResponse:
-    from app.services.engine import AdaptiveReplanningService
     from app.repositories.extensions_repository import PlanRepository
+    from app.services.engine import AdaptiveReplanningService
 
     plans = await PlanRepository(session).list_by_objective(objective_id)
     if not plans:

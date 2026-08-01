@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import ClassVar
 
 
 class WorkflowStateMachine:
@@ -13,7 +13,7 @@ class WorkflowStateMachine:
     Each state has allowed transitions. Invalid transitions raise errors.
     """
 
-    STATES = [
+    STATES: ClassVar[list[str]] = [
         "draft",
         "compiled",
         "planning",
@@ -32,7 +32,7 @@ class WorkflowStateMachine:
         "cancelled",
     ]
 
-    TRANSITIONS: dict[str, list[str]] = {
+    TRANSITIONS: ClassVar[dict[str, list[str]]] = {
         "draft": ["compiled", "failed"],
         "compiled": ["planning", "planned", "failed"],
         "planning": ["planned", "failed"],
@@ -51,7 +51,7 @@ class WorkflowStateMachine:
         "cancelled": [],
     }
 
-    STAGE_MAP: dict[str, str] = {
+    STAGE_MAP: ClassVar[dict[str, str]] = {
         "draft": "awaiting_compilation",
         "compiled": "compilation_complete",
         "planning": "planning_in_progress",

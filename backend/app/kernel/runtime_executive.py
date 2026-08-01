@@ -71,7 +71,7 @@ class RuntimeExecutive(BaseModel):
     confidence: float | None = None
     error: str | None = None
 
-    def request_specialists(self, llm_output: dict) -> list[SpecialistRequest]:
+    def request_specialists(self, llm_output: dict[str, Any]) -> list[SpecialistRequest]:
         """Parse LLM output and create specialist requests.
 
         Phase 4 (AgentFactory) will fulfill these requests with
@@ -105,7 +105,7 @@ class RuntimeExecutive(BaseModel):
             if spec.status == "pending":
                 spec.status = "running"
 
-    def receive_report(self, specialist_title: str, report: dict) -> None:
+    def receive_report(self, specialist_title: str, report: dict[str, Any]) -> None:
         """Collect a specialist's output.
 
         Phase 7 (ExecutiveAggregator) will enhance this with

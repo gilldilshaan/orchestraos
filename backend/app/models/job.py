@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, Float, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -8,6 +9,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 from app.models.base import BaseEntity
+
+if TYPE_CHECKING:
+    from app.models.objective import Objective
+    from app.models.user import User
 
 
 class Job(Base, BaseEntity):
@@ -25,8 +30,8 @@ class Job(Base, BaseEntity):
         DateTime(timezone=True), default=None, nullable=True
     )
     worker: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
-    result: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
-    error: Mapped[dict | None] = mapped_column(JSONB, default=None, nullable=True)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
+    error: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None, nullable=True)
 
     user_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("users.id"), default=None, nullable=True

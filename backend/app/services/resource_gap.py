@@ -69,6 +69,9 @@ class ResourceGapService:
             "created_at": rg.created_at.isoformat() if rg.created_at else None,
         }
 
+    async def get_gap(self, objective_id: str) -> dict[str, Any] | None:
+        return await self.get_analysis(objective_id)
+
     async def get_analysis(self, objective_id: str) -> dict[str, Any] | None:
         rg = await self._repo.get_by_objective(objective_id)
         if not rg:

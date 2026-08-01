@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+from typing import Any, cast
 
 from cryptography.fernet import Fernet
 
@@ -17,9 +18,9 @@ def _derive_key() -> bytes:
 _cipher = Fernet(_derive_key())
 
 
-def encrypt_credentials(data: dict) -> str:
+def encrypt_credentials(data: dict[str, Any]) -> str:
     return _cipher.encrypt(json.dumps(data).encode()).decode()
 
 
-def decrypt_credentials(token: str) -> dict:
-    return json.loads(_cipher.decrypt(token.encode()))
+def decrypt_credentials(token: str) -> dict[str, Any]:
+    return cast(dict[str, Any], json.loads(_cipher.decrypt(token.encode())))

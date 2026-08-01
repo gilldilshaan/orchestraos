@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import time
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 
@@ -59,7 +58,7 @@ class BaseConnector(ABC):
 
 
 class ConnectorRegistry:
-    _connectors: dict[str, type[BaseConnector]] = {}
+    _connectors: ClassVar[dict[str, type[BaseConnector]]] = {}
 
     @classmethod
     def register(cls, connector_class: type[BaseConnector]) -> type[BaseConnector]:

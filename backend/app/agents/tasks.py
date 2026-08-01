@@ -332,7 +332,7 @@ class DashboardAgent(BaseAgent):
         objective = await obj_repo.get(objective_id)
         plans = await plan_repo.list_by_objective(objective_id)
         risks = await risk_repo.list_by_objective(objective_id)
-        decisions = await decision_repo.list_by_objective(objective_id)
+        _decisions = await decision_repo.list_by_objective(objective_id)
         pending_decisions = await decision_repo.list_pending()
 
         active_plan = None

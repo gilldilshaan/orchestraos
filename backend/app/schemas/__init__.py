@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ─── Enums ───────────────────────────────────────────────────────────────────
 
-class ObjectiveStatus(str, Enum):
+class ObjectiveStatus(StrEnum):
     DRAFT = "draft"
     COMPILING = "compiling"
     COMPILED = "compiled"
@@ -31,56 +30,56 @@ class ObjectiveStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class DecisionStatus(str, Enum):
+class DecisionStatus(StrEnum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     UNDER_REVIEW = "UNDER_REVIEW"
 
 
-class PlanStatus(str, Enum):
+class PlanStatus(StrEnum):
     DRAFT = "draft"
     ACTIVE = "active"
     COMPLETED = "completed"
     ARCHIVED = "archived"
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
 
 
-class RiskStatus(str, Enum):
+class RiskStatus(StrEnum):
     IDENTIFIED = "identified"
     MITIGATED = "mitigated"
     REALIZED = "realized"
     CLOSED = "closed"
 
 
-class ScenarioStatus(str, Enum):
+class ScenarioStatus(StrEnum):
     DRAFT = "draft"
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
 
 
-class MilestoneStatus(str, Enum):
+class MilestoneStatus(StrEnum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     BLOCKED = "blocked"
 
 
-class KPIStatus(str, Enum):
+class KPIStatus(StrEnum):
     ON_TRACK = "on_track"
     AT_RISK = "at_risk"
     BEHIND = "behind"
@@ -89,7 +88,7 @@ class KPIStatus(str, Enum):
 
 # ─── RBAC ───────────────────────────────────────────────────────────────────
 
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     FOUNDER = "founder"
     ADMIN = "admin"
     MANAGER = "manager"
@@ -97,7 +96,7 @@ class UserRole(str, Enum):
     VIEWER = "viewer"
 
 
-class Permission(str, Enum):
+class Permission(StrEnum):
     CREATE_OBJECTIVE = "create:objective"
     READ_OBJECTIVE = "read:objective"
     UPDATE_OBJECTIVE = "update:objective"
@@ -176,7 +175,7 @@ class MetaData(BaseModel):
 
 class ApiResponse(BaseModel):
     data: Any = None
-    meta: MetaData = Field(default_factory=MetaData)
+    meta: MetaData | dict[str, Any] = Field(default_factory=MetaData)
 
 
 class PaginatedResponse(BaseModel):
