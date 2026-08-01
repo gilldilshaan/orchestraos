@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.extensions import AgentTelemetry, Department, Decision, Milestone, Plan
+from app.models.extensions import AgentTelemetry, Decision, Department, Milestone, Plan
 from app.models.objective import Objective
 from app.repositories.objective_repository import ObjectiveRepository
 
@@ -110,13 +110,13 @@ class RuntimeMetricsAggregator:
         # -- Agent telemetry: retries for terminal objectives --------------
         retry_counts: list[int] = []
         if terminal_ids:
-            stmt = (
+            stmt_retries = (
                 select(AgentTelemetry.retries)
                 .where(AgentTelemetry.objective_id.in_(terminal_ids))
                 .where(AgentTelemetry.retries.isnot(None))
             )
-            result = await self._session.execute(stmt)
-            retry_counts = [row[0] for row in result if row[0] is not None]
+            result_retries = await self._session.execute(stmt_retries)
+            retry_counts = [row[0] for row in result_retries if row[0] is not None]
         avg_retries = (
             sum(retry_counts) / len(retry_counts) if retry_counts else 0
         )

@@ -193,8 +193,8 @@ class OrganizationAgent(BaseAgent):
         created_depts = []
 
         if not departments_data:
+
             from app.llm.fallback import build_organization
-            import json
             prompt = self._llm.prompt_manager.render("organization_v1.md", context or {})
             fallback_result = build_organization(prompt)
             departments_data = fallback_result.get("departments", [])
@@ -266,8 +266,8 @@ class DecisionAgent(BaseAgent):
 
         options_data = result.get("options", [])
         if not options_data:
+
             from app.llm.fallback import build_decision
-            import json
             prompt = self._llm.prompt_manager.render("decision_v1.md", context or {})
             fallback_result = build_decision(prompt)
             options_data = fallback_result.get("options", [])
