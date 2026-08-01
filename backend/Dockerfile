@@ -11,8 +11,10 @@ COPY app/ ./app/
 COPY prompts/ ./prompts/
 COPY migrations/ ./migrations/
 COPY migrations/alembic.ini ./
-RUN pip install --no-cache-dir -e ".[dev]"
+COPY start.sh ./
+RUN pip install --no-cache-dir -e ".[dev]" \
+    && chmod +x start.sh
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./start.sh"]
