@@ -42,6 +42,13 @@ const PHASES = [
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
+const RISK_TONE: Record<string, string> = {
+  low: "border-emerald-500/20 bg-emerald-500/8 text-emerald-400",
+  medium: "border-amber-500/20 bg-amber-500/8 text-amber-400",
+  high: "border-red-500/20 bg-red-500/8 text-red-400",
+  critical: "border-red-500/30 bg-red-500/15 text-red-400",
+};
+
 export function ActiveExecution() {
   const [showNewRun, setShowNewRun] = useState(false);
   const activeObjectiveId = useObjectiveContextStore((s) => s.activeObjectiveId);
@@ -88,11 +95,16 @@ export function ActiveExecution() {
       recapRuntime >= 60
         ? `${(recapRuntime / 60).toFixed(1)}m`
         : `${recapRuntime.toFixed(1)}s`;
+    const milestoneTotal = dashboard?.plan?.milestone_count ?? 0;
+    const milestoneDone = dashboard?.plan?.completed_milestones ?? 0;
+    const topRisks = dashboard?.risks?.top_risks ?? [];
+    const pendingDecisions = dashboard?.decisions?.pending_decisions ?? [];
+    const milestoneTicks = Array.from({ length: Math.min(milestoneTotal, 14) }, (_, i) => i < milestoneDone);
 
     return (
-      <div className="panel">
+      <div className="panel flex h-full flex-col">
         <div className="absolute left-0 top-0 h-px w-full bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
-        <div className="panel-body">
+        <div className="panel-body flex flex-1 flex-col">
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2.5">
@@ -212,7 +224,89 @@ export function ActiveExecution() {
                 ))}
               </div>
 
-              <div className="mt-5 flex items-center gap-3">
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-border/15 bg-background/20 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="section-kicker">Milestones</span>
+                    <span className="font-mono text-[11px] tabular-nums text-foreground/60">
+                      {milestoneTotal > 0 ? `${milestoneDone}/${milestoneTotal}` : "\u2014"}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center gap-1.5">
+                    {milestoneTotal > 0 ? (
+                      milestoneTicks.map((done, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, scaleX: 0 }}
+                          animate={{ opacity: 1, scaleX: 1 }}
+                          transition={{ delay: 0.2 + i * 0.02 }}
+                          className={`h-1.5 flex-1 rounded-full ${
+                            done
+                              ? "bg-gradient-to-r from-success/70 via-success to-success/50"
+                              : "bg-muted/30"
+                          }`}
+                        />
+                      ))
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground/40">No milestone data</span>
+                    )}
+                  </div>
+                  <p className="mt-2.5 text-[10px] text-muted-foreground/40">
+                    {milestoneTotal > 0
+                      ? milestoneDone >= milestoneTotal
+                        ? "All milestones completed"
+                        : `${milestoneDone} of ${milestoneTotal} milestones reached`
+                      : "Milestones appear once the plan is compiled"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border/15 bg-background/20 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="section-kicker">Top Risks</span>
+                    <span className="font-mono text-[11px] tabular-nums text-foreground/60">
+                      {dashboard?.risks?.total != null ? String(dashboard.risks.total) : "\u2014"}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {topRisks.length > 0 ? (
+                      topRisks.slice(0, 4).map((r) => (
+                        <span
+                          key={r.id}
+                          className={`inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium ${RISK_TONE[r.risk_level] ?? "border-border/20 bg-muted/20 text-muted-foreground/60"}`}
+                          title={r.title}
+                        >
+                          <span className="truncate">{r.title}</span>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground/40">No risks identified</span>
+                    )}
+                  </div>
+                  {topRisks.length === 0 && (
+                    <p className="mt-2.5 text-[10px] text-muted-foreground/40">
+                      Risk analysis runs before execution begins
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {pendingDecisions.length > 0 && (
+                <div className="mt-4 rounded-xl border border-border/15 bg-background/20 p-4">
+                  <div className="section-kicker">Pending Decisions</div>
+                  <div className="mt-3 space-y-2.5">
+                    {pendingDecisions.slice(0, 3).map((d) => (
+                      <div key={d.id} className="flex items-center gap-3">
+                        <span className="min-w-0 flex-1 truncate text-xs text-foreground/70">
+                          {d.title}
+                        </span>
+                        <ConfidenceBar value={d.confidence} size="sm" className="w-20" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-auto flex items-center gap-3 pt-6">
                 <motion.button
                   onClick={() => setShowNewRun(true)}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.97]"
@@ -232,7 +326,7 @@ export function ActiveExecution() {
               </div>
             </>
           ) : (
-            <div className="mt-5 flex flex-col items-center justify-center rounded-xl border border-dashed border-border/40 bg-background/20 py-10 text-center">
+            <div className="my-auto flex flex-col items-center justify-center rounded-xl border border-dashed border-border/40 bg-background/20 py-14 text-center">
               <motion.div
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/8 text-primary/60"
                 animate={{ scale: [1, 1.05, 1] }}
