@@ -9,6 +9,9 @@ import Link from "next/link";
 import { useLatestObjectiveIdQuery } from "@/hooks/use-api";
 import { useObjectiveContextStore } from "@/store";
 import { StatusBadge } from "@/components/status-badge";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton, CardSkeleton } from "@/components/skeleton";
 import {
   Folder, FileJson, FileText, ChevronRight,
   Search, Clock, Cpu, DollarSign, Archive, MousePointerClick, Orbit,
@@ -24,7 +27,7 @@ interface TreeNode {
 
 export default function ArtifactsPage() {
   return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<PageSkeleton />}>
       <ArtifactsContent />
     </Suspense>
   );
@@ -166,27 +169,19 @@ function ArtifactsContent() {
 
   return (
     <div className="space-y-5">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Artifact Explorer</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Execution artifacts, telemetry, and snapshot data
-            </p>
-          </div>
-          <span className="text-[11px] text-muted-foreground/60">
-            {totalFiles} artifacts
-          </span>
-        </div>
-      </motion.div>
+      <PageHeader
+        kicker="Explore"
+        title="Artifact Explorer"
+        description="Execution artifacts, telemetry, and snapshot data"
+        meta={
+          <span className="chip">{totalFiles} artifacts</span>
+        }
+      />
 
       {isLoading && (
-        <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-          Loading artifacts...
+        <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr]">
+          <CardSkeleton className="h-[560px]" />
+          <CardSkeleton className="h-[560px]" />
         </div>
       )}
 
@@ -194,22 +189,21 @@ function ArtifactsContent() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center rounded-xl border border-border/50 bg-card p-12 text-center"
         >
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/30">
-            <Archive className="h-6 w-6 text-muted-foreground/40" />
-          </div>
-          <h2 className="mt-4 text-sm font-semibold text-foreground/80">No artifacts found</h2>
-          <p className="mt-1.5 max-w-sm text-xs text-muted-foreground/50">
-            Execution events, agent telemetry, and snapshots will appear here once an objective runs through the pipeline.
-          </p>
-          <Link
-            href="/objective"
-            className="mt-5 inline-flex items-center gap-1.5 rounded-lg border border-border/40 bg-card/60 px-3.5 py-2 text-xs font-medium text-foreground/70 transition-colors duration-200 hover:border-primary/40 hover:text-foreground"
-          >
-            <Orbit className="h-3.5 w-3.5" />
-            Start a new objective
-          </Link>
+          <EmptyState
+            icon={<Archive className="h-5 w-5" />}
+            title="No artifacts found"
+            description="Execution events, agent telemetry, and snapshots will appear here once an objective runs through the pipeline."
+            action={
+              <Link
+                href="/objective"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border/40 bg-card/60 px-3.5 py-2 text-xs font-medium text-foreground/70 transition-colors duration-200 hover:border-primary/40 hover:text-foreground"
+              >
+                <Orbit className="h-3.5 w-3.5" />
+                Start a new objective
+              </Link>
+            }
+          />
         </motion.div>
       )}
 
@@ -229,7 +223,7 @@ function ArtifactsContent() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Filter artifacts..."
-                  className="w-full rounded-md border border-border/30 bg-muted/20 py-1.5 pl-7 pr-2 text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:border-primary/40 focus:outline-none"
+                  className="input py-1.5 pl-7 pr-2 text-[11px]"
                 />
               </div>
             </div>
@@ -265,10 +259,12 @@ function ArtifactsContent() {
                   {JSON.stringify(selectedFile.data, null, 2)}
                 </pre>
               ) : (
-                <div className="flex h-40 flex-col items-center justify-center gap-2 text-center">
-                  <MousePointerClick className="h-5 w-5 text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground/50">Select an artifact from the tree to view its contents</p>
-                </div>
+                <EmptyState
+                  compact
+                  icon={<MousePointerClick className="h-5 w-5" />}
+                  title="No file selected"
+                  description="Select an artifact from the tree to view its contents."
+                />
               )}
             </div>
           </motion.div>

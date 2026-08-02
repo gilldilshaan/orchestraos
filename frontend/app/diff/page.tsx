@@ -6,12 +6,16 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useEventsQuery, useTelemetryQuery, useTelemetrySummaryQuery, useObjectivesQuery } from "@/hooks/use-api";
 import { StatusBadge } from "@/components/status-badge";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton } from "@/components/skeleton";
+import { SegmentedControl } from "@/components/segmented-control";
 import { ArrowRightLeft, Clock, Cpu, DollarSign, Activity, AlertTriangle, Search } from "lucide-react";
 import { PipelineReport } from "@/app/execution/components/pipeline-report";
 
 export default function DiffPage() {
   return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<PageSkeleton />}>
       <DiffContent />
     </Suspense>
   );
@@ -66,22 +70,17 @@ function DiffContent() {
 
   return (
     <div className="space-y-5">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <h1 className="text-lg font-semibold tracking-tight">Execution Diff</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Side-by-side comparison of two execution runs
-        </p>
-      </motion.div>
+      <PageHeader
+        kicker="Analyze"
+        title="Execution Diff"
+        description="Side-by-side comparison of two execution runs"
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
-        className="flex items-end gap-3 rounded-lg border border-border/50 bg-card p-4"
+        className="rounded-lg border border-border/50 bg-card p-4"
       >
         <div className="flex-1">
           <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
@@ -90,7 +89,7 @@ function DiffContent() {
           <select
             value={selectedA}
             onChange={(e) => setSelectedA(e.target.value)}
-            className="w-full rounded-md border border-border/30 bg-muted/20 px-3 py-2 text-[11px] text-foreground focus:border-primary/40 focus:outline-none"
+            className="input"
           >
             <option value="">Select execution...</option>
             {runs.map((r) => (
@@ -108,7 +107,7 @@ function DiffContent() {
           <select
             value={selectedB}
             onChange={(e) => setSelectedB(e.target.value)}
-            className="w-full rounded-md border border-border/30 bg-muted/20 px-3 py-2 text-[11px] text-foreground focus:border-primary/40 focus:outline-none"
+            className="input"
           >
             <option value="">Select execution...</option>
             {runs.map((r) => (
@@ -130,38 +129,28 @@ function DiffContent() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-border/50 bg-card p-8 text-center"
         >
-          <p className="text-sm text-muted-foreground">
-            Select two executions from the dropdowns above and click Compare.
-          </p>
+          <EmptyState
+            icon={<ArrowRightLeft className="h-5 w-5" />}
+            title="Select two executions"
+            description="Pick two runs from the dropdowns above and click Compare."
+          />
         </motion.div>
       ) : null}
 
       {id1 && id2 && (
         <>
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-            <span className="font-mono truncate max-w-[120px]">{obj1?.raw_input?.slice(0, 40) ?? id1.slice(0, 8)}</span>
+            <span className="chip font-mono max-w-[160px] truncate">{obj1?.raw_input?.slice(0, 40) ?? id1.slice(0, 8)}</span>
             <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" />
-            <span className="font-mono truncate max-w-[120px]">{obj2?.raw_input?.slice(0, 40) ?? id2.slice(0, 8)}</span>
+            <span className="chip font-mono max-w-[160px] truncate">{obj2?.raw_input?.slice(0, 40) ?? id2.slice(0, 8)}</span>
           </div>
 
-          <div className="flex items-center gap-1 rounded-lg border border-border/50 bg-card p-1 w-fit">
-            {sections.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setSelectedSection(s.id)}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-[11px] font-medium transition-all",
-                  selectedSection === s.id
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            value={selectedSection}
+            onChange={setSelectedSection}
+            options={sections.map((s) => ({ value: s.id, label: s.label }))}
+          />
 
           {selectedSection === "overview" && (
             <div className="grid gap-4 lg:grid-cols-2">
@@ -255,7 +244,12 @@ function RunSidebar({
             <DiffChip icon={AlertTriangle} label="Failed" value={summary.failed} color={summary.failed > 0 ? "text-red-400" : "text-muted-foreground"} />
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground/60">No telemetry data</p>
+          <EmptyState
+            compact
+            icon={<Activity className="h-5 w-5" />}
+            title="No telemetry data"
+            description="This run has no telemetry summary yet."
+          />
         )}
         <PipelineReport objectiveId={objectiveId} />
       </div>
@@ -281,7 +275,12 @@ function EventColumn({
       </div>
       <div className="max-h-[500px] overflow-y-auto scrollbar-thin divide-y divide-border/20">
         {events.length === 0 && (
-          <div className="p-4 text-xs text-muted-foreground">No events</div>
+          <EmptyState
+            compact
+            icon={<Activity className="h-5 w-5" />}
+            title="No events"
+            description="No execution events recorded for this run."
+          />
         )}
         {events.map((e) => (
           <div key={e.id} className="px-4 py-2.5 space-y-1">
@@ -338,7 +337,12 @@ function TelemetryColumn({
       </div>
       <div className="max-h-[500px] overflow-y-auto scrollbar-thin divide-y divide-border/20">
         {telemetry.length === 0 && (
-          <div className="p-4 text-xs text-muted-foreground">No telemetry</div>
+          <EmptyState
+            compact
+            icon={<Cpu className="h-5 w-5" />}
+            title="No telemetry"
+            description="No agent telemetry recorded for this run."
+          />
         )}
         {telemetry.map((t) => (
           <div key={t.id} className="px-4 py-2.5 space-y-1.5">

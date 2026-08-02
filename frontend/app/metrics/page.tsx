@@ -3,13 +3,16 @@
 import { useMemo } from "react";
 import { motion } from "motion/react";
 import { MetricCard } from "@/components/metric-card";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton } from "@/components/skeleton";
 import { BarChart3, TrendingUp, PieChart, Activity, CheckCircle2, Clock, Users, UserPlus, GitBranch, RotateCcw, DollarSign, Zap } from "lucide-react";
 import { useAggregateMetricsQuery, useChartDataQuery, useHealthAiQuery } from "@/hooks/use-api";
 
 export default function MetricsPage() {
-  const { data: agg } = useAggregateMetricsQuery();
-  const { data: charts } = useChartDataQuery();
-  const { data: ai } = useHealthAiQuery();
+  const { data: agg, isLoading: aggLoading } = useAggregateMetricsQuery();
+  const { data: charts, isLoading: chartsLoading } = useChartDataQuery();
+  const { data: ai, isLoading: aiLoading } = useHealthAiQuery();
 
   const avgTokensPerCall =
     ai?.kernel && ai.kernel.total_calls > 0
@@ -23,20 +26,17 @@ export default function MetricsPage() {
     ? Math.round(agg.average_runtime_seconds / 60 * 10) / 10
     : null;
 
+  if (aggLoading || chartsLoading || aiLoading) {
+    return <PageSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <h1 className="text-lg font-semibold tracking-tight">
-          Runtime Metrics
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Aggregated from {agg?.total_runs ?? "—"} total objectives ({agg?.completed_runs ?? 0} completed, {agg?.failed_runs ?? 0} failed)
-        </p>
-      </motion.div>
+      <PageHeader
+        kicker="Analyze"
+        title="Runtime Metrics"
+        description={`Aggregated from ${agg?.total_runs ?? "—"} total objectives (${agg?.completed_runs ?? 0} completed, ${agg?.failed_runs ?? 0} failed)`}
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -157,9 +157,12 @@ export default function MetricsPage() {
               </div>
             </div>
           ) : (
-            <div className="text-center text-sm text-muted-foreground">
-              <p>No data available for this execution.</p>
-            </div>
+            <EmptyState
+              compact
+              icon={<BarChart3 className="h-5 w-5" />}
+              title="No chart data yet"
+              description="Runtime trends will appear here once objectives have completed."
+            />
           )}
         </div>
       </motion.div>

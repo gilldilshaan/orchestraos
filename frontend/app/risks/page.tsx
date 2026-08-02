@@ -12,6 +12,9 @@ import {
 } from "@/hooks/use-api";
 import { useObjectiveContextStore } from "@/store";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton } from "@/components/skeleton";
 import {
   ShieldAlert,
   AlertTriangle,
@@ -118,49 +121,35 @@ function RisksContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold tracking-tight">
-                Risk Register
-              </h1>
-              {(risks?.total ?? 0) > 0 && (
-                <span className="rounded-full bg-red-500/10 px-2.5 py-0.5 text-[10px] font-medium text-red-400">
-                  {risks!.total} identified
-                </span>
-              )}
-            </div>
-            <p className="mt-1 truncate text-sm text-muted-foreground">
-              {objective?.raw_input ?? "Risk assessment for active objective"}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            {objective && <StatusBadge status={objective.status} size="sm" />}
-          </div>
-        </div>
+        <PageHeader
+          kicker="Analyze"
+          title="Risk Register"
+          description={objective?.raw_input ?? "Risk assessment for active objective"}
+          meta={
+            (risks?.total ?? 0) > 0 ? (
+              <span className="chip border-red-500/20 bg-red-500/10 text-red-400">
+                {risks!.total} identified
+              </span>
+            ) : undefined
+          }
+          actions={
+            objective ? <StatusBadge status={objective.status} size="sm" /> : undefined
+          }
+        />
       </motion.div>
 
       {isLoading ? (
-        <div className="flex h-40 items-center justify-center">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground" />
-            Loading risk assessment...
-          </div>
-        </div>
+        <PageSkeleton />
       ) : (risks?.total ?? 0) === 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-border/50 bg-card p-10 text-center"
         >
-          <ShieldAlert className="mx-auto h-8 w-8 text-muted-foreground/40" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            No risks identified yet.
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground/60">
-            The Risk Agent flags high-probability threats once the pipeline runs
-            on an objective.
-          </p>
+          <EmptyState
+            icon={<ShieldAlert className="h-5 w-5" />}
+            title="No risks identified yet"
+            description="The Risk Agent flags high-probability threats once the pipeline runs on an objective."
+          />
         </motion.div>
       ) : (
         <div className="space-y-4">

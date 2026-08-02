@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
-import { useSidebarStore } from "@/store";
+import { useSidebarStore, useNewRunModalStore } from "@/store";
 import {
   LayoutDashboard,
   PlayCircle,
@@ -76,33 +76,34 @@ const navGroups = [
 export function Sidebar() {
   const pathname = usePathname();
   const { isCollapsed, collapse } = useSidebarStore();
+  const openNewRun = useNewRunModalStore((s) => s.open);
 
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-30 flex h-full flex-col border-r border-border/30 bg-background/90 backdrop-blur-2xl transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+        "fixed left-0 top-0 z-30 flex h-full flex-col border-r border-border/30 bg-background/85 backdrop-blur-2xl transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
         isCollapsed ? "w-sidebar-collapsed" : "w-sidebar"
       )}
     >
       {/* Logo area */}
       <div
         className={cn(
-          "flex h-12 items-center border-b border-border/30 px-4",
+          "flex h-12 shrink-0 items-center border-b border-border/30 px-4",
           isCollapsed && "justify-center px-0"
         )}
       >
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <motion.div
-            className="flex h-7 w-7 items-center justify-center rounded-lg"
-            style={{ backgroundColor: "hsl(var(--primary) / 0.12)" }}
+            className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-primary/12 shadow-glow"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <Orbit className="h-4 w-4 text-primary" />
+            <span className="absolute inset-0 rounded-lg ring-1 ring-inset ring-primary/20" />
           </motion.div>
           {!isCollapsed && (
             <motion.span
-              className="text-sm font-semibold tracking-tight"
+              className="text-sm font-semibold tracking-tight text-foreground/95"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -119,8 +120,11 @@ export function Sidebar() {
         {navGroups.map((group) => (
           <div key={group.label}>
             {!isCollapsed && (
-              <div className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/30">
-                {group.label}
+              <div className="flex items-center gap-2 px-3 pb-1.5 pt-1">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/30">
+                  {group.label}
+                </span>
+                <span className="h-px flex-1 bg-border/20" />
               </div>
             )}
             <div className="space-y-0.5">
@@ -131,8 +135,9 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+                      "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-ring",
                       isActive
                         ? "text-primary"
                         : "text-muted-foreground/60 hover:bg-muted/20 hover:text-foreground/80",
@@ -143,32 +148,29 @@ export function Sidebar() {
                       <>
                         <motion.div
                           layoutId="nav-active-bg"
-                          className="absolute inset-0 rounded-lg"
+                          className="absolute inset-0 rounded-lg border border-primary/15"
                           style={{ backgroundColor: "hsl(var(--primary) / 0.08)" }}
                           transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         />
                         <motion.div
                           layoutId="nav-active-indicator"
-                          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary"
+                          className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary shadow-glow"
                           transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         />
                       </>
                     )}
                     <motion.div
-                      className="relative flex items-center"
+                      className={cn(
+                        "relative flex h-6 w-6 items-center justify-center rounded-md transition-colors duration-150",
+                        isActive && "bg-primary/12"
+                      )}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <Icon className={cn(
-                        "h-4 w-4 shrink-0",
-                        isActive ? "text-primary" : "text-muted-foreground/50"
-                      )} />
+                      <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground/50")} />
                     </motion.div>
                     {!isCollapsed && (
                       <span className="relative text-xs">{item.label}</span>
-                    )}
-                    {!isActive && !isCollapsed && (
-                      <span className="absolute bottom-1 left-3 right-3 h-px scale-x-0 rounded-full bg-primary/10 transition-transform duration-200 group-hover:scale-x-100" />
                     )}
                   </Link>
                 );
@@ -179,16 +181,29 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom section */}
-      <div className="border-t border-border/30 p-2">
+      <div className="shrink-0 border-t border-border/30 p-2">
         {/* Quick action button */}
         {!isCollapsed && (
           <motion.button
-            className="mb-2 flex w-full items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+            onClick={openNewRun}
+            className="mb-2 flex w-full items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary ring-1 ring-inset ring-primary/15 transition-all hover:bg-primary/15 hover:shadow-glow"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
             <Zap className="h-3.5 w-3.5" />
             <span>New Objective</span>
+            <span className="ml-auto font-mono text-[9px] text-primary/50">N</span>
+          </motion.button>
+        )}
+        {isCollapsed && (
+          <motion.button
+            onClick={openNewRun}
+            aria-label="New Objective"
+            className="mb-2 flex w-full items-center justify-center rounded-lg bg-primary/10 px-0 py-2 text-primary ring-1 ring-inset ring-primary/15 transition-all hover:bg-primary/15"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Zap className="h-3.5 w-3.5" />
           </motion.button>
         )}
         {/* Collapse toggle */}

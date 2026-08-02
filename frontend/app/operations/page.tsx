@@ -7,6 +7,9 @@ import {
   useOperationsSummaryQuery,
 } from "@/hooks/use-intelligence";
 import { StatusBadge } from "@/components/status-badge";
+import { PageHeader, SectionHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { CardSkeleton, Skeleton } from "@/components/skeleton";
 import {
   Orbit,
   Bot,
@@ -81,50 +84,45 @@ export default function OperationsPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="shrink-0 border-b border-border/50 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Executive Operations Center</h1>
-            <p className="mt-0.5 text-xs text-muted-foreground/70">
-              Real-time overview of all active objectives, agents, and system health
-            </p>
-          </div>
-          {summary && (
+      <div className="shrink-0 border-b border-border/50 px-6 py-5">
+        <PageHeader
+          kicker="Monitor"
+          title="Executive Operations Center"
+          description="Real-time overview of all active objectives, agents, and system health"
+          actions={summary && (
             <StatusBadge
               status={summary.health_score >= 80 ? "completed" : summary.health_score >= 50 ? "running" : "failed"}
               size="sm"
             />
           )}
-        </div>
+          className="border-0 pb-0"
+        />
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {isLoading ? (
           <div className="space-y-8 p-6">
-            <div className="h-20 animate-pulse rounded-xl border border-border/30 bg-card/30" />
+            <CardSkeleton />
             <div className="flex flex-wrap gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-10 w-44 animate-pulse rounded-lg border border-border/30 bg-muted/20" />
+                <Skeleton key={i} className="h-10 w-44 rounded-lg" />
               ))}
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="h-20 animate-pulse rounded-xl border border-border/40 bg-card/30" />
+                <CardSkeleton key={i} />
               ))}
             </div>
           </div>
         ) : !summary ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 py-14 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted/30 text-muted-foreground/60">
-              <Orbit className="h-5 w-5" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground/80">No operations data available</p>
-              <p className="text-xs text-muted-foreground">
-                Data will appear here once an objective starts executing.
-              </p>
-            </div>
+          <div className="flex h-full items-center justify-center p-6">
+            <EmptyState
+              icon={<Orbit className="h-5 w-5" />}
+              title="No operations data available"
+              description="Data will appear here once an objective starts executing."
+              className="w-full"
+            />
           </div>
         ) : (
           <div className="space-y-8 p-6">
@@ -183,9 +181,7 @@ export default function OperationsPage() {
 
             {/* Metrics Grid */}
             <div>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                All Metrics
-              </h2>
+              <SectionHeader title="All Metrics" className="mb-3" />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {METRICS.map((metric) => {
                   const value = (summary as unknown as Record<string, number>)[metric.key] ?? 0;

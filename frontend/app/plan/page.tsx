@@ -4,7 +4,12 @@ import { motion } from "motion/react";
 import { useLatestObjectiveIdQuery, useDashboardQuery, usePlanQuery } from "@/hooks/use-api";
 import { useObjectiveContextStore } from "@/store";
 import { HealthBadge } from "@/components/health-badge";
-import { CheckCircle2, Circle } from "lucide-react";
+import { PageHeader, SectionHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton } from "@/components/skeleton";
+import { DataTable, DataTableRow, DataTableCell, TablePill } from "@/components/data-table";
+import { StatusBadge } from "@/components/status-badge";
+import { FileText } from "lucide-react";
 
 export default function PlanPage() {
   const activeObjectiveId = useObjectiveContextStore((s) => s.activeObjectiveId);
@@ -19,8 +24,8 @@ export default function PlanPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading plan...</p>
+      <div className="min-h-[50vh]">
+        <PageSkeleton />
       </div>
     );
   }
@@ -28,10 +33,12 @@ export default function PlanPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-lg font-semibold tracking-tight">Plan</h1>
-        <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
-          <p className="text-sm text-muted-foreground">Failed to load plan data.</p>
-        </div>
+        <PageHeader kicker="Monitor" title="Plan" description="Execution plan and milestones" />
+        <EmptyState
+          icon={<FileText className="h-5 w-5" />}
+          title="Failed to load plan data"
+          description="The plan could not be retrieved. Try again in a moment."
+        />
       </div>
     );
   }
@@ -39,12 +46,12 @@ export default function PlanPage() {
   if (noPlan || !plan) {
     return (
       <div className="space-y-6">
-        <h1 className="text-lg font-semibold tracking-tight">Plan</h1>
-        <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No plan found. Run a pipeline to generate a plan.
-          </p>
-        </div>
+        <PageHeader kicker="Monitor" title="Plan" description="Execution plan and milestones" />
+        <EmptyState
+          icon={<FileText className="h-5 w-5" />}
+          title="No plan found"
+          description="Run a pipeline to generate a plan. Once planning completes, the execution plan and milestones will appear here."
+        />
       </div>
     );
   }
@@ -58,30 +65,29 @@ export default function PlanPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Plan</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Execution plan and milestones
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {plan.confidence != null && (
-              <span className="text-xs text-muted-foreground">
-                Confidence: {(plan.confidence * 100).toFixed(0)}%
-              </span>
-            )}
-            <HealthBadge
-              status={
-                plan.status === "active" ? "running" as const
-                : plan.status === "completed" ? "completed" as const
-                : plan.status === "failed" ? "failed" as const
-                : "idle" as const
-              }
-              size="sm"
-            />
-          </div>
-        </div>
+        <PageHeader
+          kicker="Monitor"
+          title="Plan"
+          description="Execution plan and milestones"
+          actions={
+            <div className="flex items-center gap-2">
+              {plan.confidence != null && (
+                <span className="text-xs text-muted-foreground">
+                  Confidence: {(plan.confidence * 100).toFixed(0)}%
+                </span>
+              )}
+              <HealthBadge
+                status={
+                  plan.status === "active" ? "running" as const
+                  : plan.status === "completed" ? "completed" as const
+                  : plan.status === "failed" ? "failed" as const
+                  : "idle" as const
+                }
+                size="sm"
+              />
+            </div>
+          }
+        />
       </motion.div>
 
       <motion.div
@@ -90,89 +96,73 @@ export default function PlanPage() {
         transition={{ duration: 0.4, delay: 0.1 }}
         className="space-y-4"
       >
-        <div className="rounded-lg border border-border/50 bg-card p-5">
-          <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            Name
-          </div>
+        <div className="bento-tile p-5">
+          <SectionHeader title="Name" />
           <p className="mt-1.5 text-sm">{plan.name}</p>
         </div>
 
         {plan.description && (
-          <div className="rounded-lg border border-border/50 bg-card p-5">
-            <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-              Description
-            </div>
+          <div className="bento-tile p-5">
+            <SectionHeader title="Description" />
             <p className="mt-1.5 text-sm">{plan.description}</p>
           </div>
         )}
 
         {plan.plan_version != null && (
-          <div className="rounded-lg border border-border/50 bg-card p-5">
-            <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-              Version
-            </div>
+          <div className="bento-tile p-5">
+            <SectionHeader title="Version" />
             <p className="mt-1.5 font-mono text-sm">v{plan.plan_version}</p>
           </div>
         )}
 
         {milestones.length > 0 && (
-          <div className="rounded-lg border border-border/50 bg-card p-5">
-            <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-              Milestones ({milestones.length})
-            </div>
-            <div className="space-y-2">
+          <div className="bento-tile p-5">
+            <SectionHeader title={`Milestones (${milestones.length})`} className="mb-3" />
+            <DataTable headers={["Status", "Milestone", "Due"]}>
               {milestones.map((ms) => (
-                <div
-                  key={ms.id}
-                  className="flex items-center gap-3 rounded-lg bg-muted/30 px-3 py-2.5"
-                >
-                  {ms.status === "completed" ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-                  ) : (
-                    <Circle className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-                  )}
-                  <div className="min-w-0 flex-1">
+                <DataTableRow key={ms.id}>
+                  <DataTableCell>
+                    <StatusBadge status={ms.status} size="sm" />
+                  </DataTableCell>
+                  <DataTableCell>
                     <div className="text-sm font-medium">{ms.name}</div>
                     {ms.description && (
                       <div className="text-xs text-muted-foreground">{ms.description}</div>
                     )}
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
-                      {ms.status}
-                    </div>
-                    {ms.due_date && (
-                      <div className="font-mono text-[10px] tabular-nums text-muted-foreground/60">
-                        {new Date(ms.due_date).toLocaleDateString()}
-                      </div>
+                  </DataTableCell>
+                  <DataTableCell>
+                    {ms.due_date ? (
+                      <TablePill>{new Date(ms.due_date).toLocaleDateString()}</TablePill>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/50">—</span>
                     )}
-                  </div>
-                </div>
+                  </DataTableCell>
+                </DataTableRow>
               ))}
-            </div>
+            </DataTable>
           </div>
         )}
 
         {plan.versions && plan.versions.length > 0 && (
-          <div className="rounded-lg border border-border/50 bg-card p-5">
-            <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-              Version History
-            </div>
-            <div className="space-y-2">
+          <div className="bento-tile p-5">
+            <SectionHeader title="Version History" className="mb-3" />
+            <DataTable headers={["Version", "Created", "Summary"]}>
               {plan.versions.map((v) => (
-                <div key={v.id} className="rounded-lg bg-muted/30 px-3 py-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">v{v.version_number}</span>
-                    <span className="font-mono text-[10px] text-muted-foreground">
+                <DataTableRow key={v.id}>
+                  <DataTableCell>
+                    <TablePill>v{v.version_number}</TablePill>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
                       {v.created_at ? new Date(v.created_at).toLocaleDateString() : "—"}
                     </span>
-                  </div>
-                  {v.diff_summary && (
-                    <p className="mt-0.5 text-xs text-muted-foreground">{v.diff_summary}</p>
-                  )}
-                </div>
+                  </DataTableCell>
+                  <DataTableCell className="text-xs text-muted-foreground">
+                    {v.diff_summary}
+                  </DataTableCell>
+                </DataTableRow>
               ))}
-            </div>
+            </DataTable>
           </div>
         )}
       </motion.div>

@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { SegmentedControl } from "@/components/segmented-control";
 import {
   useConnectorsQuery,
   useCreateConnector,
@@ -93,22 +96,21 @@ export default function ConnectorsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="shrink-0 border-b border-border/50 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Connector Marketplace</h1>
-            <p className="mt-0.5 text-xs text-muted-foreground/70">
-              Integrate OrchestraOS with external systems
-            </p>
-          </div>
-          <button
-            onClick={() => setShowCreate(!showCreate)}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add Connector
-          </button>
-        </div>
+      <div className="shrink-0 px-6 py-4">
+        <PageHeader
+          kicker="Explore"
+          title="Connector Marketplace"
+          description="Integrate OrchestraOS with external systems"
+          actions={
+            <button
+              onClick={() => setShowCreate(!showCreate)}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Connector
+            </button>
+          }
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
@@ -162,25 +164,18 @@ export default function ConnectorsPage() {
                         placeholder="Connector name"
                         value={connectorName}
                         onChange={(e) => setConnectorName(e.target.value)}
-                        className="w-full rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        className="input"
                       />
 
-                      <div className="flex gap-2">
-                        {["api_key", "oauth", "none"].map((t) => (
-                          <button
-                            key={t}
-                            onClick={() => setAuthType(t)}
-                            className={cn(
-                              "rounded-lg border px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider transition-all",
-                              authType === t
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border/40 text-muted-foreground hover:border-border",
-                            )}
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
+                      <SegmentedControl
+                        value={authType}
+                        onChange={setAuthType}
+                        options={[
+                          { value: "api_key", label: "API Key" },
+                          { value: "oauth", label: "OAuth" },
+                          { value: "none", label: "None" },
+                        ]}
+                      />
 
                       <div className="space-y-2">
                         {selectedProvider === "github" && (
@@ -234,15 +229,20 @@ export default function ConnectorsPage() {
 
           {/* Installed Connectors */}
           <div>
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground/70">
-              Installed Connectors ({connectors.length})
-            </h2>
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground/70">
+                Installed Connectors
+              </h2>
+              <span className="chip">{connectors.length}</span>
+            </div>
 
             {connectors.length === 0 && !showCreate && (
-              <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/40 py-12">
-                <Plug className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-xs text-muted-foreground/60">No connectors installed. Add one above.</p>
-              </div>
+              <EmptyState
+                compact
+                icon={<Plug className="h-5 w-5" />}
+                title="No connectors installed"
+                description="Add a connector above to integrate external systems."
+              />
             )}
 
             <div className="space-y-3">
@@ -360,20 +360,14 @@ function ConnectorDetail({
   return (
     <div className="space-y-4 p-4">
       {/* Tabs */}
-      <div className="flex gap-2">
-        {(["actions", "audit"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              "rounded-lg px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider transition-all",
-              tab === t ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "actions", label: "Actions" },
+          { value: "audit", label: "Audit" },
+        ]}
+      />
 
       {tab === "actions" && (
         <div className="space-y-3">
@@ -412,7 +406,7 @@ function ConnectorDetail({
                     placeholder={`${key} (${desc})`}
                     value={actionParams[key] ?? ""}
                     onChange={(e) => setActionParams({ ...actionParams, [key]: e.target.value })}
-                    className="w-full rounded-md border border-border/30 bg-background/50 px-2.5 py-1.5 text-[11px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    className="input px-2.5 py-1.5 text-[11px]"
                   />
                 ))}
               </div>
@@ -460,7 +454,12 @@ function ConnectorDetail({
         <div className="space-y-2">
           <h4 className="text-[11px] font-semibold text-muted-foreground">Audit Trail</h4>
           {auditLogs.length === 0 ? (
-            <p className="text-[10px] text-muted-foreground/50">No audit records yet</p>
+            <EmptyState
+              compact
+              icon={<Shield className="h-5 w-5" />}
+              title="No audit records yet"
+              description="Audit entries will appear here after actions are executed."
+            />
           ) : (
             auditLogs.slice(0, 20).map((log) => (
               <div key={log.id} className="flex items-start gap-2 rounded-lg bg-muted/20 px-3 py-2">
@@ -521,7 +520,7 @@ function CredField({
       placeholder={display ?? label}
       value={value[label] ?? ""}
       onChange={(e) => onChange({ ...value, [label]: e.target.value })}
-      className="w-full rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-xs placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30"
+      className="input"
     />
   );
 }
@@ -543,7 +542,7 @@ function ConfigField({
       placeholder={placeholder ?? label}
       value={value[label] ?? ""}
       onChange={(e) => onChange({ ...value, [label]: e.target.value })}
-      className="w-full rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-xs placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30"
+      className="input"
     />
   );
 }

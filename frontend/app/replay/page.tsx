@@ -10,6 +10,9 @@ import { useObjectiveContextStore } from "@/store";
 import { useEventsQuery, useLatestObjectiveIdQuery, useTelemetryQuery, useTelemetrySummaryQuery, type ApiAgentTelemetry } from "@/hooks/use-api";
 import { StatusBadge } from "@/components/status-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton } from "@/components/skeleton";
 import {
   Play,
   Pause,
@@ -24,6 +27,7 @@ import {
   Loader2,
   Activity,
   AlertTriangle,
+  History,
 } from "lucide-react";
 
 const stageDisplayNames: Record<string, string> = {
@@ -46,7 +50,7 @@ const speedOptions = [0.5, 1, 2];
 
 export default function ReplayPage() {
   return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<PageSkeleton />}>
       <ReplayContent />
     </Suspense>
   );
@@ -163,31 +167,29 @@ function ReplayContent() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <h1 className="text-lg font-semibold tracking-tight">Execution Replay</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Step through execution events with timeline controls
-          {objectiveId && (
-            <span className="ml-2 font-mono text-[11px] text-muted-foreground/60">
+      <PageHeader
+        kicker="Explore"
+        title="Execution Replay"
+        description="Step through execution events with timeline controls"
+        meta={
+          objectiveId && (
+            <span className="chip font-mono">
               ID: {objectiveId.slice(0, 8)}&hellip;
             </span>
-          )}
-        </p>
-      </motion.div>
+          )
+        }
+      />
 
       {totalEvents === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-border/50 bg-card p-8 text-center"
         >
-          <p className="text-sm text-muted-foreground">
-            No events available for replay. Run an objective first.
-          </p>
+          <EmptyState
+            icon={<History className="h-5 w-5" />}
+            title="No events available for replay"
+            description="Run an objective first to generate an event timeline."
+          />
         </motion.div>
       )}
 

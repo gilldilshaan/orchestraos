@@ -6,11 +6,16 @@ import { motion } from "motion/react";
 import { useLatestObjectiveIdQuery, useTelemetryQuery, useTelemetrySummaryQuery, useEventsQuery } from "@/hooks/use-api";
 import { useObjectiveContextStore } from "@/store";
 import { MetricCard } from "@/components/metric-card";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton, MetricSkeleton, TableSkeleton } from "@/components/skeleton";
+import { DataTable, DataTableRow, DataTableCell } from "@/components/data-table";
+import { StatusBadge } from "@/components/status-badge";
 import { Activity, CheckCircle2, XCircle, Clock, DollarSign, BarChart3, Cpu, Terminal } from "lucide-react";
 
 export default function TelemetryPage() {
   return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<PageSkeleton />}>
       <TelemetryContent />
     </Suspense>
   );
@@ -37,46 +42,48 @@ function TelemetryContent() {
 
   return (
     <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <h1 className="text-lg font-semibold tracking-tight">Agent Telemetry</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Per-agent execution data, token usage, cost, and event timeline
-        </p>
-      </motion.div>
+      <PageHeader
+        kicker="Analyze"
+        title="Agent Telemetry"
+        description="Per-agent execution data, token usage, cost, and event timeline"
+      />
 
       {!objectiveId && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-border/50 bg-card p-8 text-center"
         >
-          <p className="text-sm text-muted-foreground">No data available for this execution.</p>
+          <EmptyState
+            icon={<Terminal className="h-5 w-5" />}
+            title="No execution selected"
+            description="Run an objective or pick an execution from the sidebar to view its telemetry."
+          />
         </motion.div>
       )}
 
       {telemetryLoading && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-border/50 bg-card p-8 text-center"
-        >
-          <p className="text-sm text-muted-foreground">Loading telemetry...</p>
-        </motion.div>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <MetricSkeleton key={i} />
+            ))}
+          </div>
+          <div className="rounded-xl border border-border/30 bg-card p-5">
+            <TableSkeleton rows={6} cols={8} />
+          </div>
+        </div>
       )}
 
       {objectiveId && !telemetryLoading && !hasTelemetry && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-border/50 bg-card p-8 text-center"
         >
-          <p className="text-sm text-muted-foreground">
-            No data available for this execution.
-          </p>
+          <EmptyState
+            icon={<BarChart3 className="h-5 w-5" />}
+            title="No telemetry for this execution"
+            description="Agent telemetry will appear here once this objective produces run data."
+          />
         </motion.div>
       )}
 
@@ -135,44 +142,39 @@ function TelemetryContent() {
             <div className="border-b border-border/50 px-5 py-3.5">
               <h3 className="text-sm font-medium">Agent Execution Details</h3>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border/50 text-xs text-muted-foreground">
-                    <th className="px-5 py-3 font-medium">Agent</th>
-                    <th className="px-5 py-3 font-medium">Stage</th>
-                    <th className="px-5 py-3 font-medium">Status</th>
-                    <th className="px-5 py-3 font-medium">Model</th>
-                    <th className="px-5 py-3 font-medium">Tokens</th>
-                    <th className="px-5 py-3 font-medium">Cost</th>
-                    <th className="px-5 py-3 font-medium">Runtime</th>
-                    <th className="px-5 py-3 font-medium">Retries</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {telemetry.map((t) => (
-                    <tr key={t.id} className="border-b border-border/30 hover:bg-muted/30">
-                      <td className="px-5 py-3 font-medium">{t.agent_name ?? t.agent_id}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{t.stage}</td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                          t.status === "completed" ? "bg-emerald-500/10 text-emerald-500" :
-                          t.status === "failed" ? "bg-red-500/10 text-red-500" :
-                          t.status === "running" ? "bg-blue-500/10 text-blue-500" :
-                          "bg-muted text-muted-foreground"
-                        }`}>
-                          {t.status}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-muted-foreground">{t.model ?? "—"}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{t.total_tokens ?? "—"}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{t.total_cost != null ? `$${t.total_cost.toFixed(6)}` : "—"}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{t.runtime_ms != null ? `${t.runtime_ms.toFixed(0)}ms` : "—"}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{t.retries}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="p-5">
+              <DataTable
+                headers={["Agent", "Stage", "Status", "Model", "Tokens", "Cost", "Runtime", "Retries"]}
+              >
+                {telemetry.map((t) => (
+                  <DataTableRow key={t.id}>
+                    <DataTableCell className="font-medium text-foreground/90">
+                      {t.agent_name ?? t.agent_id}
+                    </DataTableCell>
+                    <DataTableCell className="text-muted-foreground">
+                      <span className="chip">{t.stage}</span>
+                    </DataTableCell>
+                    <DataTableCell>
+                      <StatusBadge status={t.status} size="sm" />
+                    </DataTableCell>
+                    <DataTableCell className="text-muted-foreground">
+                      <span className="chip">{t.model ?? "—"}</span>
+                    </DataTableCell>
+                    <DataTableCell className="tabular text-muted-foreground">
+                      {t.total_tokens ?? "—"}
+                    </DataTableCell>
+                    <DataTableCell className="tabular text-muted-foreground">
+                      {t.total_cost != null ? `$${t.total_cost.toFixed(6)}` : "—"}
+                    </DataTableCell>
+                    <DataTableCell className="tabular text-muted-foreground">
+                      {t.runtime_ms != null ? `${t.runtime_ms.toFixed(0)}ms` : "—"}
+                    </DataTableCell>
+                    <DataTableCell className="tabular text-muted-foreground">
+                      {t.retries}
+                    </DataTableCell>
+                  </DataTableRow>
+                ))}
+              </DataTable>
             </div>
           </motion.div>
 

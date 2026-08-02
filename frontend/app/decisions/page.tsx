@@ -5,6 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { HealthBadge } from "@/components/health-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton } from "@/components/skeleton";
 import {
   useApproveDecision,
   useDecisionsQuery,
@@ -46,7 +49,7 @@ function mapDecisionStatus(status: string): ExecutionStatus {
 
 export default function DecisionsPage() {
   return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<div className="h-full overflow-y-auto p-6"><PageSkeleton /></div>}>
       <DecisionsContent />
     </Suspense>
   );
@@ -108,19 +111,11 @@ function DecisionsContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-1.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/15">
-                <Scale className="h-4 w-4 text-violet-400" />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold tracking-tight">Decision Center</h1>
-                <p className="text-sm text-muted-foreground/60">Review, approve, or reject AI-generated strategic decisions</p>
-              </div>
-            </div>
-          </div>
-          {decisions && decisions.length > 0 && (
+        <PageHeader
+          kicker="Data"
+          title="Decision Center"
+          description="Review, approve, or reject AI-generated strategic decisions"
+          actions={decisions && decisions.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-muted/20 px-3 py-1 text-xs font-medium text-muted-foreground">
                 {decisions.length} Total
@@ -132,7 +127,7 @@ function DecisionsContent() {
               )}
             </div>
           )}
-        </div>
+        />
       </motion.div>
 
       {/* Empty State */}
@@ -140,30 +135,22 @@ function DecisionsContent() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-violet-950/10 via-background to-background"
         >
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-violet-500/5 blur-3xl" />
-            <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-indigo-500/5 blur-3xl" />
-          </div>
-          <div className="relative flex flex-col items-center px-12 py-16 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-violet-500/20 mb-5">
-              <Scale className="h-7 w-7 text-violet-400/60" />
-            </div>
-            <h2 className="text-base font-semibold text-foreground/80">No decisions yet</h2>
-            <p className="mt-2 max-w-sm text-sm text-muted-foreground/50 leading-relaxed">
-              AI-generated strategic decisions will appear here once an objective reaches the decision stage.
-              Approve or reject each decision to guide the organization forward.
-            </p>
-            <Link
-              href="/objective"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-border/40 bg-gradient-to-br from-violet-500/5 to-indigo-500/5 px-5 py-2.5 text-xs font-medium text-foreground/70 transition-all duration-200 hover:border-violet-400/30 hover:text-foreground hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.1)]"
-            >
-              <Orbit className="h-3.5 w-3.5 text-violet-400" />
-              Start a new objective
-              <ExternalLink className="h-3 w-3 text-muted-foreground/40" />
-            </Link>
-          </div>
+          <EmptyState
+            icon={<Scale className="h-5 w-5" />}
+            title="No decisions yet"
+            description="AI-generated strategic decisions will appear here once an objective reaches the decision stage. Approve or reject each decision to guide the organization forward."
+            action={
+              <Link
+                href="/objective"
+                className="inline-flex items-center gap-2 rounded-xl border border-border/40 bg-gradient-to-br from-violet-500/5 to-indigo-500/5 px-5 py-2.5 text-xs font-medium text-foreground/70 transition-all duration-200 hover:border-violet-400/30 hover:text-foreground hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.1)]"
+              >
+                <Orbit className="h-3.5 w-3.5 text-violet-400" />
+                Start a new objective
+                <ExternalLink className="h-3 w-3 text-muted-foreground/40" />
+              </Link>
+            }
+          />
         </motion.div>
       ) : (
         <motion.div
@@ -401,7 +388,7 @@ function DecisionsContent() {
                                 }))
                               }
                               placeholder="Optional review notes..."
-                              className="w-full rounded-lg border border-border/30 bg-muted/20 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/40 focus:border-primary/40 focus:outline-none"
+                              className="input"
                             />
                           </div>
                         )}

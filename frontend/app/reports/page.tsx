@@ -15,6 +15,9 @@ import {
 } from "@/hooks/use-api";
 import { useObjectiveContextStore } from "@/store";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton } from "@/components/skeleton";
 import {
   FileText,
   ChevronDown,
@@ -285,12 +288,12 @@ function ReportsContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold tracking-tight">
-                Executive Reports
-              </h1>
+        <PageHeader
+          kicker="Analyze"
+          title="Executive Reports"
+          description={objective?.raw_input ?? "Strategic execution report"}
+          meta={
+            <>
               {report && (
                 <span
                   className={cn(
@@ -305,42 +308,29 @@ function ReportsContent() {
                     : "Synthesized from Pipeline"}
                 </span>
               )}
-            </div>
-            <p className="mt-1 truncate text-sm text-muted-foreground">
-              {objective?.raw_input ?? "Strategic execution report"}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            {generatedAt && (
-              <span className="text-xs text-muted-foreground/60">
-                {generatedAt}
-              </span>
-            )}
-            {objective && <StatusBadge status={objective.status} size="sm" />}
-          </div>
-        </div>
+              {generatedAt && (
+                <span className="text-[11px] text-muted-foreground/60">{generatedAt}</span>
+              )}
+            </>
+          }
+          actions={
+            objective ? <StatusBadge status={objective.status} size="sm" /> : undefined
+          }
+        />
       </motion.div>
 
       {isLoading ? (
-        <div className="flex h-40 items-center justify-center">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground" />
-            Loading report...
-          </div>
-        </div>
+        <PageSkeleton />
       ) : !report ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-border/50 bg-card p-10 text-center"
         >
-          <FileText className="mx-auto h-8 w-8 text-muted-foreground/40" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            No report generated yet.
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground/60">
-            Run a full pipeline on an objective to produce the executive report.
-          </p>
+          <EmptyState
+            icon={<FileText className="h-5 w-5" />}
+            title="No report generated yet"
+            description="Run a full pipeline on an objective to produce the executive report."
+          />
         </motion.div>
       ) : (
         <div className="space-y-4">

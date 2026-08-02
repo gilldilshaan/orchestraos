@@ -7,6 +7,9 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import { MetricCard } from "@/components/metric-card";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton } from "@/components/skeleton";
 import {
   useAggregateMetricsQuery,
   useChartDataQuery,
@@ -20,10 +23,10 @@ import {
 } from "lucide-react";
 
 export default function AnalyticsPage() {
-  const { data: agg } = useAggregateMetricsQuery();
-  const { data: charts } = useChartDataQuery();
-  const { data: ai } = useHealthAiQuery();
-  const { data: org } = useHealthOrganizationQuery();
+  const { data: agg, isLoading: aggLoading } = useAggregateMetricsQuery();
+  const { data: charts, isLoading: chartsLoading } = useChartDataQuery();
+  const { data: ai, isLoading: aiLoading } = useHealthAiQuery();
+  const { data: org, isLoading: orgLoading } = useHealthOrganizationQuery();
 
   const runtimeMinutes = agg?.average_runtime_seconds != null
     ? Math.round((agg.average_runtime_seconds / 60) * 10) / 10
@@ -76,20 +79,17 @@ export default function AnalyticsPage() {
   const completedObjectives = org?.completed_objectives ?? 0;
   const failedObjectives = org?.failed_objectives ?? 0;
 
+  if (aggLoading || chartsLoading || aiLoading || orgLoading) {
+    return <PageSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <h1 className="text-lg font-semibold tracking-tight">
-          Runtime Analytics
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Execution intelligence, trends, and failure analysis
-        </p>
-      </motion.div>
+      <PageHeader
+        kicker="Analyze"
+        title="Runtime Analytics"
+        description="Execution intelligence, trends, and failure analysis"
+      />
 
       {/* Summary cards */}
       <motion.div
@@ -338,8 +338,13 @@ function ChartCard({
       {hasData ? (
         <div className="p-4">{children}</div>
       ) : (
-        <div className="flex h-60 items-center justify-center text-sm text-muted-foreground">
-          No data available for this execution.
+        <div className="flex h-60 items-center justify-center p-6">
+          <EmptyState
+            compact
+            icon={<BarChart3 className="h-5 w-5" />}
+            title="No chart data yet"
+            description="Trends will appear here once runs have been recorded."
+          />
         </div>
       )}
     </motion.div>

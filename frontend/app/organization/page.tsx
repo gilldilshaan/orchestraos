@@ -9,6 +9,9 @@ import type { ApiRole, ApiDepartment } from "@/hooks/use-api";
 import { OrganizationUniverse } from "@/components/3d/scene-wrapper";
 import { PremiumCard } from "@/components/premium/premium-card";
 import { PulseRing } from "@/components/premium/page-transition";
+import { PageSkeleton } from "@/components/skeleton";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { cn } from "@/lib/utils";
 import { X, Target, Users, ListChecks, Wrench, Activity, Cpu, GitBranch, MessageSquare, Building2, ChevronRight, Crown } from "lucide-react";
 
@@ -19,14 +22,7 @@ interface RoleDetail {
 
 export default function OrganizationPage() {
   return (
-    <Suspense fallback={
-      <div className="flex h-full items-center justify-center">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground/50">
-          <div className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-pulse" />
-          Loading organization data...
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<PageSkeleton />}>
       <OrganizationContent />
     </Suspense>
   );
@@ -121,27 +117,23 @@ function OrganizationContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-primary/60" />
-          <h1 className="text-lg font-semibold tracking-tight text-foreground/90">
-            Organization Explorer
-          </h1>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground/50">
-          Hierarchical view of the dynamically generated AI organization
-        </p>
+        <PageHeader
+          kicker="Explore"
+          title="Organization Explorer"
+          description="Hierarchical view of the dynamically generated AI organization"
+        />
       </motion.div>
 
       {!departments.length ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="panel p-12 text-center"
         >
-          <Building2 className="mx-auto h-8 w-8 text-muted-foreground/20" />
-          <p className="mt-3 text-sm text-muted-foreground/50">
-            No organization data yet. Run a pipeline to generate an organization structure.
-          </p>
+          <EmptyState
+            icon={<Building2 className="h-5 w-5" />}
+            title="No organization data yet"
+            description="Run a pipeline to generate an organization structure."
+          />
         </motion.div>
       ) : (
         <>

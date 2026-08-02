@@ -4,6 +4,11 @@ import { motion } from "motion/react";
 import { useLatestObjectiveIdQuery, useObjectiveQuery } from "@/hooks/use-api";
 import { useObjectiveContextStore } from "@/store";
 import { HealthBadge } from "@/components/health-badge";
+import { PageHeader, SectionHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { PageSkeleton } from "@/components/skeleton";
+import { DataTable, DataTableRow, DataTableCell, TablePill } from "@/components/data-table";
+import { Target } from "lucide-react";
 
 export default function ObjectivePage() {
   const activeObjectiveId = useObjectiveContextStore((s) => s.activeObjectiveId);
@@ -16,8 +21,8 @@ export default function ObjectivePage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading objective...</p>
+      <div className="min-h-[50vh]">
+        <PageSkeleton />
       </div>
     );
   }
@@ -25,10 +30,12 @@ export default function ObjectivePage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-lg font-semibold tracking-tight">Objective</h1>
-        <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
-          <p className="text-sm text-muted-foreground">Failed to load objective data.</p>
-        </div>
+        <PageHeader kicker="Data" title="Objective" description="Business objective and compilation details" />
+        <EmptyState
+          icon={<Target className="h-5 w-5" />}
+          title="Failed to load objective data"
+          description="The objective could not be retrieved. Try again in a moment."
+        />
       </div>
     );
   }
@@ -36,12 +43,12 @@ export default function ObjectivePage() {
   if (!objective) {
     return (
       <div className="space-y-6">
-        <h1 className="text-lg font-semibold tracking-tight">Objective</h1>
-        <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No objective found. Create a new run to generate an objective.
-          </p>
-        </div>
+        <PageHeader kicker="Data" title="Objective" description="Business objective and compilation details" />
+        <EmptyState
+          icon={<Target className="h-5 w-5" />}
+          title="No objective found"
+          description="Create a new run to generate an objective. Once compilation completes, the business objective and its details will appear here."
+        />
       </div>
     );
   }
@@ -59,22 +66,21 @@ export default function ObjectivePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Objective</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Business objective and compilation details
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {objective.confidence != null && (
-              <span className="text-xs text-muted-foreground">
-                Confidence: {(objective.confidence * 100).toFixed(0)}%
-              </span>
-            )}
-            <HealthBadge status={badgeStatus} size="sm" />
-          </div>
-        </div>
+        <PageHeader
+          kicker="Data"
+          title="Objective"
+          description="Business objective and compilation details"
+          actions={
+            <div className="flex items-center gap-2">
+              {objective.confidence != null && (
+                <span className="text-xs text-muted-foreground">
+                  Confidence: {(objective.confidence * 100).toFixed(0)}%
+                </span>
+              )}
+              <HealthBadge status={badgeStatus} size="sm" />
+            </div>
+          }
+        />
       </motion.div>
 
       <motion.div
@@ -83,43 +89,33 @@ export default function ObjectivePage() {
         transition={{ duration: 0.4, delay: 0.1 }}
         className="space-y-4"
       >
-        <div className="rounded-lg border border-border/50 bg-card p-5">
-          <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            Raw Input
-          </div>
+        <div className="bento-tile p-5">
+          <SectionHeader title="Raw Input" />
           <p className="mt-1.5 text-sm">{objective.raw_input}</p>
         </div>
 
         {objective.current_stage && (
-          <div className="rounded-lg border border-border/50 bg-card p-5">
-            <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-              Current Stage
-            </div>
+          <div className="bento-tile p-5">
+            <SectionHeader title="Current Stage" />
             <p className="mt-1.5 text-sm">{objective.current_stage}</p>
           </div>
         )}
 
         {compilation && (
           <>
-            <div className="rounded-lg border border-border/50 bg-card p-5">
-              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                Mission
-              </div>
+            <div className="bento-tile p-5">
+              <SectionHeader title="Mission" />
               <p className="mt-1.5 text-sm">{(compilation.mission as string) ?? "—"}</p>
             </div>
 
-            <div className="rounded-lg border border-border/50 bg-card p-5">
-              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                Vision
-              </div>
+            <div className="bento-tile p-5">
+              <SectionHeader title="Vision" />
               <p className="mt-1.5 text-sm">{(compilation.vision as string) ?? "—"}</p>
             </div>
 
             {compilation.constraints && Array.isArray(compilation.constraints) && compilation.constraints.length > 0 && (
-              <div className="rounded-lg border border-border/50 bg-card p-5">
-                <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Constraints
-                </div>
+              <div className="bento-tile p-5">
+                <SectionHeader title="Constraints" className="mb-2" />
                 <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
                   {(compilation.constraints as string[]).map((c: string, i: number) => (
                     <li key={i}>{c}</li>
@@ -129,26 +125,24 @@ export default function ObjectivePage() {
             )}
 
             {compilation.kpis && Array.isArray(compilation.kpis) && compilation.kpis.length > 0 && (
-              <div className="rounded-lg border border-border/50 bg-card p-5">
-                <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  KPIs
-                </div>
-                <div className="space-y-2">
+              <div className="bento-tile p-5">
+                <SectionHeader title="KPIs" className="mb-3" />
+                <DataTable headers={["KPI", "Target"]}>
                   {(compilation.kpis as Array<{ name: string; target: string }>).map((kpi: { name: string; target: string }, i: number) => (
-                    <div key={i} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
-                      <span className="text-sm">{kpi.name}</span>
-                      <span className="font-mono text-xs tabular-nums text-muted-foreground">{kpi.target}</span>
-                    </div>
+                    <DataTableRow key={i}>
+                      <DataTableCell className="text-sm">{kpi.name}</DataTableCell>
+                      <DataTableCell>
+                        <TablePill>{kpi.target}</TablePill>
+                      </DataTableCell>
+                    </DataTableRow>
                   ))}
-                </div>
+                </DataTable>
               </div>
             )}
 
             {compilation.timeline && typeof compilation.timeline === "object" && (
-              <div className="rounded-lg border border-border/50 bg-card p-5">
-                <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Timeline
-                </div>
+              <div className="bento-tile p-5">
+                <SectionHeader title="Timeline" />
                 <p className="mt-1.5 text-sm">
                   {(compilation.timeline as Record<string, unknown>).total_months as string ?? "—"} months, {(compilation.timeline as Record<string, unknown>).phases as string ?? "—"} phases
                 </p>
@@ -156,10 +150,8 @@ export default function ObjectivePage() {
             )}
 
             {compilation.budget && typeof compilation.budget === "object" && (
-              <div className="rounded-lg border border-border/50 bg-card p-5">
-                <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Budget
-                </div>
+              <div className="bento-tile p-5">
+                <SectionHeader title="Budget" />
                 <p className="mt-1.5 text-sm">
                   ${(compilation.budget as Record<string, unknown>).total as string ?? "—"} {(compilation.budget as Record<string, unknown>).currency as string ?? ""}
                 </p>

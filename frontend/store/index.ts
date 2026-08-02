@@ -133,6 +133,18 @@ export const useObjectiveContextStore = create<ObjectiveContextState>((set) => (
   clearActiveObjectiveId: () => set({ activeObjectiveId: null }),
 }));
 
+interface NewRunModalState {
+  isOpen: boolean;
+  open: () => void;
+  close: () => void;
+}
+
+export const useNewRunModalStore = create<NewRunModalState>((set) => ({
+  isOpen: false,
+  open: () => set({ isOpen: true }),
+  close: () => set({ isOpen: false }),
+}));
+
 interface InspectorState {
   isOpen: boolean;
   selectedNodeId: string | null;

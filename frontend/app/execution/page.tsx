@@ -19,6 +19,8 @@ import { useSSE } from "@/hooks/use-sse-events";
 import { useExecutionRun, useExecutionNodes } from "@/hooks/use-execution";
 import { useEventsQuery, useTelemetryQuery, useTelemetrySummaryQuery } from "@/hooks/use-api";
 import { StatusBadge } from "@/components/status-badge";
+import { PageHeader } from "@/components/page-header";
+import { PageSkeleton } from "@/components/skeleton";
 import { OrganizationUniverse } from "@/components/3d/scene-wrapper";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { useToastStore } from "@/lib/use-toast";
@@ -28,7 +30,7 @@ import {
 
 export default function ExecutionPage() {
   return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<div className="h-full overflow-y-auto p-6"><PageSkeleton /></div>}>
       <ExecutionContent />
     </Suspense>
   );
@@ -191,80 +193,84 @@ function ExecutionContent() {
   return (
     <div className="relative flex h-[calc(100vh-var(--topbar-height)-var(--statusbar-height)-2rem)] flex-col">
       <div className="shrink-0 border-b border-border/30">
-        <div className="px-4 py-3">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-sm font-semibold tracking-tight">Mission Control</h1>
-                <StatusBadge status={healthStatus} size="sm" />
-              </div>
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground/70">{run.objective}</p>
-            </div>
-            {progress > 0 && (
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="relative h-1.5 w-24 overflow-hidden rounded-full bg-muted">
-                  <motion.div
-                    className="relative h-full rounded-full bg-gradient-to-r from-primary/70 via-primary to-primary/80"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(progress, 100)}%` }}
-                    transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    <motion.div
-                      className="absolute inset-0 rounded-full"
-                      style={{
-                        background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%)",
-                        backgroundSize: "200% 100%",
-                      }}
-                      animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                    />
-                  </motion.div>
-                </div>
-                <motion.span
-                  className="font-mono text-[11px] font-medium tabular-nums text-foreground/80"
-                  key={Math.round(progress)}
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {Math.round(progress)}%
-                </motion.span>
-              </div>
-            )}
-          </div>
-          <motion.div
-            className="mt-2.5 flex flex-wrap items-center gap-1.5"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: {},
-              visible: { transition: { staggerChildren: 0.04 } },
-            }}
-          >
-            {[
-              { label: "Stage", value: phase },
-              {
-                label: "Runtime",
-                value: runtime !== "—"
-                  ? <span className="font-mono font-medium text-foreground/80 tabular-nums">{runtime}</span>
-                  : "—",
-              },
-              { label: "Objective ID", value: run.id.length > 10 ? run.id.slice(0, 10) + "…" : run.id, mono: true },
-              { label: "Steps", value: totalSteps > 0 ? `${completedStepNames.length}/${totalSteps}` : "—" },
-            ].map((chip) => (
-              <motion.span
-                key={chip.label}
+        <div className="px-4 pt-3">
+          <PageHeader
+            kicker="Monitor"
+            title="Mission Control"
+            description={run.objective}
+            meta={
+              <motion.div
+                className="flex flex-wrap items-center gap-1.5"
+                initial="hidden"
+                animate="visible"
                 variants={{
-                  hidden: { opacity: 0, y: -4, scale: 0.95 },
-                  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } },
+                  hidden: {},
+                  visible: { transition: { staggerChildren: 0.04 } },
                 }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border/30 bg-muted/20 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
               >
-                <span className="text-muted-foreground/50">{chip.label}</span>
-                <span className={cn("font-medium", chip.mono && "font-mono tabular-nums")}>{chip.value}</span>
-              </motion.span>
-            ))}
-          </motion.div>
+                {[
+                  { label: "Stage", value: phase },
+                  {
+                    label: "Runtime",
+                    value: runtime !== "—"
+                      ? <span className="font-mono font-medium text-foreground/80 tabular-nums">{runtime}</span>
+                      : "—",
+                  },
+                  { label: "Objective ID", value: run.id.length > 10 ? run.id.slice(0, 10) + "…" : run.id, mono: true },
+                  { label: "Steps", value: totalSteps > 0 ? `${completedStepNames.length}/${totalSteps}` : "—" },
+                ].map((chip) => (
+                  <motion.span
+                    key={chip.label}
+                    variants={{
+                      hidden: { opacity: 0, y: -4, scale: 0.95 },
+                      visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } },
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border/30 bg-muted/20 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                  >
+                    <span className="text-muted-foreground/50">{chip.label}</span>
+                    <span className={cn("font-medium", chip.mono && "font-mono tabular-nums")}>{chip.value}</span>
+                  </motion.span>
+                ))}
+              </motion.div>
+            }
+            actions={
+              <>
+                <StatusBadge status={healthStatus} size="sm" />
+                {progress > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="relative h-1.5 w-24 overflow-hidden rounded-full bg-muted">
+                      <motion.div
+                        className="relative h-full rounded-full bg-gradient-to-r from-primary/70 via-primary to-primary/80"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(progress, 100)}%` }}
+                        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                      >
+                        <motion.div
+                          className="absolute inset-0 rounded-full"
+                          style={{
+                            background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%)",
+                            backgroundSize: "200% 100%",
+                          }}
+                          animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                        />
+                      </motion.div>
+                    </div>
+                    <motion.span
+                      className="font-mono text-[11px] font-medium tabular-nums text-foreground/80"
+                      key={Math.round(progress)}
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {Math.round(progress)}%
+                    </motion.span>
+                  </div>
+                )}
+              </>
+            }
+            className="border-0 pb-3"
+          />
         </div>
         <TopToolbar />
       </div>
