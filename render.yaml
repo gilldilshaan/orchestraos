@@ -16,7 +16,7 @@ services:
       - key: API_VERSION
         value: 1.0.0
       - key: CORS_ORIGINS
-        value: https://orchestraos-nine.vercel.app,https://orchestraos.vercel.app,http://localhost:3000
+        value: https://orchestraos-nine.vercel.app,https://orchestraos.vercel.app,https://macroroute.vercel.app,https://frontend-gill1.vercel.app,http://localhost:3000
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
