@@ -69,17 +69,19 @@ approval gates, and an audit trail for every decision — because a decision you
 isn't a decision, it's a gamble. OrchestraOS is our attempt to make enterprise-grade AI
 autonomy *accountable* by construction.
 
+## Demo
+
+![OrchestraOS demo walkthrough](docs/screenshots/demo.gif)
+
 ## Screenshots
 
-> **Note:** Drop screenshots into `docs/screenshots/` and they will render here automatically.
-
-| Mission Control | Organization Explorer | Execution Graph |
+| Dashboard | Organization Explorer | Reports |
 | :---: | :---: | :---: |
-| `docs/screenshots/mission-control.png` | `docs/screenshots/organization.png` | `docs/screenshots/execution-graph.png` |
+| `docs/screenshots/dashboard.png` | `docs/screenshots/organization.png` | `docs/screenshots/reports.png` |
 
-| Reports | Decision Center | Connector Marketplace |
+| Overview | | |
 | :---: | :---: | :---: |
-| `docs/screenshots/reports.png` | `docs/screenshots/decisions.png` | `docs/screenshots/connectors.png` |
+| `docs/screenshots/screenshot-4.png` | | |
 
 ## Features
 
