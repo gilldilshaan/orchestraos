@@ -61,6 +61,10 @@ export default function ConnectorsPage() {
 
   const executeAction = useExecuteAction();
 
+  const connectedCount = connectors.filter((c) => c.status === "connected").length;
+  const errorCount = connectors.filter((c) => c.status === "error" || c.status === "failed").length;
+  const disconnectedCount = connectors.length - connectedCount - errorCount;
+
   const handleCreate = async () => {
     if (!selectedProvider || !connectorName.trim()) return;
     await createConnector.mutateAsync({
@@ -246,8 +250,7 @@ export default function ConnectorsPage() {
             )}
 
             <div className="space-y-3">
-              {connectors.map((conn) => {
-                const meta = PROVIDER_META[conn.provider] ?? DEFAULT_PROVIDER_META;
+              {connectors.map((conn) => {                const meta = PROVIDER_META[conn.provider] ?? DEFAULT_PROVIDER_META;
                 const Icon = meta.icon;
                 const isExpanded = expandedConnector === conn.id;
                 return (
@@ -322,6 +325,67 @@ export default function ConnectorsPage() {
                       )}
                     </AnimatePresence>
                   </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Health summary + browse providers */}
+          <div className="border-t border-border/20 pt-6">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground/70">
+                  Browse Providers
+                </h2>
+                <span className="chip">{marketplace.length} available</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="chip text-success">{connectedCount} connected</span>
+                <span className="chip">{disconnectedCount} disconnected</span>
+                {errorCount > 0 && (
+                  <span className="chip text-destructive">{errorCount} error</span>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {marketplace.map((entry) => {
+                const meta = PROVIDER_META[entry.provider] ?? DEFAULT_PROVIDER_META;
+                const Icon = meta.icon;
+                const installed = connectors.find((c) => c.provider === entry.provider);
+                return (
+                  <button
+                    key={entry.provider}
+                    onClick={() => {
+                      setSelectedProvider(entry.provider);
+                      setCreds({});
+                      setConfigFields({});
+                      setShowCreate(true);
+                    }}
+                    className="group flex flex-col items-center gap-2 rounded-xl border border-border/40 bg-card/30 p-4 text-left transition-all duration-150 hover:border-primary/50 hover:bg-card/50"
+                  >
+                    <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-105", meta.color)}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="text-[11px] font-medium capitalize">{entry.provider.replace(/_/g, " ")}</span>
+                    <span className={cn(
+                      "rounded-full px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider",
+                      installed
+                        ? installed.status === "connected"
+                          ? "bg-emerald-500/10 text-emerald-400"
+                          : installed.status === "error" || installed.status === "failed"
+                            ? "bg-red-500/10 text-red-400"
+                            : "bg-muted/30 text-muted-foreground"
+                        : "bg-muted/20 text-muted-foreground/40",
+                    )}>
+                      {installed
+                        ? installed.status === "connected"
+                          ? "Connected"
+                          : installed.status === "error" || installed.status === "failed"
+                            ? "Error"
+                            : "Idle"
+                        : "Not installed"}
+                    </span>
+                  </button>
                 );
               })}
             </div>

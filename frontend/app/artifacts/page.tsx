@@ -259,12 +259,68 @@ function ArtifactsContent() {
                   {JSON.stringify(selectedFile.data, null, 2)}
                 </pre>
               ) : (
-                <EmptyState
-                  compact
-                  icon={<MousePointerClick className="h-5 w-5" />}
-                  title="No file selected"
-                  description="Select an artifact from the tree to view its contents."
-                />
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-lg border border-border/15 bg-background/30 p-3 text-center">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/40">
+                        Events
+                      </div>
+                      <div className="mt-1 font-mono text-lg font-semibold tabular-nums text-foreground/80">
+                        {events.length}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border/15 bg-background/30 p-3 text-center">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/40">
+                        Agents
+                      </div>
+                      <div className="mt-1 font-mono text-lg font-semibold tabular-nums text-foreground/80">
+                        {telemetry.length}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border/15 bg-background/30 p-3 text-center">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/40">
+                        Snapshot
+                      </div>
+                      <div className="mt-1 font-mono text-lg font-semibold tabular-nums text-foreground/80">
+                        {snapshot ? `v${snapshot.snapshot_version}` : "\u2014"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {snapshot && (
+                    <div className="rounded-xl border border-border/15 bg-background/30 p-3.5">
+                      <div className="section-kicker">Snapshot Metadata</div>
+                      <div className="mt-2 space-y-1.5">
+                        {[
+                          { label: "ID", value: snapshot.id ?? "\u2014", mono: true },
+                          { label: "Objective", value: snapshot.objective_id ?? "\u2014", mono: true },
+                          {
+                            label: "Created",
+                            value: snapshot.created_at ? new Date(snapshot.created_at).toLocaleString() : "\u2014",
+                          },
+                          {
+                            label: "Updated",
+                            value: snapshot.updated_at ? new Date(snapshot.updated_at).toLocaleString() : "\u2014",
+                          },
+                        ].map((row) => (
+                          <div key={row.label} className="flex items-center justify-between gap-3 text-[11px]">
+                            <span className="text-muted-foreground/40">{row.label}</span>
+                            <span className={`truncate text-foreground/70 ${row.mono ? "font-mono text-[10px]" : ""}`}>
+                              {row.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-lg border border-dashed border-border/30 px-4 py-5 text-center">
+                    <MousePointerClick className="mx-auto h-4 w-4 text-muted-foreground/30" />
+                    <p className="mt-2 text-[11px] text-muted-foreground/40">
+                      Select an artifact from the tree to view its raw contents.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </motion.div>

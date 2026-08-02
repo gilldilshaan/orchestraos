@@ -125,6 +125,31 @@ function DiffContent() {
         </button>
       </motion.div>
 
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-lg border border-border/40 bg-card/30 p-3.5">
+          <div className="section-kicker">Available Executions</div>
+          <div className="mt-1 font-mono text-lg font-semibold tabular-nums text-foreground/80">{runs.length}</div>
+        </div>
+        <div className="rounded-lg border border-border/40 bg-card/30 p-3.5">
+          <div className="section-kicker">Completed</div>
+          <div className="mt-1 font-mono text-lg font-semibold tabular-nums text-emerald-400/90">
+            {objectives?.filter((o) => o.status === "completed").length ?? 0}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border/40 bg-card/30 p-3.5">
+          <div className="section-kicker">Running</div>
+          <div className="mt-1 font-mono text-lg font-semibold tabular-nums text-primary/90">
+            {objectives?.filter((o) => o.status === "running" || o.status === "queued").length ?? 0}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border/40 bg-card/30 p-3.5">
+          <div className="section-kicker">Failed</div>
+          <div className="mt-1 font-mono text-lg font-semibold tabular-nums text-red-400/90">
+            {objectives?.filter((o) => o.status === "failed" || o.status === "error").length ?? 0}
+          </div>
+        </div>
+      </div>
+
       {!id1 || !id2 ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}

@@ -20,7 +20,7 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useExecutionNodes, useExecutionRun } from "@/hooks/use-execution";
 import { useInspectorStore } from "@/store";
-import { Crown, Briefcase, UserCircle, CheckCircle2, Loader2, XCircle, AlertTriangle } from "lucide-react";
+import { Crown, Briefcase, UserCircle, CheckCircle2, Loader2, XCircle, AlertTriangle, Play } from "lucide-react";
 
 const typeIcon = { ceo: Crown, executive: Briefcase, specialist: UserCircle };
 const typeColor = {
@@ -169,7 +169,27 @@ export function OrgGraph() {
   }, [nodeData]);
 
   return (
-    <div className="h-full w-full">
+    <div className="relative h-full w-full">
+      {nodeData.length === 0 && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <div className="pointer-events-auto flex max-w-[320px] flex-col items-center gap-3 rounded-2xl border border-border/50 bg-card/70 px-6 py-8 text-center shadow-xl backdrop-blur-md">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Play className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground/90">No execution in progress</h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground/70">
+                Select an objective from the timeline panel, or kick off a new pipeline from the
+                Dashboard to populate the organization graph live.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50">
+              <Briefcase className="h-3 w-3" />
+              <span>Executives coordinate specialists in real time</span>
+            </div>
+          </div>
+        </div>
+      )}
       <ReactFlow
         nodes={layout.nodes}
         edges={layout.edges}
