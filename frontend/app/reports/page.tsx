@@ -10,6 +10,7 @@ import {
   useLatestObjectiveIdQuery,
   useObjectiveQuery,
   useReportQuery,
+  useDashboardQuery,
 } from "@/hooks/use-api";
 import { useObjectiveContextStore } from "@/store";
 import { cn } from "@/lib/utils";
@@ -26,8 +27,10 @@ import {
   GitBranch,
   Building2,
   History,
+  ArrowRight,
 } from "lucide-react";
 import type { ExecutionStatus } from "@/types";
+import Link from "next/link";
 
 function mapDecisionStatus(status: string): ExecutionStatus {
   if (status === "APPROVED") return "completed";
@@ -52,6 +55,7 @@ function ReportsContent() {
   const objectiveId = urlId ?? latestObjectiveId;
   const { data: report, isLoading } = useReportQuery(objectiveId);
   const { data: objective } = useObjectiveQuery(objectiveId);
+  const { data: dashboard } = useDashboardQuery(objectiveId);
 
   useEffect(() => {
     if (urlId) {
@@ -204,6 +208,95 @@ function ReportsContent() {
                   </li>
                 ))}
               </ul>
+            </Section>
+          )}
+
+          {/* Risk register */}
+          {(dashboard?.risks?.top_risks?.length ?? 0) > 0 && (
+            <Section
+              icon={ShieldAlert}
+              title={`Risk Register (${dashboard!.risks!.total})`}
+              color="text-red-400"
+              action={
+                <Link
+                  href="/risks"
+                  className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/50 transition-colors hover:text-foreground/80"
+                >
+                  View full register
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              }
+            >
+              <div className="space-y-2">
+                {dashboard!.risks!.top_risks.map((risk, i) => {
+                  const pct = Math.round((risk.probability ?? 0) * 100);
+                  const impPct = Math.round((risk.impact ?? 0) * 100);
+                  const derived = (risk.probability ?? 0) * (risk.impact ?? 0);
+                  const score = risk.risk_score ?? derived;
+                  return (
+                    <motion.div
+                      key={risk.id}
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.04 * i, duration: 0.3 }}
+                      className="flex items-start gap-3 rounded-lg border border-border/30 bg-muted/20 p-3"
+                    >
+                      <HealthBadge
+                        status={risk.risk_level as "low" | "medium" | "high" | "critical"}
+                        type="risk"
+                        size="sm"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground/85">
+                          {risk.title}
+                        </p>
+                        {risk.mitigation && (
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/70">
+                            {risk.mitigation}
+                          </p>
+                        )}
+                        <div className="mt-2 flex items-center gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[9px] uppercase text-muted-foreground/40">
+                              p
+                            </span>
+                            <div className="h-1 w-14 overflow-hidden rounded-full bg-muted/40">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${pct}%` }}
+                                transition={{ duration: 0.6, delay: 0.2 + i * 0.04 }}
+                                className="h-full rounded-full bg-red-400/70"
+                              />
+                            </div>
+                            <span className="font-mono text-[9px] tabular-nums text-muted-foreground/50">
+                              {pct}%
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[9px] uppercase text-muted-foreground/40">
+                              i
+                            </span>
+                            <div className="h-1 w-14 overflow-hidden rounded-full bg-muted/40">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${impPct}%` }}
+                                transition={{ duration: 0.6, delay: 0.3 + i * 0.04 }}
+                                className="h-full rounded-full bg-amber-400/70"
+                              />
+                            </div>
+                            <span className="font-mono text-[9px] tabular-nums text-muted-foreground/50">
+                              {impPct}%
+                            </span>
+                          </div>
+                          <span className="ml-auto rounded-md bg-red-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-red-400">
+                            {score.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </Section>
           )}
 
@@ -515,11 +608,13 @@ function Section({
   icon: Icon,
   title,
   color,
+  action,
   children,
 }: {
   icon: React.FC<React.SVGProps<SVGSVGElement>>;
   title: string;
   color: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -529,11 +624,14 @@ function Section({
       transition={{ duration: 0.35 }}
       className="rounded-xl border border-border/40 bg-card p-5"
     >
-      <div className="mb-3 flex items-center gap-2">
-        <Icon className={cn("h-4 w-4", color)} />
-        <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-foreground/60">
-          {title}
-        </h3>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Icon className={cn("h-4 w-4", color)} />
+          <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-foreground/60">
+            {title}
+          </h3>
+        </div>
+        {action}
       </div>
       {children}
     </motion.div>
