@@ -49,3 +49,7 @@ logs/
 # Misc
 *.bak
 *.tmp
+
+# local screenshots
+Screenshot*
+Recording*
