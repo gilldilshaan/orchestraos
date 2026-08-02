@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { HealthBadge } from "@/components/health-badge";
@@ -8,12 +9,23 @@ import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { TableSkeleton } from "@/components/skeleton";
 import { DataTable, DataTableRow, DataTableCell } from "@/components/data-table";
+import { PremiumMetricCard } from "@/components/premium-metric-card";
 import { useObjectivesQuery } from "@/hooks/use-api";
 import { useObjectiveContextStore } from "@/store";
 import {
   ExternalLink, RotateCcw, ArrowRightLeft, History,
   GitBranch, Building2, Radio, Scale, FolderOpen, LineChart,
+  PlayCircle, CheckCircle2, Brain, Clock,
 } from "lucide-react";
+
+const FILTERS = [
+  { label: "All", value: "all" },
+  { label: "Running", value: "running" },
+  { label: "Completed", value: "completed" },
+  { label: "Failed", value: "failed" },
+] as const;
+
+type FilterValue = (typeof FILTERS)[number]["value"];
 
 function runtimeSeconds(createdAt: string | null, updatedAt: string | null, isTerminal: boolean): number {
   if (!createdAt) return 0;
@@ -24,6 +36,7 @@ function runtimeSeconds(createdAt: string | null, updatedAt: string | null, isTe
 
 export default function RunsPage() {
   const router = useRouter();
+  const [filter, setFilter] = useState<FilterValue>("all");
   const { setActiveObjectiveId } = useObjectiveContextStore();
   const { data: objectives, isLoading } = useObjectivesQuery();
 
@@ -46,6 +59,15 @@ export default function RunsPage() {
     };
   });
 
+  const filtered = filter === "all" ? runs : runs.filter((r) => r.status === filter);
+  const completed = runs.filter((r) => r.status === "completed").length;
+  const failed = runs.filter((r) => r.status === "failed").length;
+  const running = runs.filter((r) => r.status === "running").length;
+  const avgConfidence = runs.length
+    ? runs.reduce((a, r) => a + (r.confidence ?? 0), 0) / runs.length
+    : null;
+  const avgDuration = runs.length ? runs.reduce((a, r) => a + r.duration, 0) / runs.length : null;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -53,6 +75,67 @@ export default function RunsPage() {
         title="Historical Runs"
         description="Past execution runs and their results"
       />
+
+      {!isLoading && runs.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <PremiumMetricCard
+            icon={<PlayCircle className="h-4 w-4" />}
+            label="Total Runs"
+            value={runs.length}
+            subtitle={`${running} running now`}
+            tone="hsl(217 80% 58%)"
+          />
+          <PremiumMetricCard
+            icon={<CheckCircle2 className="h-4 w-4" />}
+            label="Completed"
+            value={completed}
+            subtitle={failed > 0 ? `${failed} failed` : "no failures"}
+            tone="hsl(158 62% 42%)"
+          />
+          <PremiumMetricCard
+            icon={<Brain className="h-4 w-4" />}
+            label="Avg. Confidence"
+            value={avgConfidence != null ? Math.round(avgConfidence * 100) : null}
+            format="percent"
+            subtitle="across all runs"
+            tone="hsl(263 72% 62%)"
+          />
+          <PremiumMetricCard
+            icon={<Clock className="h-4 w-4" />}
+            label="Avg. Duration"
+            value={avgDuration != null ? Math.round(avgDuration) : null}
+            format="time"
+            subtitle="per execution"
+            tone="hsl(38 88% 52%)"
+          />
+        </div>
+      )}
+
+      {!isLoading && runs.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {FILTERS.map((f) => {
+            const count =
+              f.value === "all" ? runs.length : f.value === "running" ? running : f.value === "completed" ? completed : failed;
+            const active = filter === f.value;
+            return (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition-all ${
+                  active
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-border/20 bg-transparent text-muted-foreground/60 hover:bg-muted/20"
+                }`}
+              >
+                {f.label}
+                <span className={`font-mono tabular-nums ${active ? "text-primary/70" : "text-muted-foreground/40"}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {isLoading && (
         <div className="rounded-xl border border-border/30 bg-card p-5">
@@ -70,6 +153,18 @@ export default function RunsPage() {
             icon={<History className="h-5 w-5" />}
             title="No runs yet"
             description="Start a new run to see execution history."
+          />
+        </motion.div>
+      ) : !isLoading && filtered.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          <EmptyState
+            icon={<History className="h-5 w-5" />}
+            title={`No ${filter} runs`}
+            description="Try a different status filter or start a new run."
           />
         </motion.div>
       ) : (
@@ -90,7 +185,7 @@ export default function RunsPage() {
                 <span key="actions" className="block text-right">Actions</span>,
               ]}
             >
-              {runs.map((run) => (
+              {filtered.map((run) => (
                 <DataTableRow key={run.id}>
                   <DataTableCell>
                     <div className="text-sm font-medium line-clamp-1">{run.objective}</div>
