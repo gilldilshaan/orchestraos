@@ -41,7 +41,7 @@ export function RiskOverview() {
           <span className="panel-header-title">Risk Overview</span>
         </div>
         <Link
-          href="/execution"
+          href="/risks"
           className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/50 transition-colors hover:text-foreground/60"
         >
           Details
