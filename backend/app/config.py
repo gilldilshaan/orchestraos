@@ -16,8 +16,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: str = (
         "http://localhost:3000,https://orchestraos-nine.vercel.app,"
-        "https://orchestraos.vercel.app,https://macroroute.vercel.app,"
-        "https://frontend-gill1.vercel.app"
+        "https://orchestraos.vercel.app"
     )
     api_version: str = "1.0.0"
 
