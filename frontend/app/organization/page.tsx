@@ -58,7 +58,23 @@ function OrganizationContent() {
   const roleTelemetry = useMemo(() => {
     if (!selectedRole || !telemetry) return [];
     const { role, department } = selectedRole;
-    return telemetry.filter(
+    const matches = telemetry.filter(
+      (t) =>
+        t.agent_name === role.title ||
+        t.agent_id === role.id ||
+        t.role === role.title ||
+        t.department === department.name
+    );
+    if (matches.length > 0) return matches;
+    return [...telemetry]
+      .sort((a, b) => (b.start_time ?? "").localeCompare(a.start_time ?? ""))
+      .slice(0, 8);
+  }, [selectedRole, telemetry]);
+
+  const telemetryIsFallback = useMemo(() => {
+    if (!selectedRole || !telemetry) return false;
+    const { role, department } = selectedRole;
+    return !telemetry.some(
       (t) =>
         t.agent_name === role.title ||
         t.agent_id === role.id ||
@@ -76,9 +92,12 @@ function OrganizationContent() {
 
   const roleDecisions = useMemo(() => {
     if (!selectedRole || !decisions) return [];
-    return decisions.filter(
-      (d) => d.title.toLowerCase().includes(selectedRole.role.title.toLowerCase())
-    );
+    const role = selectedRole.role.title.toLowerCase();
+    return [...decisions].sort((a, b) => {
+      const aMatch = a.title.toLowerCase().includes(role) ? 1 : 0;
+      const bMatch = b.title.toLowerCase().includes(role) ? 1 : 0;
+      return bMatch - aMatch;
+    });
   }, [selectedRole, decisions]);
 
   const universeNodes = useMemo(() => {
@@ -210,6 +229,7 @@ function OrganizationContent() {
       <RoleDetailModal
         detail={selectedRole}
         telemetry={roleTelemetry}
+        telemetryFallback={telemetryIsFallback}
         events={roleEvents}
         decisions={roleDecisions}
         onClose={closeModal}
@@ -292,9 +312,10 @@ function Section({ icon: Icon, title, color, children }: {
   );
 }
 
-function RoleDetailModal({ detail, telemetry, events, decisions, onClose }: {
+function RoleDetailModal({ detail, telemetry, telemetryFallback, events, decisions, onClose }: {
   detail: RoleDetail | null;
   telemetry: ReturnType<typeof useTelemetryQuery>["data"];
+  telemetryFallback: boolean;
   events: ReturnType<typeof useEventsQuery>["data"];
   decisions: ReturnType<typeof useDecisionsQuery>["data"];
   onClose: () => void;
@@ -393,6 +414,11 @@ function RoleDetailModal({ detail, telemetry, events, decisions, onClose }: {
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground/40 italic">No telemetry records found for this role</p>
+                )}
+                {telemetryFallback && telemetry && telemetry.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground/30 mt-1">
+                    Roles are design-time &mdash; showing pipeline-level activity instead
+                  </p>
                 )}
               </Section>
 

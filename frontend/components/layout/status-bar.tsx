@@ -15,6 +15,9 @@ export function StatusBar() {
 
   const deps = system?.dependencies ?? {};
 
+  const backendOk = system?.status === "healthy";
+  const connected = sseConnected || backendOk;
+
   const dbOk = deps.database?.status === "ok";
   const redisOk = deps.redis?.status === "ok";
 
@@ -34,12 +37,12 @@ export function StatusBar() {
       <div className="flex flex-1 items-center gap-4">
         <span className="flex items-center gap-1.5">
           <PulseRing
-            active={sseConnected}
-            color={sseConnected ? "hsl(var(--success))" : "hsl(var(--muted-foreground))"}
+            active={connected}
+            color={connected ? "hsl(var(--success))" : "hsl(var(--muted-foreground))"}
             size={8}
           />
-          <span className={sseConnected ? "text-muted-foreground/70" : ""}>
-            {sseConnected ? "Connected" : "Disconnected"}
+          <span className={connected ? "text-muted-foreground/70" : ""}>
+            {sseConnected ? "Live" : backendOk ? "Connected" : "Disconnected"}
           </span>
         </span>
         <span className="text-muted-foreground/30 hidden sm:inline">{system?.version ?? "0.1.0"}</span>
