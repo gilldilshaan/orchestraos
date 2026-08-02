@@ -2,7 +2,12 @@
 set -e
 
 echo "Running database migrations..."
-alembic upgrade head
+if alembic upgrade head; then
+  echo "Migrations applied."
+else
+  echo "WARNING: migrations failed. Starting anyway - database features will be unavailable."
+fi
 
-echo "Starting API server..."
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+PORT="${PORT:-8000}"
+echo "Starting API server on port ${PORT}..."
+exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT"

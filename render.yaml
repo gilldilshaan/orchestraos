@@ -7,7 +7,7 @@ services:
     dockerfilePath: Dockerfile
     dockerContext: .
     plan: free
-    healthCheckPath: /api/v1/health
+    healthCheckPath: /api/v1/health/system
     envVars:
       - key: APP_ENV
         value: production
@@ -16,7 +16,7 @@ services:
       - key: API_VERSION
         value: 1.0.0
       - key: CORS_ORIGINS
-        sync: false
+        value: https://orchestraos-nine.vercel.app,https://orchestraos.vercel.app,http://localhost:3000
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL

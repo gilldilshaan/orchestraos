@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -27,8 +28,21 @@ AGENT_MODULES = [
 
 @router.get("/system")
 async def health_system() -> dict[str, Any]:
-    db_healthy = await check_database_health()
-    redis_healthy = await get_redis_health()
+    async def _db_ok() -> bool:
+        try:
+            async with asyncio.timeout(3):
+                return await check_database_health()
+        except (TimeoutError, Exception):
+            return False
+
+    async def _redis_ok() -> bool:
+        try:
+            async with asyncio.timeout(3):
+                return await get_redis_health()
+        except (TimeoutError, Exception):
+            return False
+
+    db_healthy, redis_healthy = await asyncio.gather(_db_ok(), _redis_ok())
 
     dependencies = {
         "database": {"status": "ok" if db_healthy else "error"},
