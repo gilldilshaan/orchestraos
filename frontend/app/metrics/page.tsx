@@ -135,9 +135,9 @@ export default function MetricsPage() {
         <div className="border-b border-border/50 px-5 py-3.5">
           <h3 className="text-sm font-medium">Performance Over Time</h3>
         </div>
-        <div className="flex h-80 items-center justify-center">
+        <div className="flex min-h-80 items-center justify-center px-6 py-6">
           {hasChartData ? (
-            <div className="w-full max-w-3xl px-6">
+            <div className="w-full max-w-3xl">
               <p className="mb-4 text-xs text-muted-foreground">Runtime per day (seconds)</p>
               <div className="flex items-end gap-2" style={{ height: 200 }}>
                 {chartData.map((d) => {
@@ -155,6 +155,20 @@ export default function MetricsPage() {
                   );
                 })}
               </div>
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-border/10 pt-4">
+                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50">
+                  <Zap className="h-3 w-3 text-primary/60" />
+                  {chartData.length} sampled days
+                </span>
+                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50">
+                  <Clock className="h-3 w-3 text-primary/60" />
+                  avg {(runtimeMinutes ?? 0).toFixed(1)}m per run
+                </span>
+                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50">
+                  <CheckCircle2 className="h-3 w-3 text-success/70" />
+                  {Math.round((agg?.success_rate ?? 0) * 100)}% success rate
+                </span>
+              </div>
             </div>
           ) : (
             <EmptyState
@@ -164,6 +178,43 @@ export default function MetricsPage() {
               description="Runtime trends will appear here once objectives have completed."
             />
           )}
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+        className="rounded-lg border border-border/50 bg-card"
+      >
+        <div className="border-b border-border/50 px-5 py-3.5">
+          <h3 className="text-sm font-medium">Kernel Health</h3>
+        </div>
+        <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            label="Total Calls"
+            value={ai?.kernel.total_calls ?? "—"}
+            format="number"
+            icon={<Activity className="h-4 w-4" />}
+          />
+          <MetricCard
+            label="Cache Hit Rate"
+            value={ai?.kernel.cache_hit_rate != null ? Math.round(ai.kernel.cache_hit_rate * 100) : "—"}
+            format="percent"
+            icon={<Zap className="h-4 w-4" />}
+          />
+          <MetricCard
+            label="Total Cost"
+            value={ai?.kernel.total_cost != null ? `$${Number(ai.kernel.total_cost).toFixed(2)}` : "—"}
+            format="number"
+            icon={<DollarSign className="h-4 w-4" />}
+          />
+          <MetricCard
+            label="Uptime"
+            value={ai?.uptime_seconds != null ? `${Math.floor(ai.uptime_seconds / 3600)}h ${Math.floor((ai.uptime_seconds % 3600) / 60)}m` : "—"}
+            format="raw"
+            icon={<Activity className="h-4 w-4" />}
+          />
         </div>
       </motion.div>
     </div>

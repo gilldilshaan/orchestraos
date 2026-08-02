@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { useLatestObjectiveIdQuery, useTelemetryQuery, useTelemetrySummaryQuery, useEventsQuery } from "@/hooks/use-api";
@@ -39,6 +39,21 @@ function TelemetryContent() {
   }, [urlId, setActiveObjectiveId]);
 
   const hasTelemetry = telemetry && telemetry.length > 0;
+
+  const stageGroups = useMemo(() => {
+    const map = new Map<string, { agents: number; tokens: number; cost: number }>();
+    for (const t of telemetry ?? []) {
+      const key = t.stage ?? "unknown";
+      const cur = map.get(key) ?? { agents: 0, tokens: 0, cost: 0 };
+      cur.agents++;
+      cur.tokens += t.total_tokens ?? 0;
+      cur.cost += t.total_cost ?? 0;
+      map.set(key, cur);
+    }
+    const groups = [...map.entries()].map(([stage, v]) => ({ stage, ...v }));
+    const maxTokens = Math.max(...groups.map((g) => g.tokens), 0);
+    return { groups, maxTokens };
+  }, [telemetry]);
 
   return (
     <div className="space-y-6">
@@ -132,6 +147,43 @@ function TelemetryContent() {
               icon={<Clock className="h-4 w-4" />}
             />
           </motion.div>
+
+          {stageGroups.groups.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.15 }}
+              className="rounded-lg border border-border/50 bg-card"
+            >
+              <div className="border-b border-border/50 px-5 py-3.5">
+                <h3 className="text-sm font-medium">Stage Summary</h3>
+              </div>
+              <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                {stageGroups.groups.map((g) => (
+                  <div key={g.stage} className="rounded-xl border border-border/15 bg-background/30 p-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="chip truncate">{g.stage}</span>
+                      <span className="font-mono text-[10px] tabular-nums text-muted-foreground/50">
+                        {g.agents} agent{g.agents !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${stageGroups.maxTokens > 0 ? (g.tokens / stageGroups.maxTokens) * 100 : 0}%` }}
+                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                        className="h-full rounded-full bg-gradient-to-r from-primary/70 to-primary/40"
+                      />
+                    </div>
+                    <div className="mt-2.5 flex items-center justify-between text-[10px] text-muted-foreground/50">
+                      <span className="tabular-nums">{g.tokens.toLocaleString()} tokens</span>
+                      <span className="tabular-nums">${g.cost.toFixed(6)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 8 }}

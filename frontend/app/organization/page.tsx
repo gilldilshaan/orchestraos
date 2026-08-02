@@ -12,8 +12,9 @@ import { PulseRing } from "@/components/premium/page-transition";
 import { PageSkeleton } from "@/components/skeleton";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { PremiumMetricCard } from "@/components/premium-metric-card";
 import { cn } from "@/lib/utils";
-import { X, Target, Users, ListChecks, Wrench, Activity, Cpu, GitBranch, MessageSquare, Building2, ChevronRight, Crown } from "lucide-react";
+import { X, Target, Users, ListChecks, Wrench, Activity, Cpu, GitBranch, MessageSquare, Building2, ChevronRight, Crown, Network, UserRound, Scale } from "lucide-react";
 
 interface RoleDetail {
   role: ApiRole;
@@ -109,6 +110,17 @@ function OrganizationContent() {
     });
   }, [departments]);
 
+  const orgStats = useMemo(() => {
+    const roles = departments.flatMap((d) => d.roles ?? []);
+    return {
+      departments: departments.length,
+      headCount: departments.reduce((a, d) => a + (d.head_count ?? 0), 0),
+      roles: roles.length,
+      activeRoles: roles.filter((r) => r.status === "active" || r.status === "running").length,
+      decisions: decisions?.length ?? 0,
+    };
+  }, [departments, decisions]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -148,6 +160,43 @@ function OrganizationContent() {
               nodes={universeNodes}
               isExecuting
               className="h-full w-full"
+            />
+          </motion.div>
+
+          {/* Org stats strip */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+          >
+            <PremiumMetricCard
+              icon={<Building2 className="h-4 w-4" />}
+              label="Departments"
+              value={orgStats.departments}
+              subtitle="executive units"
+              tone="hsl(217 80% 58%)"
+            />
+            <PremiumMetricCard
+              icon={<Network className="h-4 w-4" />}
+              label="Head Count"
+              value={orgStats.headCount}
+              subtitle="total personnel"
+              tone="hsl(158 62% 42%)"
+            />
+            <PremiumMetricCard
+              icon={<UserRound className="h-4 w-4" />}
+              label="Roles Defined"
+              value={orgStats.roles}
+              subtitle={`${orgStats.activeRoles} active`}
+              tone="hsl(263 72% 62%)"
+            />
+            <PremiumMetricCard
+              icon={<Scale className="h-4 w-4" />}
+              label="Decisions"
+              value={orgStats.decisions}
+              subtitle="linked decisions"
+              tone="hsl(38 88% 52%)"
             />
           </motion.div>
 

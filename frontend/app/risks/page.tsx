@@ -450,6 +450,61 @@ function RisksContent() {
               </div>
             )}
           </div>
+
+          {/* Severity distribution */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="rounded-xl border border-border/40 bg-card p-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-medium text-foreground/80">
+                Severity Distribution
+              </span>
+              <span className="text-[10px] text-muted-foreground/50">
+                {risks!.total} risks across {severityCounts.filter((s) => s.value > 0).length} levels
+              </span>
+            </div>
+            <div className="mt-3 flex h-3 w-full gap-px overflow-hidden rounded-full bg-muted/20">
+              {severityCounts.map((s) =>
+                s.value > 0 ? (
+                  <motion.div
+                    key={s.key}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(s.value / Math.max(risks!.total, 1)) * 100}%` }}
+                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    className={cn("h-full", LEVEL_STYLE[s.key].bar)}
+                  />
+                ) : null,
+              )}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {severityCounts.map((s) => {
+                const style = LEVEL_STYLE[s.key];
+                const Icon = style.icon;
+                return (
+                  <div
+                    key={s.key}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg border px-2.5 py-2",
+                      style.bg,
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className={cn("text-[10px] font-semibold uppercase tracking-[0.06em]", style.text)}>
+                        {s.label}
+                      </div>
+                      <div className="mt-0.5 font-mono text-xs tabular-nums text-foreground/70">
+                        {s.value} · {risks!.total > 0 ? Math.round((s.value / risks!.total) * 100) : 0}%
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
         </div>
       )}
     </div>
