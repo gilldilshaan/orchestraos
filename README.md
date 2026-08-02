@@ -77,11 +77,11 @@ autonomy *accountable* by construction.
 
 | Dashboard | Organization Explorer | Reports |
 | :---: | :---: | :---: |
-| `docs/screenshots/dashboard.png` | `docs/screenshots/organization.png` | `docs/screenshots/reports.png` |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Organization Explorer](docs/screenshots/organization.png) | ![Reports](docs/screenshots/reports.png) |
 
 | Overview | | |
 | :---: | :---: | :---: |
-| `docs/screenshots/screenshot-4.png` | | |
+| ![Overview](docs/screenshots/screenshot-4.png) | | |
 
 ## Features
 
