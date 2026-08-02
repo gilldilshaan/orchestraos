@@ -10,6 +10,7 @@ import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { PageSkeleton } from "@/components/skeleton";
+import { ScoreRing } from "@/components/score-ring";
 import {
   useAggregateMetricsQuery,
   useChartDataQuery,
@@ -251,6 +252,31 @@ export default function AnalyticsPage() {
         {/* Failure analysis summary */}
         <ChartCard title="Failure Analysis" hasData={agg != null}>
           <div className="p-4 space-y-4">
+            {agg && (
+              <div className="flex items-center gap-5 rounded-xl border border-border/20 bg-background/30 p-4">
+                <ScoreRing
+                  value={Math.round((agg.success_rate ?? 0) * 100)}
+                  size={76}
+                  strokeWidth={6}
+                  color="hsl(158 62% 42%)"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="section-kicker">Success Rate</div>
+                  <div className="mt-0.5 text-sm font-medium text-foreground/85">
+                    {Math.round((agg.success_rate ?? 0) * 100)}% of all runs completed
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className="chip text-success">{agg.completed_runs} completed</span>
+                    <span className="chip text-destructive">{agg.failed_runs} failed</span>
+                    {failureRate != null && (
+                      <span className="chip">
+                        {failureRate.toFixed(1)}% failure rate
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-lg border border-border/30 bg-muted/20 p-3 text-center">
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -312,6 +338,44 @@ export default function AnalyticsPage() {
           </div>
         </ChartCard>
       </div>
+
+      {/* Kernel health */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+        className="rounded-lg border border-border/50 bg-card"
+      >
+        <div className="border-b border-border/50 px-5 py-3.5">
+          <h3 className="text-sm font-medium">Kernel Health</h3>
+        </div>
+        <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            label="Total Calls"
+            value={ai?.kernel.total_calls ?? "—"}
+            format="number"
+            icon={<Activity className="h-4 w-4" />}
+          />
+          <MetricCard
+            label="Cache Hit Rate"
+            value={ai?.kernel.cache_hit_rate != null ? Math.round(ai.kernel.cache_hit_rate * 100) : "—"}
+            format="percent"
+            icon={<Zap className="h-4 w-4" />}
+          />
+          <MetricCard
+            label="Total Cost"
+            value={ai?.kernel.total_cost != null ? `$${Number(ai.kernel.total_cost).toFixed(2)}` : "—"}
+            format="number"
+            icon={<DollarSign className="h-4 w-4" />}
+          />
+          <MetricCard
+            label="Uptime"
+            value={ai?.uptime_seconds != null ? `${Math.floor(ai.uptime_seconds / 3600)}h ${Math.floor((ai.uptime_seconds % 3600) / 60)}m` : "—"}
+            format="raw"
+            icon={<Cpu className="h-4 w-4" />}
+          />
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { ConfidenceBar } from "@/components/confidence-bar";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { PageSkeleton } from "@/components/skeleton";
+import { PremiumMetricCard } from "@/components/premium-metric-card";
 import {
   Play,
   Pause,
@@ -28,6 +29,8 @@ import {
   Activity,
   AlertTriangle,
   History,
+  ListChecks,
+  Users,
 } from "lucide-react";
 
 const stageDisplayNames: Record<string, string> = {
@@ -336,6 +339,44 @@ function ReplayContent() {
               </div>
             </motion.div>
           )}
+
+          {/* Summary metrics */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18 }}
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+          >
+            <PremiumMetricCard
+              icon={<ListChecks className="h-4 w-4" />}
+              label="Total Events"
+              value={totalEvents}
+              subtitle="in timeline"
+              tone="hsl(217 80% 58%)"
+            />
+            <PremiumMetricCard
+              icon={<Users className="h-4 w-4" />}
+              label="Agents Tracked"
+              value={summary?.total_agents ?? null}
+              subtitle="across all stages"
+              tone="hsl(158 62% 42%)"
+            />
+            <PremiumMetricCard
+              icon={<Cpu className="h-4 w-4" />}
+              label="Tokens Consumed"
+              value={summary?.total_tokens ?? null}
+              subtitle="total usage"
+              tone="hsl(263 72% 62%)"
+            />
+            <PremiumMetricCard
+              icon={<DollarSign className="h-4 w-4" />}
+              label="Total Cost"
+              value={summary != null && summary.total_cost > 0 ? summary.total_cost : null}
+              format="decimal"
+              subtitle="aggregate spend"
+              tone="hsl(38 88% 52%)"
+            />
+          </motion.div>
 
           {/* Stage Telemetry Tiles */}
           <motion.div

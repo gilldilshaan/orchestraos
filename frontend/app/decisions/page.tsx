@@ -8,6 +8,7 @@ import { ConfidenceBar } from "@/components/confidence-bar";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { PageSkeleton } from "@/components/skeleton";
+import { PremiumMetricCard } from "@/components/premium-metric-card";
 import {
   useApproveDecision,
   useDecisionsQuery,
@@ -31,6 +32,9 @@ import {
   Scale,
   Orbit,
   ExternalLink,
+  CheckCircle2,
+  XCircle,
+  Hourglass,
 } from "lucide-react";
 
 const STATUS_STYLES: Record<string, { label: string; dot: string; bg: string; border: string }> = {
@@ -102,6 +106,8 @@ function DecisionsContent() {
     status === "PENDING" || status === "UNDER_REVIEW";
 
   const pendingCount = decisions?.filter((d) => d.status === "PENDING").length ?? 0;
+  const approvedCount = decisions?.filter((d) => d.status === "APPROVED").length ?? 0;
+  const rejectedCount = decisions?.filter((d) => d.status === "REJECTED").length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -129,6 +135,45 @@ function DecisionsContent() {
           )}
         />
       </motion.div>
+
+      {/* Summary rail */}
+      {decisions && decisions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.08 }}
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        >
+          <PremiumMetricCard
+            icon={<ListChecks className="h-4 w-4" />}
+            label="Total Decisions"
+            value={decisions.length}
+            subtitle="all statuses"
+            tone="hsl(217 80% 58%)"
+          />
+          <PremiumMetricCard
+            icon={<Hourglass className="h-4 w-4" />}
+            label="Pending Review"
+            value={pendingCount}
+            subtitle={pendingCount > 0 ? "awaiting your action" : "nothing waiting"}
+            tone="hsl(38 88% 52%)"
+          />
+          <PremiumMetricCard
+            icon={<CheckCircle2 className="h-4 w-4" />}
+            label="Approved"
+            value={approvedCount}
+            subtitle="accepted strategies"
+            tone="hsl(158 62% 42%)"
+          />
+          <PremiumMetricCard
+            icon={<XCircle className="h-4 w-4" />}
+            label="Rejected"
+            value={rejectedCount}
+            subtitle="declined proposals"
+            tone="hsl(0 72% 55%)"
+          />
+        </motion.div>
+      )}
 
       {/* Empty State */}
       {!decisions || decisions.length === 0 ? (
