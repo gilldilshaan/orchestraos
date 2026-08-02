@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useHealthAiQuery } from "@/hooks/use-api";
 import { useAggregateMetrics } from "@/hooks/use-dashboard";
 import { PulseRing } from "@/components/premium/page-transition";
+import { ScoreRing } from "@/components/score-ring";
 import { Activity } from "lucide-react";
 
 interface GaugeProps {
@@ -87,17 +88,25 @@ export function SystemHealth() {
         <PulseRing active color="hsl(var(--success))" size={6} />
       </div>
       <div className="panel-body space-y-2 p-5">
-        <div className="mb-3 flex items-end justify-between rounded-lg border border-border/20 bg-background/30 px-3.5 py-3">
-          <div>
+        <div className="mb-3 flex items-center gap-4 rounded-lg border border-border/20 bg-gradient-to-br from-background/40 to-background/10 px-4 py-3.5">
+          <ScoreRing
+            value={compositeSafe}
+            size={72}
+            strokeWidth={6}
+            color={
+              compositeSafe >= 70
+                ? "hsl(158 62% 42%)"
+                : compositeSafe >= 40
+                  ? "hsl(38 88% 52%)"
+                  : "hsl(0 72% 55%)"
+            }
+          />
+          <div className="min-w-0 flex-1">
             <div className="section-kicker">Composite Score</div>
-            <div className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground/90">
-              {compositeSafe}
-              <span className="text-xs text-muted-foreground/50">/100</span>
+            <div className="mt-0.5 truncate text-xs text-muted-foreground/40">
+              Normalized across 6 live subsystems
             </div>
-          </div>
-          <div className="text-right">
-            <div className="section-kicker">Status</div>
-            <div className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-success">
+            <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-success">
               <PulseRing active color="hsl(var(--success))" size={5} />
               {ai?.status ?? "\u2014"}
             </div>

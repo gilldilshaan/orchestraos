@@ -1,9 +1,9 @@
 "use client";
 
-import { motion } from "motion/react";
 import { useRecentRuns } from "@/hooks/use-dashboard";
 import { HealthBadge } from "@/components/health-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
+import { DataTable, DataTableRow, DataTableCell, TablePill } from "@/components/data-table";
 import Link from "next/link";
 import { ArrowRight, List } from "lucide-react";
 
@@ -27,71 +27,40 @@ export function RecentRuns() {
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
-      <div className="panel-body p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border/10">
-              {["Objective", "Runtime", "Confidence", "Nodes", "Status"].map(
-                (h) => (
-                  <th
-                    key={h}
-                    className="px-6 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/30"
-                  >
-                    {h}
-                  </th>
-                )
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {runs.slice(0, 6).map((run, i) => (
-              <motion.tr
-                key={run.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 + i * 0.03 }}
-                className="data-row"
-              >
-                <td className="px-6 py-3.5">
-                  <div>
-                    <span className="text-sm font-medium text-foreground/80">
-                      {run.objective.length > 50
-                        ? run.objective.slice(0, 50) + "..."
-                        : run.objective}
-                    </span>
-                    <div className="mt-0.5 font-mono text-[10px] text-muted-foreground/25">
-                      {run.id.slice(0, 8)}...
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-3.5 font-mono text-xs tabular-nums text-muted-foreground/50">
-                  {run.duration.toFixed(1)}s
-                </td>
-                <td className="px-6 py-3.5">
-                  <ConfidenceBar
-                    value={run.confidence}
-                    size="sm"
-                    className="w-24"
-                    showValue
-                  />
-                </td>
-                <td className="px-6 py-3.5 font-mono text-xs tabular-nums text-muted-foreground/50">
-                  {run.node_count}
-                </td>
-                <td className="px-6 py-3.5">
-                  <HealthBadge status={run.status} size="sm" />
-                </td>
-              </motion.tr>
-            ))}
-            {runs.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-sm text-muted-foreground/40">
-                  No runs yet. Start a new run to see data here.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="panel-body p-4">
+        <DataTable headers={["Objective", "Runtime", "Confidence", "Nodes", "Status"]}>
+          {runs.slice(0, 6).map((run) => (
+            <DataTableRow key={run.id}>
+              <DataTableCell className="max-w-[260px]">
+                <div className="truncate font-medium text-foreground/80">
+                  {run.objective}
+                </div>
+                <div className="mt-0.5 font-mono text-[10px] text-muted-foreground/30">
+                  {run.id.slice(0, 8)}...
+                </div>
+              </DataTableCell>
+              <DataTableCell className="font-mono text-xs tabular-nums text-muted-foreground/60">
+                {run.duration.toFixed(1)}s
+              </DataTableCell>
+              <DataTableCell>
+                <ConfidenceBar value={run.confidence} size="sm" className="w-24" showValue />
+              </DataTableCell>
+              <DataTableCell>
+                <TablePill>{run.node_count}</TablePill>
+              </DataTableCell>
+              <DataTableCell>
+                <HealthBadge status={run.status} size="sm" />
+              </DataTableCell>
+            </DataTableRow>
+          ))}
+        </DataTable>
+        {runs.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border/30 px-6 py-8 text-center">
+            <p className="text-sm text-muted-foreground/40">
+              No runs yet. Start a new run to see data here.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

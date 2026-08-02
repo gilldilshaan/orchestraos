@@ -1,6 +1,7 @@
 "use client";
 
 import { HeroSection } from "./components/hero-section";
+import { ExecutiveBand } from "./components/executive-band";
 import { PipelineRail } from "./components/pipeline-rail";
 import { MetricGrid } from "./components/metric-grid";
 import { ActiveExecution } from "./components/active-execution";
@@ -21,6 +22,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-5">
       <HeroSection />
+
+      <ExecutiveBand />
 
       <PipelineRail />
 

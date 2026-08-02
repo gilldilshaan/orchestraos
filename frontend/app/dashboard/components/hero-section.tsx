@@ -58,6 +58,7 @@ interface HeroStat {
   accent?: boolean;
   pulse?: boolean;
   tint?: string;
+  color?: string;
 }
 
 export function HeroSection() {
@@ -74,6 +75,7 @@ export function HeroSection() {
       format: "percent",
       accent: true,
       tint: "text-success",
+      color: "hsl(158 62% 42%)",
     },
     {
       label: "Health Score",
@@ -81,39 +83,46 @@ export function HeroSection() {
       format: "percent",
       accent: true,
       tint: "text-success",
+      color: "hsl(158 62% 42%)",
     },
     {
       label: "Active Agents",
       value: (ai?.active_agents ?? 0) + (ai?.active_executives ?? 0) + (ai?.active_specialists ?? 0),
       icon: Brain,
+      color: "hsl(217 80% 58%)",
     },
     {
       label: "Pending Tasks",
       value: ai?.pending_tasks ?? 0,
       icon: Activity,
       pulse: (ai?.pending_tasks ?? 0) > 0,
+      color: "hsl(38 88% 52%)",
     },
     {
       label: "Kernel Calls",
       value: ai?.kernel.total_calls ?? 0,
       icon: Cpu,
+      color: "hsl(263 72% 62%)",
     },
     {
       label: "Tokens Used",
       value: ai?.kernel.tokens_used ?? 0,
       icon: DatabaseZap,
+      color: "hsl(199 72% 52%)",
     },
     {
       label: "Kernel Cost",
       value: ai?.kernel.total_cost ?? null,
       format: "decimal",
       icon: Coins,
+      color: "hsl(326 74% 58%)",
     },
     {
       label: "Cache Hit",
       value: ai?.kernel.cache_hit_rate != null ? ai.kernel.cache_hit_rate : null,
       format: "percent",
       icon: Sparkles,
+      color: "hsl(158 62% 42%)",
     },
   ];
 
@@ -135,10 +144,20 @@ export function HeroSection() {
       <div className="relative px-8 py-8">
         <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-                Command Center
-              </h1>
+            <div className="flex items-center gap-2">
+              <span className="section-kicker">OrchestraOS</span>
+              <span className="h-3 w-px bg-border/40" />
+              <span className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/40">
+                {now ? now.toLocaleTimeString() : "\u2014"}
+              </span>
+            </div>
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight md:text-3xl">
+              Command Center
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground/60">
+              Monitor and orchestrate your AI organization in real-time
+            </p>
+            <div className="mt-3 flex items-center gap-2">
               <motion.div
                 className="flex items-center gap-1.5 rounded-full bg-success/8 px-3 py-1 text-[11px] font-medium text-success/80"
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -149,17 +168,14 @@ export function HeroSection() {
                 <span>Operational</span>
               </motion.div>
               <motion.span
-                className="hidden font-mono text-[11px] tabular-nums text-muted-foreground/35 lg:inline"
+                className="chip"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
               >
-                {now ? now.toLocaleTimeString() : "\u2014"}
+                {ai?.provider ?? "\u2014"} · {ai?.model ?? "\u2014"}
               </motion.span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground/60">
-              Monitor and orchestrate your AI organization in real-time
-            </p>
           </div>
 
           <div className="hidden items-center gap-2 sm:flex">
@@ -193,34 +209,48 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border/20 bg-border/20 sm:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {stats.map((item, i) => (
             <motion.div
               key={item.label}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08 + i * 0.04, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="group relative bg-card/40 px-4 py-3 transition-colors hover:bg-card/60"
+              className="group relative overflow-hidden rounded-xl border border-border/20 bg-card/50 px-4 py-3 transition-colors hover:border-border/40"
             >
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${item.color ?? "hsl(var(--primary))"}66, transparent)`,
+                }}
+              />
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/40">
                   {item.label}
                 </span>
                 {item.icon ? (
-                  <item.icon className="h-3 w-3 text-muted-foreground/20" />
+                  <span
+                    className="flex h-6 w-6 items-center justify-center rounded-md border"
+                    style={{
+                      backgroundColor: `${item.color ?? "hsl(var(--primary))"}12`,
+                      borderColor: `${item.color ?? "hsl(var(--primary))"}22`,
+                      color: item.color ?? "hsl(var(--primary))",
+                    }}
+                  >
+                    <item.icon className="h-3 w-3" />
+                  </span>
                 ) : (
                   <span className={item.tint ? `${item.tint}/40` : ""}>
                     <ArrowUpRight className="h-3 w-3" />
                   </span>
                 )}
               </div>
-              <div className="mt-0.5">
+              <div className="mt-1.5">
                 {item.value != null ? (
                   <AnimatedCounter
                     value={item.value}
                     format={item.format ?? "number"}
-                    className={`text-sm font-medium tabular-nums ${item.accent ? "text-primary" : "text-foreground/70"}`}
+                    className={`text-lg font-semibold tabular-nums ${item.accent ? "text-primary" : "text-foreground/80"}`}
                   />
                 ) : (
                   <span className="font-mono text-sm text-muted-foreground/30">\u2014</span>
@@ -251,10 +281,6 @@ export function HeroSection() {
             Queue: {health.queue_depth}
           </span>
           <span>Uptime: {Math.floor(health.uptime / 3600)}h</span>
-          <span className="hidden items-center gap-1.5 md:flex">
-            <Sparkles className="h-3 w-3 text-muted-foreground/20" />
-            {ai?.provider ?? "\u2014"} / {ai?.model ?? "\u2014"}
-          </span>
           <span className="hidden font-mono text-muted-foreground/25 lg:inline">
             {aiAgents} agents online
           </span>

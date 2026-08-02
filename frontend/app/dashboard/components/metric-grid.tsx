@@ -20,6 +20,21 @@ import {
   Zap,
 } from "lucide-react";
 
+const tones = [
+  "hsl(217 80% 58%)",
+  "hsl(158 62% 42%)",
+  "hsl(263 72% 62%)",
+  "hsl(38 88% 52%)",
+  "hsl(199 72% 52%)",
+  "hsl(326 74% 58%)",
+  "hsl(20 78% 55%)",
+  "hsl(158 62% 42%)",
+  "hsl(0 72% 55%)",
+  "hsl(263 72% 62%)",
+  "hsl(199 72% 52%)",
+  "hsl(326 74% 58%)",
+] as const;
+
 const metricsConfig = [
   {
     icon: <PlayCircle className="h-4 w-4" />,
@@ -144,6 +159,7 @@ export function MetricGrid() {
             format={cfg.format}
             subtitle={cfg.subtitle}
             delay={0.05 + i * 0.03}
+            tone={tones[i % tones.length]}
           />
         ))}
       </div>
