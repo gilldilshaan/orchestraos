@@ -6,10 +6,11 @@ pytestmark = pytest.mark.integration
 
 
 class TestMigrations:
-    async def test_upgrade_runs(self, _engine):
+    async def test_upgrade_runs(self):
         from app.database.base import Base
+        from app.database.session import engine
 
-        async with _engine.begin() as conn:
+        async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
     async def test_tables_exist(self, session):
@@ -66,11 +67,10 @@ class TestMigrations:
         from sqlalchemy import inspect
 
         inspector = await session.connection()
-        columns = await inspector.run_sync(
-            lambda conn: inspect(conn).get_columns("users")
+        pk = await inspector.run_sync(
+            lambda conn: inspect(conn).get_pk_constraint("users")
         )
-        id_col = next(c for c in columns if c["name"] == "id")
-        assert id_col["primary_key"] is True
+        assert pk["constrained_columns"] == ["id"]
 
     async def test_downgrade_cleanup(self, session):
         from sqlalchemy import inspect

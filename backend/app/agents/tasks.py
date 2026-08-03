@@ -30,6 +30,7 @@ from app.schemas.llm_outputs import (
     PlanOutputSchema,
     RiskOutputSchema,
 )
+from app.services.memory_retrieval import get_memory_context_for_planning
 
 
 class PlannerAgent(BaseAgent):
@@ -44,6 +45,14 @@ class PlannerAgent(BaseAgent):
 
         compilation = await comp_repo.get_by_objective(objective_id)
 
+        # Retrieve organizational memory context
+        memory_context = await get_memory_context_for_planning(
+            self._session,
+            objective.raw_input,
+            objective_id,
+            record_events=True,
+        )
+
         context = {
             "objective": {"raw": objective.raw_input},
             "compilation": {
@@ -53,6 +62,16 @@ class PlannerAgent(BaseAgent):
                 "timeline": compilation.timeline if compilation else None,
             },
             "constraints": objective.constraints,
+            "memory_context": {
+                "has_memories": len(memory_context.similar_objectives) > 0,
+                "similar_objectives": memory_context.similar_objectives,
+                "strategies": memory_context.strategies,
+                "lessons_learned": memory_context.lessons_learned,
+                "risks": memory_context.risks,
+                "executive_decisions": memory_context.executive_decisions,
+                "success_factors": memory_context.success_factors,
+                "memory_sources": memory_context.memory_sources,
+            },
         }
 
         result = await self._llm.run(
@@ -89,16 +108,57 @@ class PlannerAgent(BaseAgent):
             )
             await milestone_repo.create(milestone)
 
+        # Store memory references in plan metadata for reporting
+        memory_refs = result.get("memory_references", [])
+        if memory_refs:
+            await plan_repo.update(plan.id, {
+                "metadata": {
+                    "memory_references": memory_refs,
+                    "memory_context_used": {
+                        "similar_objectives_count": len(memory_context.similar_objectives),
+                        "strategies_reused": len(memory_context.strategies),
+                        "lessons_applied": len(memory_context.lessons_learned),
+                        "risks_mitigated": len(memory_context.risks),
+                    },
+                }
+            })
+
+            # Record reuse events for the knowledge timeline (best-effort)
+            from app.services.memory_service import MemoryService
+            memory_service = MemoryService(self._session)
+            for ref in memory_refs:
+                memory_id = ref.get("memory_id") if isinstance(ref, dict) else None
+                if memory_id:
+                    await memory_service.record_event(
+                        memory_id,
+                        "reused",
+                        {
+                            "actor": "planner",
+                            "objective_id": objective_id,
+                            "strategy_reused": ref.get("strategy_reused") if isinstance(ref, dict) else None,
+                            "lessons_applied": ref.get("lessons_applied") if isinstance(ref, dict) else None,
+                        },
+                    )
+
         await self._save_explanation(
             entity_type="Plan",
             entity_id=plan.id,
             recommendation=f"Created execution plan with {len(milestones_data)} milestones",
-            reasoning="Plan generated from objective compilation data using AIKernel",
+            reasoning=(
+                "Plan generated from objective compilation data "
+                "using AIKernel with organizational memory context"
+            ),
             evidence=[str(context)],
             confidence=plan.confidence,
         )
 
-        return {"plan_id": plan.id, "milestones_count": len(milestones_data), "status": "created"}
+        return {
+            "plan_id": plan.id,
+            "milestones_count": len(milestones_data),
+            "status": "created",
+            "memory_references": memory_refs,
+            "memory_sources_count": len(memory_context.memory_sources),
+        }
 
 
 class RiskAgent(BaseAgent):

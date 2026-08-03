@@ -14,6 +14,7 @@ from app.kernel.context_manager import ExecutionContext
 from app.kernel.event_bus import EventBus
 from app.services.artifact_service import ArtifactService
 from app.services.execution_events import sse_manager
+from app.services.memory_generator import generate_memory_on_pipeline_completion
 
 logger = logging.getLogger(__name__)
 
@@ -493,6 +494,17 @@ class AgentOrchestrator:
                 )
             except Exception:
                 logger.exception("Failed to save execution snapshot")
+
+        # Generate organizational memory automatically
+        try:
+            await generate_memory_on_pipeline_completion(
+                self._session,
+                objective_id,
+                list(completed),
+                results,
+            )
+        except Exception:
+            logger.exception("Failed to generate organizational memory")
 
         return {
             "status": pipeline_status,

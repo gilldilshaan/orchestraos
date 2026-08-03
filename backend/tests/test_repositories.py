@@ -26,7 +26,7 @@ class TestUserRepository:
         created = await repo.create(user)
         fetched = await repo.get(created.id)
         assert fetched is not None
-        assert fetched.id == created.id
+        assert str(fetched.id) == str(created.id)
 
     async def test_get_nonexistent(self, session):
         repo = UserRepository(session)

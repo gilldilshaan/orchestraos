@@ -1142,6 +1142,247 @@ def build_dashboard(prompt: str) -> dict[str, Any]:
     }
 
 
+_ROLE_THEMES: dict[str, tuple[str, str, float]] = {
+    "Planner": (
+        "execution sequencing, milestones, and delivery feasibility",
+        "the plan sequencing and milestone dependencies hold together for this objective",
+        0.62,
+    ),
+    "Engineering": (
+        "technical feasibility and delivery risk",
+        "the engineering delivery path is realistic for the given timeline",
+        0.68,
+    ),
+    "Finance": (
+        "budget adequacy, unit economics, and ROI",
+        "the budget covers realistic costs with a defensible contingency",
+        0.58,
+    ),
+    "Marketing": (
+        "market traction and adoption",
+        "there is plausible demand to justify the go-to-market spend",
+        0.65,
+    ),
+    "Legal": (
+        "compliance, regulatory exposure, and liability",
+        "the compliance and contracting path is clean for this objective",
+        0.6,
+    ),
+    "Risk": (
+        "exposure, uncertainty, and mitigation coverage",
+        "key risks have named owners and mitigations before we commit",
+        0.55,
+    ),
+    "Operations": (
+        "capacity, staffing, and operational readiness",
+        "operations can actually stand up the work inside the timeline",
+        0.6,
+    ),
+}
+
+_DEFAULT_THEME = (
+    "strategic alignment and delivery confidence",
+    "the initiative aligns with strategy and can be delivered",
+    0.65,
+)
+
+
+def _board_role(prompt: str) -> str:
+    match = re.search(r"You are ([A-Za-z ]+),", prompt)
+    if match:
+        return match.group(1).strip()
+    return "CEO"
+
+
+def _board_theme(prompt: str) -> tuple[str, str, float]:
+    role = _board_role(prompt)
+    return _ROLE_THEMES.get(role, _DEFAULT_THEME)
+
+
+def build_board_opening(prompt: str) -> dict[str, Any]:
+    facts = _extract_facts(prompt)
+    role = _board_role(prompt)
+    theme, _claim, conf = _board_theme(prompt)
+    summary = _summarize_objective(facts)
+    return {
+        "title": f"{role}: initial read on {summary}",
+        "summary": (
+            f"From a {role} lens, the initiative is sound in principle but lives or dies on "
+            f"{theme}. I can support it if the board addresses the items below."
+        ),
+        "stance": "conditional",
+        "key_points": [
+            f"Objective is clear: {summary}",
+            f"{role} scope and accountabilities need to be explicit before kickoff",
+            "Timing and sequencing must be locked in this session",
+        ],
+        "concerns": [
+            f"{role} risk is unstated in the brief and needs a concrete number",
+            "No mitigation for schedule or budget slippage is visible yet",
+            "Dependencies on other executives are not load-balanced",
+        ],
+        "questions": [
+            "What is the confirmed budget with contingency for this phase?",
+            "Which milestone is the board treating as the go/no-go checkpoint?",
+        ],
+        "confidence": conf,
+    }
+
+
+def build_board_deliberation(prompt: str) -> dict[str, Any]:
+    facts = _extract_facts(prompt)
+    role = _board_role(prompt)
+    _theme, claim, conf = _board_theme(prompt)
+    summary = _summarize_objective(facts)
+    return {
+        "title": f"{role} deliberation on {summary}",
+        "summary": (
+            f"After reviewing the openings, I hold the same position: {claim}. "
+            "Several colleagues overstated confidence; I need tighter numbers before I move."
+        ),
+        "stance_now": "conditional",
+        "agreements": [
+            "The board generally agrees the objective is achievable",
+            "The sequencing in the openings is broadly consistent",
+        ],
+        "challenges": [
+            {
+                "target": "Finance",
+                "point": f"The budget has no stated contingency — inflate it for {summary}",
+            },
+            {
+                "target": "Planner",
+                "point": "The milestone checkpoints are too late to catch failure cheaply",
+            },
+        ],
+        "questions": [
+            {"target": "Finance", "question": "What is the contingency number on the budget?"},
+            {"target": "Planner", "question": "Which milestone is the true go/no-go?"},
+        ],
+        "conditions": [
+            "Add a named contingency budget",
+            "Insert an earlier go/no-go checkpoint",
+        ],
+        "confidence": conf,
+    }
+
+
+def build_board_response(prompt: str) -> dict[str, Any]:
+    facts = _extract_facts(prompt)
+    role = _board_role(prompt)
+    _theme, _claim, conf = _board_theme(prompt)
+    summary = _summarize_objective(facts)
+    return {
+        "title": f"{role} answers the board",
+        "summary": (
+            f"On the points raised at me: I hold my ground on the principle for {summary} "
+            "but concede the budget line needs a contingency number, which I am happy to take."
+        ),
+        "answers": [
+            {"question": "contingency on the budget", "answer": "Add 15% contingency as the default"},
+            {"question": "tight checkpoints", "answer": "Bring the go/no-go checkpoint forward one milestone"},
+        ],
+        "stance_now": "conditional",
+        "concessions": ["Budget requires a stated contingency"],
+        "remaining_concerns": ["Schedule slip protection is still light"],
+        "escalation": False,
+        "escalate_reason": "",
+        "confidence": conf,
+    }
+
+
+def _board_vote(role: str) -> str:
+    return {
+        "Finance": "conditional",
+        "Risk": "conditional",
+        "Legal": "approve",
+        "Engineering": "approve",
+        "Marketing": "approve",
+        "Planner": "conditional",
+        "Operations": "approve",
+        "CEO": "approve",
+    }.get(role, "approve")
+
+
+def build_board_vote(prompt: str) -> dict[str, Any]:
+    facts = _extract_facts(prompt)
+    role = _board_role(prompt)
+    vote = _board_vote(role)
+    summary = _summarize_objective(facts)
+    return {
+        "title": f"{role} vote on {summary}",
+        "summary": (
+            f"Based on the deliberation, {role} votes {vote} for {summary}, "
+            "with confidence in the plan behind it."
+        ),
+        "vote": vote,
+        "stance": "support" if vote == "approve" else "conditional",
+        "reasoning": (
+            f"the plan is deliverable, {vote} with conditions"
+            if vote == "conditional"
+            else "the plan is clear, funded, and can proceed"
+        ),
+        "conditions": (
+            ["15% budget contingency", "named mitigation for the top risk"]
+            if vote == "conditional"
+            else []
+        ),
+        "confidence": 0.62 if vote == "conditional" else 0.75,
+    }
+
+
+def build_board_consensus(prompt: str) -> dict[str, Any]:
+    facts = _extract_facts(prompt)
+    summary = _summarize_objective(facts)
+    vote_counts: dict[str, int] = {}
+    for match in re.finditer(r'"vote":\s*"(\w+)"', prompt):
+        vote_counts[match.group(1)] = vote_counts.get(match.group(1), 0) + 1
+
+    conditional = vote_counts.get("conditional", 0)
+    rejects = vote_counts.get("reject", 0)
+
+    if rejects > 0:
+        verdict, mood = "conditional", "divided"
+    elif conditional > 0:
+        verdict, mood = "conditional", "consensus"
+    else:
+        verdict, mood = "approve", "consensus"
+
+    return {
+        "title": f"Board consensus on {summary}",
+        "decision": (
+            f"The board approves {summary} with conditions: name budget contingency, "
+            "earlier go/no-go, and named mitigations before full commitment."
+        ),
+        "verdict": verdict,
+        "mood": mood,
+        "rationale": (
+            f"The roll call shows {conditional} conditional and {rejects} reject votes; "
+            "conditions are adoptable, so the board proceeds on a conditional basis."
+        ),
+        "adopted_conditions": [
+            "15% budget contingency reserve",
+            "Go/no-go moved one milestone earlier",
+            "named mitigation owner for the top risk",
+        ],
+        "action_items": [
+            "Lock the budget with contingency",
+            "Publish go/no-go checkpoint cadence",
+            "Assign mitigation owners",
+            "Re-convene if the checkpoint is missed",
+        ],
+        "minority_reports": [
+            {
+                "who": "Risk",
+                "point": "wants mitigation ownership explicit before approval",
+            }
+        ]
+        if rejects > 0
+        else [],
+        "overall_confidence": round(0.62 + 0.05 * (rejects == 0), 2),
+    }
+
+
 _BUILDERS = {
     "compile": build_compile,
     "plan": build_plan,
@@ -1151,6 +1392,11 @@ _BUILDERS = {
     "devils_advocate": build_devils_advocate,
     "dependency_graph": build_dependency_graph,
     "dashboard": build_dashboard,
+    "board_opening": build_board_opening,
+    "board_deliberation": build_board_deliberation,
+    "board_response": build_board_response,
+    "board_vote": build_board_vote,
+    "board_consensus": build_board_consensus,
 }
 
 

@@ -42,6 +42,12 @@ class ModelRouter:
         "dashboard": _route(0.3, priority=2),
         "replan": _route(0.4),
         "simulation": _route(0.5),
+        "memory_extraction": _route(0.2),
+        "board_opening": _route(0.6),
+        "board_deliberation": _route(0.6),
+        "board_response": _route(0.5),
+        "board_vote": _route(0.3),
+        "board_consensus": _route(0.3),
     }
 
     def __init__(self) -> None:

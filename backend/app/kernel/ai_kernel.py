@@ -76,6 +76,7 @@ class AIKernel:
             "executive": "Dynamic Executive",
             "specialist": "Dynamic Specialist",
             "ceo_synthesis": "CEO Synthesis",
+            "memory_extraction": "Memory Extraction",
         }
         return name_map.get(task_type, task_type.replace("_", " ").title())
 

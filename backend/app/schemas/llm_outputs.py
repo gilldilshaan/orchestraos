@@ -28,6 +28,7 @@ class PlanOutputSchema(BaseModel):
     evidence: list[str] = Field(default_factory=list)
     risk_level: RiskLevel | None = None
     assumptions: list[str] = Field(default_factory=list)
+    memory_references: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class RiskOutputSchema(BaseModel):

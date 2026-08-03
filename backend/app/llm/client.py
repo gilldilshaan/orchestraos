@@ -452,5 +452,31 @@ class LLMClient:
 
         raise NotImplementedError(f"Provider {self._provider} not yet implemented")
 
+    # -------------------------------------------------------------------------
+    # Embeddings
+    # -------------------------------------------------------------------------
+
+    def _get_embedding_model(self):
+        """Lazy-load the sentence-transformers model."""
+        if not hasattr(self, "_embedding_model"):
+            from sentence_transformers import SentenceTransformer
+            # Use a lightweight but effective model
+            self._embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        return self._embedding_model
+
+    def embed(self, texts: list[str] | str) -> list[list[float]]:
+        """Generate embeddings for a list of texts (or single text)."""
+        if isinstance(texts, str):
+            texts = [texts]
+        model = self._get_embedding_model()
+        embeddings = model.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
+        return embeddings.tolist()
+
+    async def aembed(self, texts: list[str] | str) -> list[list[float]]:
+        """Async wrapper for embed (runs in thread pool)."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self.embed, texts)
+
 
 llm_client = LLMClient()
