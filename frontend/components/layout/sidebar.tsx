@@ -26,6 +26,17 @@ import {
   Zap,
   FileText,
   ShieldAlert,
+  Brain,
+  BookOpen,
+  Lightbulb,
+  Search,
+  TrendingUp,
+  Clock3,
+  Network,
+  ScanSearch,
+  Landmark,
+  Users,
+  Target,
 } from "lucide-react";
 
 const navGroups = [
@@ -35,6 +46,19 @@ const navGroups = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/execution", label: "Live Execution", icon: PlayCircle },
       { href: "/operations", label: "Operations Center", icon: Gauge },
+    ],
+  },
+  {
+    label: "Knowledge",
+    items: [
+      { href: "/knowledge", label: "Memory Explorer", icon: Brain },
+      { href: "/knowledge/strategies", label: "Strategy Library", icon: BookOpen },
+      { href: "/knowledge/lessons", label: "Lessons Learned", icon: Lightbulb },
+      { href: "/knowledge/similar", label: "Similar Objectives", icon: Search },
+      { href: "/knowledge/analytics", label: "Analytics", icon: TrendingUp },
+      { href: "/knowledge/timeline", label: "Timeline", icon: Clock3 },
+      { href: "/knowledge/graph", label: "Knowledge Graph", icon: Network },
+      { href: "/knowledge/search", label: "Global Search", icon: ScanSearch },
     ],
   },
   {
@@ -63,6 +87,13 @@ const navGroups = [
     items: [
       { href: "/decisions", label: "Decision Center", icon: Scale },
       { href: "/runs", label: "Historical Runs", icon: Clock },
+    ],
+  },
+  {
+    label: "Executive",
+    items: [
+      { href: "/board", label: "Executive Board", icon: Landmark },
+      { href: "/executive-workspace", label: "Executive Workspace", icon: Users },
     ],
   },
   {

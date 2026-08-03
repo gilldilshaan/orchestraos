@@ -1,5 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import type {
+  BoardSession,
+  BoardMessage,
+  StartBoardRequest,
+  StartBoardResponse,
+  ExecutiveWorkspace,
+  WorkspaceItem,
+  WorkspaceSummary,
+  MemoryPartitionItem,
+} from "@/types";
 
 // Background poll interval for widgets that should stay live even when no
 // New-Run/execution-page invalidation is in flight (e.g. the dashboard
@@ -685,5 +695,249 @@ export function useTelemetrySummaryQuery(objectiveId: string | null | undefined)
     enabled: !!objectiveId,
     staleTime: 15_000,
     refetchInterval: 15_000,
+  });
+}
+
+// ─── Executive Board ───────────────────────────────────────────────────────────
+
+export function useBoardSessionsQuery(skip = 0, limit = 100) {
+  return useQuery({
+    queryKey: ["board", "sessions", skip, limit],
+    queryFn: () =>
+      apiClient.get<{ sessions: BoardSession[]; total: number }>(
+        `/board?skip=${skip}&limit=${limit}`,
+      ),
+    staleTime: 5_000,
+    refetchInterval: 5_000,
+  });
+}
+
+export function useBoardSessionQuery(boardId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["board", "session", boardId],
+    queryFn: () => apiClient.get<BoardSession>(`/board/${boardId}`),
+    enabled: !!boardId,
+    staleTime: 5_000,
+    refetchInterval: 5_000,
+  });
+}
+
+export function useBoardMessagesQuery(
+  boardId: string | null | undefined,
+  skip = 0,
+  limit = 500,
+) {
+  return useQuery({
+    queryKey: ["board", "messages", boardId, skip, limit],
+    queryFn: () =>
+      apiClient.get<{ messages: BoardMessage[]; total: number }>(
+        `/board/${boardId}/messages?skip=${skip}&limit=${limit}`,
+      ),
+    enabled: !!boardId,
+    staleTime: 2_000,
+    refetchInterval: 3_000,
+  });
+}
+
+export function useStartBoard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: StartBoardRequest) =>
+      apiClient.post<StartBoardResponse>("/board/start", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["board", "sessions"] });
+    },
+  });
+}
+
+// ─── Executive Workspace ───────────────────────────────────────────────────
+
+export function useWorkspaceQuery(
+  objectiveId: string | null | undefined,
+  executiveRole: string | null | undefined,
+) {
+  return useQuery({
+    queryKey: ["executive-workspace", objectiveId, executiveRole],
+    queryFn: () =>
+      apiClient.get<ExecutiveWorkspace>(
+        `/executive-workspace/${objectiveId}/${executiveRole}`,
+      ),
+    enabled: !!objectiveId && !!executiveRole,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useWorkspacesQuery(objectiveId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["executive-workspace", "list", objectiveId],
+    queryFn: () =>
+      apiClient.get<{ workspaces: ExecutiveWorkspace[] }>(
+        `/executive-workspace/${objectiveId}`,
+      ),
+    enabled: !!objectiveId,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useWorkspaceItemsQuery(
+  objectiveId: string | null | undefined,
+  executiveRole: string | null | undefined,
+  kind?: string,
+  status?: string,
+  skip = 0,
+  limit = 100,
+) {
+  return useQuery({
+    queryKey: [
+      "executive-workspace",
+      "items",
+      objectiveId,
+      executiveRole,
+      kind,
+      status,
+      skip,
+      limit,
+    ],
+    queryFn: () =>
+      apiClient.get<{ items: WorkspaceItem[]; total: number }>(
+        `/executive-workspace/${objectiveId}/${executiveRole}/items?kind=${kind ?? ""}&status=${status ?? ""}&skip=${skip}&limit=${limit}`,
+      ),
+    enabled: !!objectiveId && !!executiveRole,
+    staleTime: 3_000,
+    refetchInterval: 5_000,
+  });
+}
+
+export function useWorkspaceSummaryQuery(
+  objectiveId: string | null | undefined,
+  executiveRole: string | null | undefined,
+) {
+  return useQuery({
+    queryKey: ["executive-workspace", "summary", objectiveId, executiveRole],
+    queryFn: () =>
+      apiClient.get<WorkspaceSummary>(
+        `/executive-workspace/${objectiveId}/${executiveRole}/summary`,
+      ),
+    enabled: !!objectiveId && !!executiveRole,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useWorkspaceKpisQuery(
+  objectiveId: string | null | undefined,
+  executiveRole: string | null | undefined,
+) {
+  return useQuery({
+    queryKey: ["executive-workspace", "kpis", objectiveId, executiveRole],
+    queryFn: () =>
+      apiClient.get<Record<string, unknown>>(
+        `/executive-workspace/${objectiveId}/${executiveRole}/kpis`,
+      ),
+    enabled: !!objectiveId && !!executiveRole,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useWorkspaceMemoriesQuery(
+  objectiveId: string | null | undefined,
+  executiveRole: string | null | undefined,
+  skip = 0,
+  limit = 100,
+) {
+  return useQuery({
+    queryKey: ["executive-workspace", "memories", objectiveId, executiveRole],
+    queryFn: () =>
+      apiClient.get<{ memories: MemoryPartitionItem[] }>(
+        `/executive-workspace/${objectiveId}/${executiveRole}/memories?skip=${skip}&limit=${limit}`,
+      ),
+    enabled: !!objectiveId && !!executiveRole,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useEnsureWorkspace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { objective_id: string; executive_role: string }) =>
+      apiClient.post<ExecutiveWorkspace>("/executive-workspace/ensure", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["executive-workspace"] });
+    },
+  });
+}
+
+export function useCreateWorkspaceItem(
+  objectiveId: string | null | undefined,
+  executiveRole: string | null | undefined,
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      kind: string;
+      title: string;
+      content?: string;
+      priority?: string;
+      due_at?: string;
+      source?: Record<string, unknown>;
+    }) =>
+      apiClient.post<WorkspaceItem>(
+        `/executive-workspace/${objectiveId}/${executiveRole}/items`,
+        payload,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["executive-workspace", "items", objectiveId, executiveRole],
+      });
+    },
+  });
+}
+
+export function useUpdateWorkspaceItem(
+  objectiveId: string | null | undefined,
+  executiveRole: string | null | undefined,
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      item_id: string;
+      title?: string;
+      content?: string;
+      priority?: string;
+      status?: string;
+      due_at?: string;
+    }) =>
+      apiClient.patch<WorkspaceItem>(
+        `/executive-workspace/${objectiveId}/${executiveRole}/items/${payload.item_id}`,
+        payload,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["executive-workspace", "items", objectiveId, executiveRole],
+      });
+    },
+  });
+}
+
+export function useUpdateKpis(
+  objectiveId: string | null | undefined,
+  executiveRole: string | null | undefined,
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (kpis: Record<string, unknown>) =>
+      apiClient.patch<ExecutiveWorkspace>(
+        `/executive-workspace/${objectiveId}/${executiveRole}/kpis`,
+        { kpis },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["executive-workspace", "kpis", objectiveId, executiveRole],
+      });
+    },
   });
 }
